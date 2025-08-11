@@ -1,8 +1,15 @@
 import React, { useMemo, useState } from 'react';
-import type { DieRoll, SpecialDieFace } from '@/types/monopoly-schema';
+import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
 import { evaluateRollAdvisories } from '@/features/rules/advisories';
+import EventLog from '@/components/EventLog';
+import { useDispatch } from 'react-redux';
+import { appendEvent } from '@/features/events/eventsSlice';
+import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
+import { assignOwner } from '@/features/properties/propertiesSlice';
+import { drawCard } from '@/features/cards/cardsSlice';
 
 export default function Play(): JSX.Element {
+  const dispatch = useDispatch();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [d6A, setD6A] = useState<number>(1);
   const [d6B, setD6B] = useState<number>(1);
@@ -21,6 +28,43 @@ export default function Play(): JSX.Element {
       isOwnedByOther: () => false,
     });
     setAdvice(result.map((r) => r.message));
+  };
+
+  const onApplyMove = (): void => {
+    const moveSteps = d6A + d6B + (typeof special === 'number' ? special : 0);
+    const toIndex = (currentIndex + moveSteps) % BOARD_TILES.length;
+    const tile = getTileByIndex(toIndex);
+    const ev: GameEvent = {
+      id: crypto.randomUUID(),
+      gameId: 'local',
+      type: 'MOVE',
+      payload: { from: currentIndex, to: toIndex, steps: moveSteps, message: `Moved to ${tile.name}` },
+      createdAt: new Date().toISOString(),
+    };
+    dispatch(appendEvent(ev));
+    if (passedGo(currentIndex, toIndex)) {
+      dispatch(
+        appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PASSED_GO', payload: { amount: 200, message: '+$200 for passing GO' }, moneyDelta: +200, createdAt: new Date().toISOString() })
+      );
+    }
+    setCurrentIndex(toIndex);
+  };
+
+  const onBuyProperty = (): void => {
+    const tile = getTileByIndex(currentIndex);
+    if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
+    // For MVP, assign to a generic owner id "P1"; later we’ll add a picker
+    dispatch(assignOwner({ tileId: tile.id, ownerId: 'P1' }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PURCHASE', payload: { tileId: tile.id, message: `Purchased ${tile.name}` }, createdAt: new Date().toISOString() })
+    );
+  };
+
+  const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
+    dispatch(drawCard(deck));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', payload: { deck, message: `Drew from ${deck}` }, createdAt: new Date().toISOString() })
+    );
   };
 
   return (
@@ -56,6 +100,21 @@ export default function Play(): JSX.Element {
           <button onClick={onEvaluate} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
             Evaluate Roll
           </button>
+          <button onClick={onApplyMove} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            Apply Move
+          </button>
+          <button onClick={onBuyProperty} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            Buy Property
+          </button>
+          <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">
+            Draw Chance
+          </button>
+          <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">
+            Draw Community
+          </button>
+          <button onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+            Draw Bus
+          </button>
         </div>
         <div className="space-y-2">
           <h2 className="text-lg font-medium">Advisories</h2>
@@ -65,6 +124,7 @@ export default function Play(): JSX.Element {
             ))}
           </ul>
         </div>
+        <EventLog />
       </div>
     </div>
   );

@@ -4440,6 +4440,363 @@ lets move on to next step
 
 _**Assistant**_
 
+<think><details><summary>Thought Process</summary>**Planning next milestones**
+
+We need to move on to the next milestone. Our progress so far includes completing Milestone 0 (scaffold), Milestone 1a (board data), Milestone 1b (cards), and part of Milestone 1c (Property improvements). Now, for Milestone 2, we’ve partly done advisories and the GM console along with spectator features. Since the user wants to proceed, we could either focus on Milestone 1c for buildings or continue with the GM flow and implement event logging. Let's decide what’s most beneficial!
+**Implementing building rules**
+
+We need to move from using placeholders to implementing building rules, which will allow the spectator to display real property counts. I propose we tackle Milestone 1c by defining property ownership states and improvements. This includes creating a `properties` slice to track ownership, improvement level, mortgage status, and building bank counts. We’ll also need functions to compute rent based on improvements, actions for buying and mortgaging properties, and enforcement for building regulations. Let’s ensure we clarify skyscraper specifics too!
+**Updating game mechanics**
+
+We currently don't have a UI, but the GM can later use actions. I'll start by updating spectator selectors to calculate bank counts for houses and hotels based on property improvements. Since we don’t have skyscraper counts yet, we’ll stick with classic rules: 32 houses and 12 hotels. I note that for Mega Monopoly, there might be different counts, but we’ll handle houses and hotels first and leave skyscrapers for later.
+
+Next, I’ll enhance the Play GM console to include tile selection for actions like "Buy Property" or "Buy House." The user wants us to progress without making it too UI-heavy. Adhering to Tailwind for code style is important, as we have already used it.
+**Implementing property management**
+
+We need to keep a status update and summary at the end, using minimal verbosity. Here's the plan: I'll create a new `propertiesSlice.ts` to capture ownership, improvements, and mortgage status. This will include functions to enforce even-building rules, like ensuring property improvements are within a difference of 1 for each color group and requiring full unmortgaged ownership to buy houses.
+
+Also, I'll provide actions such as assigning owners to properties, buying and selling houses, and managing mortgages. We’ll update spectator selectors to use this new slice for tracking owned and bank counts.
+**Establishing property consistency**
+
+We want to ensure consistency by using the properties slice as the main source of truth, which will help us avoid duplicate property arrays in player data. I’ll update the `app/store.ts` to include the properties reducer while making minimal changes in the UI; we'll replace counts in the Spectate page and consider property actions in GM's `Play.tsx` later.
+
+Next, I'll create `src/features/properties/propertiesSlice.ts` and implement even-building enforcement rules for buying and selling houses and hotels, keeping track of improvements and bank counts. I'll also adjust mortgage rules to ensure smooth operation. Let's implement all these changes and ensure everything compiles properly!</details></think>
+
+---
+
+Implementing Milestone 1c: adding a properties slice to track ownership, mortgage, and improvements with even-building rules and bank piece counts. Then I’ll wire selectors and update the spectator view to use real counts.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/properties/propertiesSlice.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 136, lines removed: 1
+
+```diff
+@@ -1,1 +1,136 @@
+- 
++ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
++ import { BOARD_TILES } from '@/data/board';
++ 
++ export type OwnerId = string | null;
++ 
++ export interface PropertyState {
++   ownerId: OwnerId;
++   mortgaged: boolean;
++   improvements: number; // 0..4 houses, 5 = hotel
++ }
++ 
++ export interface PropertiesState {
++   byTileId: Record<string, PropertyState | undefined>;
++   housesRemaining: number; // start 32
++   hotelsRemaining: number; // start 12
++ }
++ 
++ const initialState: PropertiesState = {
++   byTileId: Object.fromEntries(
++     BOARD_TILES.filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility').map((t) => [t.id, { ownerId: null, mortgaged: false, improvements: 0 }])
++   ),
++   housesRemaining: 32,
++   hotelsRemaining: 12,
++ };
++ 
++ function getGroupTileIds(tileId: string): string[] {
++   const tile = BOARD_TILES.find((t) => t.id === tileId);
++   if (!tile) return [];
++   if (tile.type !== 'property' || !tile.group) return [tileId];
++   return BOARD_TILES.filter((t) => t.type === 'property' && t.group === tile.group).map((t) => t.id);
++ }
++ 
++ function canEvenBuild(state: PropertiesState, tileId: string, ownerId: string): boolean {
++   const group = getGroupTileIds(tileId);
++   // If not a color group (railroad/utility), allow without even rule
++   if (group.length <= 1) return true;
++   // Must own full set and none mortgaged
++   for (const id of group) {
++     const ps = state.byTileId[id]!;
++     if (ps.ownerId !== ownerId || ps.mortgaged) return false;
++   }
++   const levels = group.map((id) => state.byTileId[id]!.improvements);
++   const minLevel = Math.min(...levels);
++   const targetLevel = state.byTileId[tileId]!.improvements;
++   // Can only build on properties at current min level
++   return targetLevel === minLevel;
++ }
++ 
++ function canEvenSell(state: PropertiesState, tileId: string): boolean {
++   const group = getGroupTileIds(tileId);
++   if (group.length <= 1) return true;
++   const levels = group.map((id) => state.byTileId[id]!.improvements);
++   const maxLevel = Math.max(...levels);
++   const targetLevel = state.byTileId[tileId]!.improvements;
++   // Can only sell from properties at current max level
++   return targetLevel === maxLevel && targetLevel > 0;
++ }
++ 
++ const propertiesSlice = createSlice({
++   name: 'properties',
++   initialState,
++   reducers: {
++     assignOwner(state, action: PayloadAction<{ tileId: string; ownerId: OwnerId }>) {
++       const ps = state.byTileId[action.payload.tileId];
++       if (!ps) return;
++       ps.ownerId = action.payload.ownerId;
++       ps.mortgaged = false;
++       ps.improvements = 0;
++     },
++     setMortgaged(state, action: PayloadAction<{ tileId: string; mortgaged: boolean }>) {
++       const ps = state.byTileId[action.payload.tileId];
++       if (!ps) return;
++       if (action.payload.mortgaged) {
++         // cannot mortgage with improvements
++         if (ps.improvements > 0) return;
++         ps.mortgaged = true;
++       } else {
++         ps.mortgaged = false;
++       }
++     },
++     buyHouse(state, action: PayloadAction<{ tileId: string; ownerId: string }>) {
++       const { tileId, ownerId } = action.payload;
++       const ps = state.byTileId[tileId];
++       if (!ps) return;
++       if (ps.ownerId !== ownerId || ps.mortgaged) return;
++       // Only for property tiles
++       const boardTile = BOARD_TILES.find((t) => t.id === tileId);
++       if (!boardTile || boardTile.type !== 'property') return;
++ 
++       // Enforce even-building
++       if (!canEvenBuild(state, tileId, ownerId)) return;
++ 
++       if (ps.improvements >= 5) return; // already hotel
++ 
++       if (ps.improvements < 4) {
++         // buy a house
++         if (state.housesRemaining <= 0) return;
++         ps.improvements += 1;
++         state.housesRemaining -= 1;
++       } else if (ps.improvements === 4) {
++         // upgrade to hotel
++         if (state.hotelsRemaining <= 0) return;
++         ps.improvements = 5;
++         state.hotelsRemaining -= 1;
++         state.housesRemaining += 4; // return four houses to bank
++       }
++     },
++     sellHouse(state, action: PayloadAction<{ tileId: string }>) {
++       const { tileId } = action.payload;
++       const ps = state.byTileId[tileId];
++       if (!ps) return;
++       // Only property tiles
++       const boardTile = BOARD_TILES.find((t) => t.id === tileId);
++       if (!boardTile || boardTile.type !== 'property') return;
++       if (ps.improvements <= 0) return;
++ 
++       // Enforce even-selling
++       if (!canEvenSell(state, tileId)) return;
++ 
++       if (ps.improvements === 5) {
++         // downgrade hotel to 4 houses
++         ps.improvements = 4;
++         state.hotelsRemaining += 1;
++         state.housesRemaining -= 4; // take 4 houses from bank
++         if (state.housesRemaining < 0) state.housesRemaining = 0; // safety
++       } else {
++         // sell a house
++         ps.improvements -= 1;
++         state.housesRemaining += 1;
++       }
++     },
++   },
++ });
++ 
++ export const { assignOwner, setMortgaged, buyHouse, sellHouse } = propertiesSlice.actions;
++ export default propertiesSlice.reducer;
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/app/store.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -4,4 +4,5 @@
+  import eventsReducer from '@/features/events/eventsSlice';
+  import cardsReducer from '@/features/cards/cardsSlice';
++ import propertiesReducer from '@/features/properties/propertiesSlice';
+  
+  export const store = configureStore({
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -11,4 +12,5 @@
+      events: eventsReducer,
+      cards: cardsReducer,
++     properties: propertiesReducer,
+    },
+  });
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors/stats.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 8, lines removed: 5
+
+```diff
+@@ -4,16 +4,19 @@
+  
+  export const selectPlayers = (state: RootState) => state.players.players;
++ export const selectProperties = (state: RootState) => state.properties;
+  
+- export const selectOwnedPropertyIds = createSelector(selectPlayers, (players) => {
++ export const selectOwnedPropertyIds = createSelector(selectProperties, (props) => {
+    const set = new Set<string>();
+-   for (const p of players) for (const id of p.properties) set.add(id);
++   for (const [tileId, ps] of Object.entries(props.byTileId)) {
++     if (ps && ps.ownerId) set.add(tileId);
++   }
+    return set;
+  });
+  
+- export const selectUnownedProperties = createSelector(selectOwnedPropertyIds, () => {
+-   return BOARD_TILES.filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility').filter((t) => true);
++ export const selectUnownedProperties = createSelector(selectOwnedPropertyIds, (owned) => {
++   return BOARD_TILES.filter((t) => (t.type === 'property' || t.type === 'railroad' || t.type === 'utility') && !owned.has(t.id));
+  });
+  
+- export const selectBankBuildingCounts = () => ({ houses: 32, hotels: 12 }); // placeholder until buildings implemented
++ export const selectBankBuildingCounts = createSelector(selectProperties, (props) => ({ houses: props.housesRemaining, hotels: props.hotelsRemaining }));
+  
+  export const selectSpectatorSummary = createSelector(selectPlayers, (players) => {
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+src/pages/Spectate.tsx(9,16): error TS2554: Expected 1 arguments, but got 0.
+```
+
+---
+
+<think><details><summary>Thought Process</summary>**Updating Spectate.tsx**
+
+I need to fix the Spectate.tsx file to get the bank using useSelector. We should also update the import, since we already import selectBankBuildingCounts. After editing, I’ll commit the changes. Once that's done, we can claim that Milestone 1c pieces are complete, with properties slice and real bank counts in the spectator. I'll ensure the store registration is finished, build after fixing, and then summarize for the user about moving forward.</details></think>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Spectate.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -7,5 +7,5 @@
+    const { shareCode } = useParams<{ shareCode: string }>();
+    const players = useSelector(selectSpectatorSummary);
+-   const bank = selectBankBuildingCounts();
++   const bank = useSelector(selectBankBuildingCounts);
+  
+    return (
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) ✗ npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 56 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-DKT_gI6Y.css   12.83 kB │ gzip:  3.20 kB
+dist/assets/index-B9L4c6xp.js   209.56 kB │ gzip: 67.85 kB
+✓ built in 697ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(buildings): Milestone 1c - properties ownership/mortgage/improvements with even-building and real bank counts; spectator uses counts"
+```
+
+```
+
+[main a820e0c] feat(buildings): Milestone 1c - properties ownership/mortgage/improvements with even-building
+ and real bank counts; spectator uses counts
+
+ 6 files changed, 357 insertions(+), 7 deletions(-)
+ create mode 100644 src/features/properties/propertiesSlice.ts
+```
+
+---
+
+Status: Completed Milestone 1c. Properties ownership, mortgage, and improvements are tracked with even-building enforcement and bank houses/hotels counts. Spectator view now uses real counts.
+
+What I added:
+- `properties` slice:
+  - Ownership per tile, mortgage flag, improvement level (0–4 houses, 5 = hotel).
+  - Even-building/even-selling rules across a color set.
+  - Bank inventory (32 houses, 12 hotels) updated on buy/sell and hotel swaps.
+- Selectors:
+  - Real unowned properties set.
+  - Real bank building counts.
+- Updated `Spectate` to read bank counts via selector.
+
+Next proposals (GM-focused):
+- Add GM actions on Play page: buy/sell house/hotel, mortgage/unmortgage, assign ownership, pay/receive money, and draw/resolve cards.
+- Start the event log to record each action and update state accordingly.
+
+---
+
+_**User**_
+
+next 
+
+---
+
+_**Assistant**_
+
 
 
 ---
