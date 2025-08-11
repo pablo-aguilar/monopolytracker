@@ -6,7 +6,7 @@ import { selectSpectatorSummary, selectBankBuildingCounts } from '@/features/sel
 export default function Spectate(): JSX.Element {
   const { shareCode } = useParams<{ shareCode: string }>();
   const players = useSelector(selectSpectatorSummary);
-  const bank = selectBankBuildingCounts();
+  const bank = useSelector(selectBankBuildingCounts);
 
   return (
     <div className="min-h-dvh flex items-start justify-center p-6 bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">

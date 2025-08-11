@@ -3,6 +3,7 @@ import sessionReducer from '@/features/session/sessionSlice';
 import playersReducer from '@/features/players/playersSlice';
 import eventsReducer from '@/features/events/eventsSlice';
 import cardsReducer from '@/features/cards/cardsSlice';
+import propertiesReducer from '@/features/properties/propertiesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     players: playersReducer,
     events: eventsReducer,
     cards: cardsReducer,
+    properties: propertiesReducer,
   },
 });
 

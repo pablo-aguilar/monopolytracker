@@ -4227,9 +4227,218 @@ I’m adding a basic spectator stats view: extend players to include money and o
 
 ---
 
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/players/playersSlice.ts</summary>
 
+undefined
+
+**Chunk 1**
+Lines added: 2, lines removed: undefined
+
+```diff
+@@ -6,4 +6,6 @@
+    color: string;
+    avatarKey: string;
++   money: number;
++   properties: string[]; // board tile ids
+  };
+  
+```
+
+**Chunk 2**
+Lines added: 13, lines removed: 1
+
+```diff
+@@ -29,7 +31,19 @@
+        state.players = [];
+      },
++     setPlayerMoney(state, action: PayloadAction<{ id: string; money: number }>) {
++       const p = state.players.find((x) => x.id === action.payload.id);
++       if (p) p.money = action.payload.money;
++     },
++     assignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
++       const p = state.players.find((x) => x.id === action.payload.id);
++       if (p && !p.properties.includes(action.payload.tileId)) p.properties.push(action.payload.tileId);
++     },
++     unassignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
++       const p = state.players.find((x) => x.id === action.payload.id);
++       if (p) p.properties = p.properties.filter((t) => t !== action.payload.tileId);
++     },
+    },
+  });
+  
+- export const { addPlayer, removePlayer, resetPlayers } = playersSlice.actions;
++ export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
+  export default playersSlice.reducer; 
+```
+
+</details>
 
 ---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors/stats.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 21, lines removed: 1
+
+```diff
+@@ -1,1 +1,21 @@
+- 
++ import { createSelector } from '@reduxjs/toolkit';
++ import type { RootState } from '@/app/store';
++ import { BOARD_TILES } from '@/data/board';
++ 
++ export const selectPlayers = (state: RootState) => state.players.players;
++ 
++ export const selectOwnedPropertyIds = createSelector(selectPlayers, (players) => {
++   const set = new Set<string>();
++   for (const p of players) for (const id of p.properties) set.add(id);
++   return set;
++ });
++ 
++ export const selectUnownedProperties = createSelector(selectOwnedPropertyIds, () => {
++   return BOARD_TILES.filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility').filter((t) => true);
++ });
++ 
++ export const selectBankBuildingCounts = () => ({ houses: 32, hotels: 12 }); // placeholder until buildings implemented
++ 
++ export const selectSpectatorSummary = createSelector(selectPlayers, (players) => {
++   return players.map((p) => ({ id: p.id, nickname: p.nickname, money: p.money, properties: p.properties }));
++ });
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Spectate.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 36, lines removed: 5
+
+```diff
+@@ -1,13 +1,44 @@
+  import React from 'react';
+  import { useParams } from 'react-router-dom';
++ import { useSelector } from 'react-redux';
++ import { selectSpectatorSummary, selectBankBuildingCounts } from '@/features/selectors/stats';
+  
+  export default function Spectate(): JSX.Element {
+    const { shareCode } = useParams<{ shareCode: string }>();
++   const players = useSelector(selectSpectatorSummary);
++   const bank = selectBankBuildingCounts();
++ 
+    return (
+-     <div className="min-h-dvh flex items-center justify-center p-6 bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
+-       <div className="w-full max-w-3xl space-y-4">
+-         <h1 className="text-2xl font-semibold">Spectate</h1>
+-         <p className="text-sm opacity-80">Share code: {shareCode}</p>
+-         <p className="text-sm opacity-80">Milestone 5: Live spectator view – placeholder</p>
++     <div className="min-h-dvh flex items-start justify-center p-6 bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
++       <div className="w-full max-w-5xl space-y-6">
++         <div className="flex items-center justify-between">
++           <h1 className="text-2xl font-semibold">Spectator View</h1>
++           <div className="text-sm opacity-80">Share code: {shareCode}</div>
++         </div>
++ 
++         <section className="space-y-3">
++           <h2 className="text-lg font-medium">Players</h2>
++           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
++             {players.map((p) => (
++               <div key={p.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++                 <div className="flex items-center justify-between">
++                   <div className="font-semibold">{p.nickname}</div>
++                   <div className="text-sm">${p.money}</div>
++                 </div>
++                 <div className="mt-2 text-sm">
++                   <div className="opacity-70">Owns {p.properties.length} properties</div>
++                 </div>
++               </div>
++             ))}
++           </div>
++         </section>
++ 
++         <section className="space-y-3">
++           <h2 className="text-lg font-medium">Bank</h2>
++           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 text-sm grid grid-cols-2 gap-2">
++             <div>Houses left: {bank.houses}</div>
++             <div>Hotels left: {bank.hotels}</div>
++           </div>
++         </section>
+        </div>
+      </div>
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 55 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-DKT_gI6Y.css   12.83 kB │ gzip:  3.20 kB
+dist/assets/index-DeVhl9qp.js   207.57 kB │ gzip: 67.25 kB
+✓ built in 703ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(spectator): basic spectator summary for players and bank counts"
+```
+
+```
+➜  monopolytracker git:(main) ✗ git add -A && git commit -m "feat(spectator): basic spectator summary for pl
+ayers and bank counts"
+[main f31440c] feat(spectator): basic spectator summary for players and bank counts
+ 5 files changed, 477 insertions(+), 8 deletions(-)
+ create mode 100644 src/features/selectors/stats.ts
+```
+
+---
+
+Added a basic spectator mode aligned with the GM-driven MVP.
+
+What’s in now:
+- Player state extended with money and owned properties.
+- Spectator selectors:
+  - Per-player summary: nickname, money, owned properties count.
+  - Bank counts placeholder for houses/hotels (real counts will come with buildings in 1c).
+- UI: `Spectate` page shows share code, player summaries, and bank counts.
+
+Next upgrades for spectator (after core GM flow):
+- Unowned/open properties list.
+- Live event timeline snippet.
+- Property ownership breakdown by color group.
+- Building counts wired to actual improvement logic from Milestone 1c.
+
+- Implemented spectator summary view and supporting selectors; compiled and committed.
+
+---
+
+_**User**_
+
+lets move on to next step
+
+---
+
+_**Assistant**_
 
 
 
