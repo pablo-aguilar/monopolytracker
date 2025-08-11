@@ -5542,6 +5542,223 @@ Lines added: 71, lines removed: 1
 
 ---
 
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Play.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 3, lines removed: 1
+
+```diff
+@@ -6,13 +6,15 @@
+  import { appendEvent } from '@/features/events/eventsSlice';
+  import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
+- import { assignOwner } from '@/features/properties/propertiesSlice';
++ import { assignOwner, setMortgaged, buyHouse, sellHouse } from '@/features/properties/propertiesSlice';
+  import { drawCard } from '@/features/cards/cardsSlice';
+  import { adjustPlayerMoney } from '@/features/players/playersSlice';
+  import type { RootState } from '@/app/store';
++ import { computeRent } from '@/features/selectors/rent';
+  
+  export default function Play(): JSX.Element {
+    const dispatch = useDispatch();
+    const players = useSelector((s: RootState) => s.players.players);
+    const cardsState = useSelector((s: RootState) => s.cards);
++   const propsState = useSelector((s: RootState) => s.properties);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [d6A, setD6A] = useState<number>(1);
+```
+
+**Chunk 2**
+Lines added: 47, lines removed: undefined
+
+```diff
+@@ -80,4 +82,51 @@
+      setMoneyDelta(0);
+    };
++ 
++   const onPayRent = (): void => {
++     const tile = getTileByIndex(currentIndex);
++     const state = (window as any).__store__?.getState?.() as RootState | undefined; // optional global for future
++     const diceTotal = d6A + d6B + (typeof special === 'number' ? special : 0);
++     const rent = computeRent({ ...(state as any), properties: propsState } as RootState, tile.id, diceTotal);
++     // For MVP, take from selected moneyPlayerId and credit to tile owner if set
++     const ownerIdForTile = propsState.byTileId[tile.id]?.ownerId as string | null;
++     if (!moneyPlayerId || !ownerIdForTile || rent <= 0) return;
++     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -rent }));
++     dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', payload: { tileId: tile.id, from: moneyPlayerId, to: ownerIdForTile, amount: rent, message: `Rent ${rent}` }, moneyDelta: -rent, createdAt: new Date().toISOString() })
++     );
++   };
++ 
++   const onPayTax = (): void => {
++     const tile = getTileByIndex(currentIndex);
++     if (tile.type !== 'tax' || !tile.taxAmount || !moneyPlayerId) return;
++     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -tile.taxAmount }));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', payload: { tileId: tile.id, from: moneyPlayerId, amount: tile.taxAmount, message: `Tax ${tile.taxAmount}` }, moneyDelta: -tile.taxAmount, createdAt: new Date().toISOString() })
++     );
++   };
++ 
++   const onMortgageToggle = (mortgaged: boolean): void => {
++     const tile = getTileByIndex(currentIndex);
++     if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
++     dispatch(setMortgaged({ tileId: tile.id, mortgaged }));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, mortgaged }, createdAt: new Date().toISOString() })
++     );
++   };
++ 
++   const onBuild = (): void => {
++     const tile = getTileByIndex(currentIndex);
++     if (tile.type !== 'property') return;
++     dispatch(buyHouse({ tileId: tile.id, ownerId: ownerId || (propsState.byTileId[tile.id]?.ownerId as string) }));
++     dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Build' }, createdAt: new Date().toISOString() }));
++   };
++ 
++   const onSell = (): void => {
++     const tile = getTileByIndex(currentIndex);
++     if (tile.type !== 'property') return;
++     dispatch(sellHouse({ tileId: tile.id }));
++     dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Sell' }, createdAt: new Date().toISOString() }));
++   };
+  
+    const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
+```
+
+**Chunk 3**
+Lines added: 6, lines removed: undefined
+
+```diff
+@@ -143,4 +192,10 @@
+              <button onClick={onAdjustMoney} className="inline-flex items-center justify-center rounded-md px-3 py-2 bg-slate-700 text-white font-semibold shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
+            </div>
++           <button onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
++           <button onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold shadow hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
++           <button onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold shadow hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
++           <button onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold shadow hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
++           <button onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold shadow hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
++           <button onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold shadow hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
+            <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Draw Chance</button>
+            <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Draw Community</button>
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 58 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-BDASJtk0.css   17.72 kB │ gzip:  4.25 kB
+dist/assets/index-CwaEwPZR.js   219.75 kB │ gzip: 69.69 kB
+✓ built in 595ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(gm): tile-aware Pay Rent/Tax; mortgage/unmortgage; build/sell; rent calc for properties/railroads/utilities"
+```
+
+```
+
+[main 13b1450] feat(gm): tile-aware Pay Rent/Tax; mortgage/unmortgage; build/sell; rent calc for properties/
+railroads/utilities
+
+ 4 files changed, 513 insertions(+), 2 deletions(-)
+ create mode 100644 src/features/selectors/rent.ts
+```
+
+---
+
+Status: Implemented tile-aware GM actions and rent logic.
+
+What’s new:
+- Rent calculation selector for properties, railroads, utilities (monopoly double, mortgage, utility dice multiplier).
+- GM controls on Play:
+  - Pay Rent (from selected player to tile owner) and Pay Tax.
+  - Mortgage/Unmortgage current tile.
+  - Build/Sell houses/hotel with even-building rules and bank inventory updates.
+- Event log records each action.
+
+Next options:
+- Persistence (redux-persist with IndexedDB) to save/resume games.
+- Setup page to add players (nickname/color/avatar) so owner picker is meaningful.
+- Spectator enhancements (unowned list, color group ownership, timeline).
+
+---
+
+_**User**_
+
+go
+
+---
+
+_**Assistant**_
+
+<think><details><summary>Thought Process</summary>**Planning player setup page**
+
+I need to move on to the next step. Options from before include persistence, a setup page for adding players, and spectator enhancements. Given that the GM-driven MVP is important, the setup page for adding players seems crucial to make the owner picker meaningful. I’ll implement a setup page where players can choose a nickname, color, and avatar. Using Tailwind v4, I'll create a fixture set for avatars or use placeholder avatars for now.
+**Planning Setup page implementation**
+
+I need to install the redux-persist package and localforage since they aren’t currently installed. But the user gave the go-ahead, so let’s implement the Setup page first! I’ll keep the design minimal with icons and components. We already have actions in playersSlice for resetting and adding players; I’ll generate IDs using crypto.randomUUID. The Setup page will have a form for nickname, color, avatar, starting money, and a seed for the cards. I'll make sure to include navigation to play and test the build afterward.
+**Editing for persistence implementation**
+
+I see that I can implement persistence later by adding redux-persist and localforage, but that seems to be another step. Since the user said “go” and wants to proceed, I’ll focus on implementing the Setup page first. After that, I can propose adding the persistence feature. So, let's move on and make those necessary edits to get the Setup page in place!</details></think>
+
+---
+
+Implementing Milestone: building the Setup page to add players (nickname, color, avatar), set a card shuffle seed, and proceed to Play. I’ll create minimal avatar options, wire up Redux actions, and build and commit.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/data/avatars.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 16, lines removed: 1
+
+```diff
+@@ -1,1 +1,16 @@
+- 
++ export type AvatarKey =
++   | 'hat'
++   | 'car'
++   | 'dog'
++   | 'ship'
++   | 'iron'
++   | 'horse';
++ 
++ export const AVATARS: { key: AvatarKey; label: string; emoji: string }[] = [
++   { key: 'hat', label: 'Top Hat', emoji: '🎩' },
++   { key: 'car', label: 'Car', emoji: '🚗' },
++   { key: 'dog', label: 'Dog', emoji: '🐶' },
++   { key: 'ship', label: 'Ship', emoji: '🚢' },
++   { key: 'iron', label: 'Iron', emoji: '🧺' },
++   { key: 'horse', label: 'Horse', emoji: '🐴' },
++ ];
+```
+
+</details>
+
+---
+
 
 
 ---
