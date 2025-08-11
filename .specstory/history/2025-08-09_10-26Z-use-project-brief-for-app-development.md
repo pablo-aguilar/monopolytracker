@@ -5960,7 +5960,297 @@ _**Assistant**_
 
 <think><details><summary>Thought Process</summary>**Improving spectator mode**
 
-I'm focusing on improving the spectator mode. Right now, the code displays player money, property counts, and bank counts, but the user wants more details. They’re asking for stats like available houses, open properties, individual player finances, and more regarding ownership. Previous features included rent earned and other data points. I'll consider adding unowned property lists, breakdowns by color group, and live updates using Redux for seamless stats. I'll work on implementing this in the appropriate file.</details></think>
+I'm focusing on improving the spectator mode. Right now, the code displays player money, property counts, and bank counts, but the user wants more details. They’re asking for stats like available houses, open properties, individual player finances, and more regarding ownership. Previous features included rent earned and other data points. I'll consider adding unowned property lists, breakdowns by color group, and live updates using Redux for seamless stats. I'll work on implementing this in the appropriate file.
+**Updating spectator code**
+
+I'm planning to enhance the `pages/Spectate.tsx` file to display more useful information. This includes a list of properties owned by each player, with their names and improvements. I'll also include a grid of unowned properties and bank counts. Although we could show pot values, there's currently no pot to report. To enhance the spectator experience, I'll calculate landing stats from the events log by counting MOVE events for landed tiles. I'll be implementing new selectors for player properties and landing stats in the update.
+**Adding color group ownership progress**
+
+I plan to show the ownership progress for each color group in the spectator mode. This means displaying which player owns how many properties out of the total for each group. I’ll add a new selector in `selectors/stats.ts` to compute this ownership map. After that, I’ll update the Spectate page accordingly. My next step will be to make the necessary file edits, commit the changes, and build the updates. Exciting times!</details></think>
+
+---
+
+I’m going to add richer spectator selectors (per-player owned properties with improvements, unowned property list, color group ownership, and most-landed tile from the event log) and update the Spectate page to render these. Then I’ll build and commit.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors/stats.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -5,4 +5,5 @@
+  export const selectPlayers = (state: RootState) => state.players.players;
+  export const selectProperties = (state: RootState) => state.properties;
++ export const selectEvents = (state: RootState) => state.events.events;
+  
+  export const selectOwnedPropertyIds = createSelector(selectProperties, (props) => {
+```
+
+**Chunk 2**
+Lines added: 58, lines removed: undefined
+
+```diff
+@@ -23,3 +24,61 @@
+    return players.map((p) => ({ id: p.id, nickname: p.nickname, money: p.money, properties: p.properties }));
+  });
++ 
++ export const selectPlayerPropertyDetails = createSelector(selectPlayers, selectProperties, (players, props) => {
++   return players.map((p) => {
++     const details = p.properties
++       .map((id) => {
++         const tile = BOARD_TILES.find((t) => t.id === id);
++         const ps = props.byTileId[id];
++         if (!tile || !ps) return null;
++         return { id, name: tile.name, type: tile.type, improvements: ps.improvements, mortgaged: ps.mortgaged };
++       })
++       .filter(Boolean) as { id: string; name: string; type: string; improvements: number; mortgaged: boolean }[];
++     return { playerId: p.id, nickname: p.nickname, properties: details };
++   });
++ });
++ 
++ export const selectColorGroupOwnership = createSelector(selectProperties, () => {
++   const groups: Record<string, { total: number; owners: Record<string, number> }> = {};
++   for (const tile of BOARD_TILES) {
++     if (tile.type === 'property' && tile.group) {
++       if (!groups[tile.group]) groups[tile.group] = { total: 0, owners: {} };
++       groups[tile.group].total += 1;
++       const ownerId = (window as any).__store__?.getState?.()?.properties?.byTileId?.[tile.id]?.ownerId as string | null;
++       if (ownerId) {
++         groups[tile.group].owners[ownerId] = (groups[tile.group].owners[ownerId] || 0) + 1;
++       }
++     }
++   }
++   return groups;
++ });
++ 
++ export const selectMostLandedProperty = createSelector(selectEvents, () => {
++   const counts: Record<string, number> = {};
++   for (const ev of (selectEvents as any).source?.events ?? []) {
++     // placeholder
++   }
++   return null;
++ });
++ 
++ export const selectMostLandedTile = createSelector(selectEvents, (events) => {
++   const counts: Record<string, number> = {};
++   for (const ev of events) {
++     if (ev.type === 'MOVE' && typeof ev.payload?.to === 'number') {
++       const tile = BOARD_TILES[ev.payload.to];
++       if (tile && tile.type === 'property') counts[tile.id] = (counts[tile.id] || 0) + 1;
++     }
++   }
++   let topId: string | null = null;
++   let topCount = 0;
++   for (const [id, c] of Object.entries(counts)) {
++     if (c > topCount) {
++       topCount = c;
++       topId = id;
++     }
++   }
++   if (!topId) return null;
++   const t = BOARD_TILES.find((x) => x.id === topId);
++   return t ? { id: topId, name: t.name, count: topCount } : null;
++ });
+  
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Spectate.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 6, lines removed: 2
+
+```diff
+@@ -2,14 +2,18 @@
+  import { useParams } from 'react-router-dom';
+  import { useSelector } from 'react-redux';
+- import { selectSpectatorSummary, selectBankBuildingCounts } from '@/features/selectors/stats';
++ import { selectSpectatorSummary, selectBankBuildingCounts, selectPlayerPropertyDetails, selectUnownedProperties, selectColorGroupOwnership, selectMostLandedTile } from '@/features/selectors/stats';
+  
+  export default function Spectate(): JSX.Element {
+    const { shareCode } = useParams<{ shareCode: string }>();
+    const players = useSelector(selectSpectatorSummary);
++   const playerDetails = useSelector(selectPlayerPropertyDetails);
+    const bank = useSelector(selectBankBuildingCounts);
++   const unowned = useSelector(selectUnownedProperties);
++   const groupOwnership = useSelector(selectColorGroupOwnership);
++   const mostLanded = useSelector(selectMostLandedTile);
+  
+    return (
+      <div className="min-h-dvh flex items-start justify-center p-6 bg-white text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
+-       <div className="w-full max-w-5xl space-y-6">
++       <div className="w-full max-w-6xl space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-semibold">Spectator View</h1>
+```
+
+**Chunk 2**
+Lines added: 64, lines removed: 16
+
+```diff
+@@ -20,25 +24,73 @@
+            <h2 className="text-lg font-medium">Players</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+-             {players.map((p) => (
+-               <div key={p.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
+-                 <div className="flex items-center justify-between">
+-                   <div className="font-semibold">{p.nickname}</div>
+-                   <div className="text-sm">${p.money}</div>
+-                 </div>
+-                 <div className="mt-2 text-sm">
+-                   <div className="opacity-70">Owns {p.properties.length} properties</div>
++             {players.map((p) => {
++               const detail = playerDetails.find((d) => d.playerId === p.id);
++               return (
++                 <div key={p.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++                   <div className="flex items-center justify-between">
++                     <div className="font-semibold">{p.nickname}</div>
++                     <div className="text-sm">${p.money}</div>
++                   </div>
++                   <div className="mt-2 text-sm space-y-1">
++                     <div className="opacity-70">Owns {p.properties.length} properties</div>
++                     <ul className="list-disc pl-5">
++                       {detail?.properties.slice(0, 6).map((prop) => (
++                         <li key={prop.id}>
++                           {prop.name}
++                           {prop.mortgaged ? ' (M)' : ''}
++                           {prop.improvements > 0 ? ` (+${prop.improvements >= 5 ? 'Hotel' : prop.improvements})` : ''}
++                         </li>
++                       ))}
++                     </ul>
++                   </div>
++                 </div>
++               );
++             })}
++           </div>
++         </section>
++ 
++         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
++           <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++             <h2 className="text-lg font-medium">Bank</h2>
++             <div className="text-sm grid grid-cols-2 gap-2">
++               <div>Houses left: {bank.houses}</div>
++               <div>Hotels left: {bank.hotels}</div>
++             </div>
++           </div>
++           <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++             <h2 className="text-lg font-medium">Unowned</h2>
++             <ul className="text-sm max-h-40 overflow-auto space-y-1">
++               {unowned.map((t) => (
++                 <li key={t.id}>{t.name}</li>
++               ))}
++             </ul>
++           </div>
++           <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++             <h2 className="text-lg font-medium">Most Landed</h2>
++             <div className="text-sm">{mostLanded ? `${mostLanded.name} (${mostLanded.count})` : '—'}</div>
++           </div>
++         </section>
++ 
++         <section className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++           <h2 className="text-lg font-medium">Color Group Ownership</h2>
++           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
++             {Object.entries(groupOwnership).map(([group, info]) => (
++               <div key={group} className="rounded-md border border-neutral-200 dark:border-neutral-700 p-3">
++                 <div className="font-semibold mb-1">{group}</div>
++                 <div>Total: {info.total}</div>
++                 <div className="mt-2">
++                   Owners:
++                   <ul className="list-disc pl-5">
++                     {Object.entries(info.owners).map(([ownerId, count]) => (
++                       <li key={ownerId}>
++                         {ownerId}: {count}
++                       </li>
++                     ))}
++                   </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+- 
+-         <section className="space-y-3">
+-           <h2 className="text-lg font-medium">Bank</h2>
+-           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4 text-sm grid grid-cols-2 gap-2">
+-             <div>Houses left: {bank.houses}</div>
+-             <div>Hotels left: {bank.hotels}</div>
+-           </div>
+-         </section>
+        </div>
+      </div>
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 59 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-U9bu03T7.css   18.57 kB │ gzip:  4.36 kB
+dist/assets/index-XHelmMDU.js   223.82 kB │ gzip: 70.29 kB
+✓ built in 672ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(spectator): richer view with per-player properties, unowned list, color group ownership, and most-landed tile"
+```
+
+```
+
+[main 3a78519] feat(spectator): richer view with per-player properties, unowned list, color group ownership,
+ and most-landed tile
+
+ 3 files changed, 325 insertions(+), 17 deletions(-)
+```
+
+---
+
+Spectator improved and committed.
+
+Now shows:
+- Per-player owned properties with mortgage/improvements.
+- Unowned properties list.
+- Color group ownership summary.
+- Most-landed property from event log.
+
+Next: add persistence (save/resume), then deploy to Vercel for testing.
+
+---
+
+_**User**_
+
+go
+
+---
+
+_**Assistant**_
+
+
 
 ---
 
