@@ -34,6 +34,10 @@ const playersSlice = createSlice({
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p) p.money = action.payload.money;
     },
+    adjustPlayerMoney(state, action: PayloadAction<{ id: string; delta: number }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p) p.money += action.payload.delta;
+    },
     assignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p && !p.properties.includes(action.payload.tileId)) p.properties.push(action.payload.tileId);
@@ -45,5 +49,5 @@ const playersSlice = createSlice({
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
 export default playersSlice.reducer; 

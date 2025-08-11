@@ -4797,6 +4797,370 @@ next
 
 _**Assistant**_
 
+<think><details><summary>Thought Process</summary>**Considering player management features**
+
+I need to focus on implementing player management functionalities. Right now, the playersSlice holds the players state, but the Setup page doesn’t allow adding players. For MVP, it’s manageable since the GM can handle minimal controls, but we might need to add a player UI later. 
+
+Let’s proceed to implement a minimal EventLog component, update the GM console with an "Apply Move" button, and add actions like buying properties and assigning them to players through a button with input options.
+**Implementing action suggestions for tiles**
+
+I'm thinking about adding automatic detection for the tile types and generating suggested actions like "Buy property," "Draw Chance/Community card," "Pay tax," and "Go to Jail." I’d provide buttons for these actions, but properties slice operations will require a player ID. For now, I’ll just ask for "ownerId" as a text input in the panel. 
+
+I'll also need to implement money updates for each player and add a UI for quickly adjusting player money.
+**Planning feature implementations**
+
+Given the constraints, I’m ready to implement several components. First, I'll create `components/EventLog.tsx` to display events from eventsSlice. 
+
+Next, I’ll enhance Play.tsx. It will need a quick form for adding players, showing essential info like player ID, nickname, color, avatarKey, and default money (1500). I’ll display the current tile info based on currentIndex and an evaluate button to show advisories.
+
+Depending on tile type, I’ll allow for actions like "Buy property" and "Draw Card." I’ll also make sure TypeScript compiles properly as I implement these changes.
+**Updating components and functionality**
+
+I need to import useDispatch and actions as I proceed with the edits. First, I’ll create `src/components/EventLog.tsx` to read events from the eventsSlice, allowing us to list them. 
+
+Next, I'll update the eventsSlice to include a message string, centered around the GameEvent type with a payload, enabling minimal messages in the UI. 
+
+In Play.tsx, I’ll implement local state for `lastTarget` index and tile ID after evaluating, and show quick actions. I’ll also add the ability to dispatch `addPlayer` with a random ID and include buttons for adjusting money, keeping it minimal with addPlayer, applyMove, buy property, and draw card functions.
+**Implementing card selection and state management**
+
+I plan to look at the state after dispatching the drawCard function to get `discardPile[0]`. In the UI, I can dispatch and then select with `useSelector`. 
+
+I’ll implement a cards selector for the top of the discard pile for the deck by creating `features/selectors/cards.ts` with a function called `topOfDiscard(deck)`. But really, it may be simpler to just use `useSelector` to read from `state.cards.decks`. I’ll code this out and make sure to include Tailwind classes as I proceed with the edits.</details></think>
+
+---
+
+I’m going to implement the GM actions and event log for the Play page: add an event log component, extend the Play page with Apply Move, Buy Property (with owner input), and Draw Card for Chance/Community/Bus, and wire Redux actions. Then I’ll build and commit.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/EventLog.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 22, lines removed: 1
+
+```diff
+@@ -1,1 +1,22 @@
+- 
++ import React from 'react';
++ import { useSelector } from 'react-redux';
++ import type { RootState } from '@/app/store';
++ 
++ export default function EventLog(): JSX.Element {
++   const events = useSelector((s: RootState) => s.events.events);
++   return (
++     <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
++       <h3 className="text-base font-semibold mb-2">Event Log</h3>
++       <ol className="space-y-1 text-sm max-h-60 overflow-auto">
++         {events.length === 0 && <li className="opacity-70">No events yet.</li>}
++         {events.map((ev) => (
++           <li key={ev.id} className="flex items-start gap-2">
++             <span className="opacity-60 tabular-nums">{new Date(ev.createdAt).toLocaleTimeString()}</span>
++             <span className="font-medium">{ev.type}</span>
++             <span className="opacity-80">{String(ev.payload?.message ?? '')}</span>
++           </li>
++         ))}
++       </ol>
++     </div>
++   );
++ }
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Play.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 8, lines removed: 1
+
+```diff
+@@ -1,7 +1,14 @@
+  import React, { useMemo, useState } from 'react';
+- import type { DieRoll, SpecialDieFace } from '@/types/monopoly-schema';
++ import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
+  import { evaluateRollAdvisories } from '@/features/rules/advisories';
++ import EventLog from '@/components/EventLog';
++ import { useDispatch } from 'react-redux';
++ import { appendEvent } from '@/features/events/eventsSlice';
++ import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
++ import { assignOwner } from '@/features/properties/propertiesSlice';
++ import { drawCard } from '@/features/cards/cardsSlice';
+  
+  export default function Play(): JSX.Element {
++   const dispatch = useDispatch();
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [d6A, setD6A] = useState<number>(1);
+```
+
+**Chunk 2**
+Lines added: 37, lines removed: undefined
+
+```diff
+@@ -23,4 +30,41 @@
+      setAdvice(result.map((r) => r.message));
+    };
++ 
++   const onApplyMove = (): void => {
++     const moveSteps = d6A + d6B + (typeof special === 'number' ? special : 0);
++     const toIndex = (currentIndex + moveSteps) % BOARD_TILES.length;
++     const tile = getTileByIndex(toIndex);
++     const ev: GameEvent = {
++       id: crypto.randomUUID(),
++       gameId: 'local',
++       type: 'MOVE',
++       payload: { from: currentIndex, to: toIndex, steps: moveSteps, message: `Moved to ${tile.name}` },
++       createdAt: new Date().toISOString(),
++     };
++     dispatch(appendEvent(ev));
++     if (passedGo(currentIndex, toIndex)) {
++       dispatch(
++         appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PASSED_GO', payload: { amount: 200, message: '+$200 for passing GO' }, moneyDelta: +200, createdAt: new Date().toISOString() })
++       );
++     }
++     setCurrentIndex(toIndex);
++   };
++ 
++   const onBuyProperty = (): void => {
++     const tile = getTileByIndex(currentIndex);
++     if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
++     // For MVP, assign to a generic owner id "P1"; later we’ll add a picker
++     dispatch(assignOwner({ tileId: tile.id, ownerId: 'P1' }));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PURCHASE', payload: { tileId: tile.id, message: `Purchased ${tile.name}` }, createdAt: new Date().toISOString() })
++     );
++   };
++ 
++   const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
++     dispatch(drawCard(deck));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', payload: { deck, message: `Drew from ${deck}` }, createdAt: new Date().toISOString() })
++     );
++   };
+  
+    return (
+```
+
+**Chunk 3**
+Lines added: 15, lines removed: undefined
+
+```diff
+@@ -57,4 +101,19 @@
+              Evaluate Roll
+            </button>
++           <button onClick={onApplyMove} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
++             Apply Move
++           </button>
++           <button onClick={onBuyProperty} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
++             Buy Property
++           </button>
++           <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">
++             Draw Chance
++           </button>
++           <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">
++             Draw Community
++           </button>
++           <button onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">
++             Draw Bus
++           </button>
+          </div>
+          <div className="space-y-2">
+```
+
+**Chunk 4**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -66,4 +125,5 @@
+            </ul>
+          </div>
++         <EventLog />
+        </div>
+      </div>
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) ✗ npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 57 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-TtkNFM-l.css   15.35 kB │ gzip:  3.76 kB
+dist/assets/index-BOe9lyw7.js   212.63 kB │ gzip: 68.55 kB
+✓ built in 595ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(gm): apply move, buy property, draw cards; event log component"
+```
+
+```
+<move, buy property, draw cards; event log component"
+[main 130c4dd] feat(gm): apply move, buy property, draw cards; event log component
+ 4 files changed, 441 insertions(+), 2 deletions(-)
+ create mode 100644 src/components/EventLog.tsx
+```
+
+---
+
+Milestone 2: GM workflow is now taking shape.
+
+Added:
+- Event log component to track actions.
+- Play page actions:
+  - Evaluate roll advisories
+  - Apply Move (handles GO payout)
+  - Buy Property (assigns to placeholder owner for now)
+  - Draw Chance/Community/Bus cards (tracked in deck state)
+
+Next small steps I’ll implement:
+- Owner picker when buying (choose player).
+- Money transfer actions (pay/receive, pay rent/tax).
+- Card resolution overlay (show drawn card text; mark as used or return to bottom for “Get Out of Jail Free” later).
+
+Say “go” and I’ll implement these, then we’ll have a usable GM-driven MVP loop with spectator stats.
+
+---
+
+_**User**_
+
+go
+
+---
+
+_**Assistant**_
+
+<think><details><summary>Thought Process</summary>**Planning implementation details**
+
+I need to implement an owner picker, along with money transfer actions and a card resolution overlay. First off, I’ll look at modifying the players slice to add some starting players and create a generic UI for selecting existing players. For the money transfer, adding actions to adjust money and record events sounds straightforward. Regarding card resolution, I need to determine if we should get the top discard or the drawn card; I think I'll go with drawing the top card from the pile. Plus, I should add selectors in the cards slice for better functionality!
+**Implementing owner picker**
+
+I need to implement a simple owner picker for buying property. First, I should pull the players list from the playersSlice since there’s currently no UI to add players. For the MVP, I might generate sample players or allow manual entries in the Setup page later. The owner picker should read players from the state and default to P1 if there are none. I also want to ensure that when assigning property, both propertiesSlice and players slice stay in sync to maintain consistency, especially for a spectator summary.
+**Implementing money transfers and card resolution**
+
+I need to implement the onBuyProperty function in the Play page. We'll modify the money transfer process by adding a new reducer, adjustPlayerMoney, in playersSlice, which will be simpler to use. In the Play page, I’ll create a panel to select a player and amount, with buttons for paying or receiving money. The card resolution overlay will display the current top discard and its text. For the MVP, the GM can handle complex movements manually, while I'll also add selectors for the last drawn card per deck.
+**Updating UI and functionality**
+
+I need to create a new file and make several updates in Play.tsx. First, I'll add a dropdown for selecting the property owner and ensure the 'Buy Property' feature uses this selected owner while updating both slices and generating an event. For the money controls, I'll include dropdowns for selecting fromPlayer and toPlayer, an input for the amount, and buttons for various actions like "Pay Bank" and "Pay Player." I’ll also show the current top discard in the card panel, along with an "Acknowledge" button. Finally, I need to maintain Tailwind class consistency and formatting!</details></think>
+
+---
+
+I’m adding the GM owner picker, money transfer actions, and a basic card resolution panel on the Play page. I’ll also add a money adjust action and a selector to show the last drawn card text. Then I’ll build and commit.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/players/playersSlice.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 4, lines removed: undefined
+
+```diff
+@@ -35,4 +35,8 @@
+        if (p) p.money = action.payload.money;
+      },
++     adjustPlayerMoney(state, action: PayloadAction<{ id: string; delta: number }>) {
++       const p = state.players.find((x) => x.id === action.payload.id);
++       if (p) p.money += action.payload.delta;
++     },
+      assignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
+        const p = state.players.find((x) => x.id === action.payload.id);
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -46,4 +50,4 @@
+  });
+  
+- export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
++ export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
+  export default playersSlice.reducer; 
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/cards/cardsSlice.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: undefined, lines removed: 2
+
+```diff
+@@ -43,10 +43,8 @@
+        const deck = state.decks[deckKey];
+        if (deck.drawPile.length === 0) {
+-         // reshuffle discard into draw with a new shuffle seed derived from discard length
+          const reshuffled = buildShuffledDeck(deckKey, `${state.seed}:${deckKey}:r${deck.discardPile.length}`);
+          deck.drawPile = reshuffled;
+          deck.discardPile = [];
+        }
+-       // move top of draw pile to discard pile
+        const card = deck.drawPile.shift();
+        if (card) {
+```
+
+**Chunk 2**
+Lines added: undefined, lines removed: 1
+
+```diff
+@@ -57,5 +55,4 @@
+        const { deck: deckKey, cardId } = action.payload;
+        const deck = state.decks[deckKey];
+-       // remove from discard if present
+        const idx = deck.discardPile.findIndex((c) => c.id === cardId);
+        if (idx >= 0) {
+```
+
+**Chunk 3**
+Lines added: 5, lines removed: undefined
+
+```diff
+@@ -66,4 +63,9 @@
+    },
+  });
++ 
++ export const selectLastDrawnCard = (state: CardsState, deck: CardDeck): CardDefinition | null => {
++   const d = state.decks[deck];
++   return d.discardPile.length > 0 ? d.discardPile[0] : null;
++ };
+  
+  export const { setSeed, drawCard, putCardOnBottom } = cardsSlice.actions;
+```
+
+</details>
+
+---
+
+
+
+---
+
 
 
 ---

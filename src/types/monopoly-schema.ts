@@ -39,6 +39,7 @@ export type EventType =
   | 'BUS_PASS_USED'
   | 'JAIL' // payload.reason should be JailReason
   | 'DECLARE_WINNER'
+  | 'MONEY_ADJUST'
   | 'REVERT_TO';
 
 export interface GameEvent {

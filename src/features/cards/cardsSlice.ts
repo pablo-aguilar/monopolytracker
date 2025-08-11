@@ -42,12 +42,10 @@ const cardsSlice = createSlice({
       const deckKey = action.payload;
       const deck = state.decks[deckKey];
       if (deck.drawPile.length === 0) {
-        // reshuffle discard into draw with a new shuffle seed derived from discard length
         const reshuffled = buildShuffledDeck(deckKey, `${state.seed}:${deckKey}:r${deck.discardPile.length}`);
         deck.drawPile = reshuffled;
         deck.discardPile = [];
       }
-      // move top of draw pile to discard pile
       const card = deck.drawPile.shift();
       if (card) {
         deck.discardPile.unshift(card);
@@ -56,7 +54,6 @@ const cardsSlice = createSlice({
     putCardOnBottom(state, action: PayloadAction<{ deck: CardDeck; cardId: string }>) {
       const { deck: deckKey, cardId } = action.payload;
       const deck = state.decks[deckKey];
-      // remove from discard if present
       const idx = deck.discardPile.findIndex((c) => c.id === cardId);
       if (idx >= 0) {
         const [card] = deck.discardPile.splice(idx, 1);
@@ -65,6 +62,11 @@ const cardsSlice = createSlice({
     },
   },
 });
+
+export const selectLastDrawnCard = (state: CardsState, deck: CardDeck): CardDefinition | null => {
+  const d = state.decks[deck];
+  return d.discardPile.length > 0 ? d.discardPile[0] : null;
+};
 
 export const { setSeed, drawCard, putCardOnBottom } = cardsSlice.actions;
 export default cardsSlice.reducer;
