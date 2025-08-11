@@ -5157,6 +5157,391 @@ Lines added: 5, lines removed: undefined
 
 ---
 
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Play.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 12, lines removed: 1
+
+```diff
+@@ -3,17 +3,28 @@
+  import { evaluateRollAdvisories } from '@/features/rules/advisories';
+  import EventLog from '@/components/EventLog';
+- import { useDispatch } from 'react-redux';
++ import { useDispatch, useSelector } from 'react-redux';
+  import { appendEvent } from '@/features/events/eventsSlice';
+  import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
+  import { assignOwner } from '@/features/properties/propertiesSlice';
+  import { drawCard } from '@/features/cards/cardsSlice';
++ import { adjustPlayerMoney } from '@/features/players/playersSlice';
++ import type { RootState } from '@/app/store';
+  
+  export default function Play(): JSX.Element {
+    const dispatch = useDispatch();
++   const players = useSelector((s: RootState) => s.players.players);
++   const cardsState = useSelector((s: RootState) => s.cards);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [d6A, setD6A] = useState<number>(1);
+    const [d6B, setD6B] = useState<number>(1);
+    const [special, setSpecial] = useState<SpecialDieFace>(1);
+    const [advice, setAdvice] = useState<string[]>([]);
++   const [ownerId, setOwnerId] = useState<string>('');
++   const [moneyDelta, setMoneyDelta] = useState<number>(0);
++   const [moneyPlayerId, setMoneyPlayerId] = useState<string>('');
++ 
++   const lastChance = cardsState.decks.chance.discardPile[0];
++   const lastCommunity = cardsState.decks.community.discardPile[0];
++   const lastBus = cardsState.decks.bus.discardPile[0];
+  
+    const roll: DieRoll = useMemo(
+```
+
+**Chunk 2**
+Lines added: 12, lines removed: 3
+
+```diff
+@@ -54,10 +65,19 @@
+      const tile = getTileByIndex(currentIndex);
+      if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
+-     // For MVP, assign to a generic owner id "P1"; later we’ll add a picker
+-     dispatch(assignOwner({ tileId: tile.id, ownerId: 'P1' }));
++     if (!ownerId) return;
++     dispatch(assignOwner({ tileId: tile.id, ownerId }));
+      dispatch(
+-       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PURCHASE', payload: { tileId: tile.id, message: `Purchased ${tile.name}` }, createdAt: new Date().toISOString() })
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PURCHASE', payload: { tileId: tile.id, ownerId, message: `Purchased ${tile.name}` }, createdAt: new Date().toISOString() })
+      );
+    };
++ 
++   const onAdjustMoney = (): void => {
++     if (!moneyPlayerId || !Number.isFinite(moneyDelta) || moneyDelta === 0) return;
++     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: moneyDelta }));
++     dispatch(
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: moneyDelta > 0 ? 'RECEIVE' : 'PAY', payload: { playerId: moneyPlayerId, amount: moneyDelta, message: `${moneyDelta > 0 ? '+' : ''}${moneyDelta}` }, moneyDelta, createdAt: new Date().toISOString() })
++     );
++     setMoneyDelta(0);
++   };
+  
+    const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
+```
+
+**Chunk 3**
+Lines added: 43, lines removed: 19
+
+```diff
+@@ -97,23 +117,47 @@
+            </div>
+          </div>
+-         <div className="flex gap-3">
+-           <button onClick={onEvaluate} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+-             Evaluate Roll
+-           </button>
+-           <button onClick={onApplyMove} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+-             Apply Move
+-           </button>
+-           <button onClick={onBuyProperty} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400">
+-             Buy Property
+-           </button>
+-           <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">
+-             Draw Chance
+-           </button>
+-           <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">
+-             Draw Community
+-           </button>
+-           <button onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+-             Draw Bus
+-           </button>
++         <div className="flex flex-wrap gap-3">
++           <button onClick={onEvaluate} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">Evaluate Roll</button>
++           <button onClick={onApplyMove} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">Apply Move</button>
++           <div className="inline-flex items-center gap-2">
++             <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
++               <option value="">Select owner</option>
++               {players.map((p) => (
++                 <option value={p.id} key={p.id}>
++                   {p.nickname}
++                 </option>
++               ))}
++             </select>
++             <button onClick={onBuyProperty} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400">Buy Property</button>
++           </div>
++           <div className="inline-flex items-center gap-2">
++             <select value={moneyPlayerId} onChange={(e) => setMoneyPlayerId(e.target.value)} className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
++               <option value="">Select player</option>
++               {players.map((p) => (
++                 <option value={p.id} key={p.id}>
++                   {p.nickname}
++                 </option>
++               ))}
++             </select>
++             <input type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} className="w-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
++             <button onClick={onAdjustMoney} className="inline-flex items-center justify-center rounded-md px-3 py-2 bg-slate-700 text-white font-semibold shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
++           </div>
++           <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Draw Chance</button>
++           <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Draw Community</button>
++           <button onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Draw Bus</button>
++         </div>
++         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
++           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
++             <div className="font-semibold mb-1">Last Chance</div>
++             <div className="opacity-80 min-h-10">{lastChance ? lastChance.text : '—'}</div>
++           </div>
++           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
++             <div className="font-semibold mb-1">Last Community Chest</div>
++             <div className="opacity-80 min-h-10">{lastCommunity ? lastCommunity.text : '—'}</div>
++           </div>
++           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
++             <div className="font-semibold mb-1">Last Bus</div>
++             <div className="opacity-80 min-h-10">{lastBus ? lastBus.text : '—'}</div>
++           </div>
+          </div>
+          <div className="space-y-2">
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+src/pages/Play.tsx(78,63): error TS2322: Type '"RECEIVE" | "PAY"' is not assignable to type 'EventType'.
+  Type '"RECEIVE"' is not assignable to type 'EventType'.
+```
+
+---
+
+<think><details><summary>Thought Process</summary>**Considering Tailwind classes**
+
+I need to follow the code style guidelines for the Tailwind 4 classes order. The user wants proper formatting with line breaks for better readability. We've already used some classes, so I also need to give a status update message that's brief. It seems straightforward, but I want to ensure I'm getting the formatting just right. Let's go ahead and implement those class orders accordingly!</details></think>
+
+---
+
+Implementing Milestone update: fixing event type for money adjustments by adding a generic MONEY_ADJUST event and updating the Play page to use it, then building and committing.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/types/monopoly-schema.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -40,4 +40,5 @@
+    | 'JAIL' // payload.reason should be JailReason
+    | 'DECLARE_WINNER'
++   | 'MONEY_ADJUST'
+    | 'REVERT_TO';
+  
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Play.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: 1
+
+```diff
+@@ -76,5 +76,5 @@
+      dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: moneyDelta }));
+      dispatch(
+-       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: moneyDelta > 0 ? 'RECEIVE' : 'PAY', payload: { playerId: moneyPlayerId, amount: moneyDelta, message: `${moneyDelta > 0 ? '+' : ''}${moneyDelta}` }, moneyDelta, createdAt: new Date().toISOString() })
++       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { playerId: moneyPlayerId, amount: moneyDelta, message: `${moneyDelta > 0 ? '+' : ''}${moneyDelta}` }, moneyDelta, createdAt: new Date().toISOString() })
+      );
+      setMoneyDelta(0);
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) ✗ npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 57 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-Gn4uvxtT.css   15.86 kB │ gzip:  3.86 kB
+dist/assets/index-Dfad2uPs.js   215.68 kB │ gzip: 68.97 kB
+✓ built in 604ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(gm): owner picker, money transfers via MONEY_ADJUST, show last drawn cards"
+```
+
+```
+➜  monopolytracker git:(main) ✗ git add -A && git commit -m "feat(gm): owner picker, money transfers via MON
+EY_ADJUST, show last drawn cards"
+[main 7b5afbe] feat(gm): owner picker, money transfers via MONEY_ADJUST, show last drawn cards
+ 5 files changed, 442 insertions(+), 27 deletions(-)
+```
+
+---
+
+Milestone 2 GM loop improved and committed.
+
+Added:
+- Owner picker when buying a property.
+- Money transfers via a generic MONEY_ADJUST event.
+- Drawn card preview panels (Chance, Community, Bus).
+- Event log continues to capture actions.
+
+Ready to:
+- Add tile-aware actions (rent/tax detection and one-click “Pay Rent/Tax”).
+- GM buttons for mortgage/unmortgage and build/sell houses/hotels tied to current tile.
+- Persist local games (redux-persist) and “resume last game.”
+
+Want me to proceed with tile-aware rent/tax actions next, or wire persistence first?
+
+---
+
+_**User**_
+
+go
+
+---
+
+_**Assistant**_
+
+<think><details><summary>Thought Process</summary>**Implementing tile-aware actions**
+
+Alright, I need to implement tile-aware rent and tax actions since the user said "go." I'll follow the developer tool flow to continue coding. The plan is to add selectors to compute rent based on tile improvements, monopoly status, and utility rules. I'll create a function to get the owner of each tile, then extend the Play page with actions like Pay Rent and Buy House. I also need to ensure the ownership data in the `players` slice stays consistent.
+**Clarifying actions for consistency**
+
+I think it's better to maintain consistency even if we're minimizing for now. We can keep using the properties slice for rent and mortgage. I'll add some selectors, like ownerIdForTile, which reads the ownerId from properties by tile ID. I need to implement the monopoly status and improvement levels for rent calculations based on the property schedule. We also need to consider railroad rents and utility calculations. For taxes, we'll use the taxAmount value from each tile.
+**Setting up rent payment actions**
+
+For the Pay Rent process, the GM should select the current player as the payer, while the owner is determined separately. I need to establish a concept for the current "active player," which isn't set up yet. For now, we can let the GM choose the payer from a dropdown. I’ll compute the rent amount, adjust funds for both players, and log these changes with MONEY_ADJUST events. I also plan to enhance the Play page with controls for tile info, payer selection, and buttons for various actions like Pay Rent and Buy House.
+**Updating player finances**
+
+I need to adjust players' money based on mortgage and unmortgage rules. Mortgaging yields money equal to the mortgage value, while unmortgaging costs 110% of the value — that’s standard practice. I’ll assume a 10% fee for unmortgaging and adjust the money accordingly. For buying houses or hotels, I'll fetch the houseCost and ensure that the buyHouse function properly adjusts money. I want to make sure this follows the rules, so purchasing a hotel will require returning four houses to the bank.
+**Implementing house selling and mortgage actions**
+
+I need to set up selling houses to return half the price. Currently, sellHouse only updates counts without handling money changes, so we can implement automatic adjustments. When buying a house, I’ll subtract the houseCost, and for hotel upgrades, we'll subtract the same amount while modifying rental schedules. Selling will add half the houseCost, and for downgrading from a hotel, we'll ensure proper financial adjustments. 
+
+I'll also create selector functions to manage properties and rents, and modify the Play page to add UI actions for renting, mortgage, and property transactions. This will streamline the money adjustments involved.</details></think>
+
+---
+
+Adding rent/tax and property-action logic for GM workflow: selectors to compute rent per tile, then wiring new buttons on Play to pay rent/tax, mortgage/unmortgage, buy/sell houses/hotels with money adjustments. I'll implement the selectors and UI, build, and commit.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors/rent.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 71, lines removed: 1
+
+```diff
+@@ -1,1 +1,71 @@
+- 
++ import { createSelector } from '@reduxjs/toolkit';
++ import type { RootState } from '@/app/store';
++ import { BOARD_TILES } from '@/data/board';
++ 
++ export const selectPropertiesState = (s: RootState) => s.properties;
++ 
++ export const selectOwnerIdForTile = (tileId: string) =>
++   createSelector(selectPropertiesState, (props) => props.byTileId[tileId]?.ownerId ?? null);
++ 
++ export function getBoardTile(tileId: string) {
++   const t = BOARD_TILES.find((x) => x.id === tileId);
++   if (!t) throw new Error(`Unknown tile: ${tileId}`);
++   return t;
++ }
++ 
++ export function isMonopolyOwned(state: RootState, tileId: string, ownerId: string): boolean {
++   const tile = getBoardTile(tileId);
++   if (tile.type !== 'property' || !tile.group) return false;
++   const ids = BOARD_TILES.filter((t) => t.type === 'property' && t.group === tile.group).map((t) => t.id);
++   for (const id of ids) {
++     const ps = state.properties.byTileId[id];
++     if (!ps || ps.ownerId !== ownerId || ps.mortgaged) return false;
++   }
++   return true;
++ }
++ 
++ export function countRailroadsOwned(state: RootState, ownerId: string): number {
++   return BOARD_TILES.filter((t) => t.type === 'railroad').reduce((acc, t) => (state.properties.byTileId[t.id]?.ownerId === ownerId ? acc + 1 : acc), 0);
++ }
++ 
++ export function countUtilitiesOwned(state: RootState, ownerId: string): number {
++   return BOARD_TILES.filter((t) => t.type === 'utility').reduce((acc, t) => (state.properties.byTileId[t.id]?.ownerId === ownerId ? acc + 1 : acc), 0);
++ }
++ 
++ export function computeRent(state: RootState, tileId: string, diceTotalForUtility = 0): number {
++   const tile = getBoardTile(tileId);
++   const ps = state.properties.byTileId[tileId];
++   if (!ps || !ps.ownerId) return 0;
++   if (ps.mortgaged) return 0;
++ 
++   if (tile.type === 'property' && tile.property) {
++     const imp = ps.improvements;
++     if (imp === 0) {
++       const base = tile.property.rent.base;
++       const mono = isMonopolyOwned(state, tileId, ps.ownerId);
++       return mono ? base * 2 : base;
++     }
++     if (imp === 1) return tile.property.rent.house1;
++     if (imp === 2) return tile.property.rent.house2;
++     if (imp === 3) return tile.property.rent.house3;
++     if (imp === 4) return tile.property.rent.house4;
++     if (imp >= 5) return tile.property.rent.hotel;
++     return tile.property.rent.base;
++   }
++ 
++   if (tile.type === 'railroad' && tile.railroad) {
++     const owned = countRailroadsOwned(state, ps.ownerId);
++     if (owned <= 1) return tile.railroad.rent1;
++     if (owned === 2) return tile.railroad.rent2;
++     if (owned === 3) return tile.railroad.rent3;
++     return tile.railroad.rent4;
++   }
++ 
++   if (tile.type === 'utility' && tile.utility) {
++     const owned = countUtilitiesOwned(state, ps.ownerId);
++     const mult = owned >= 2 ? tile.utility.rentMultiplier2 : tile.utility.rentMultiplier1;
++     return diceTotalForUtility * mult;
++   }
++ 
++   return 0;
++ }
+```
+
+</details>
+
+---
+
 
 
 ---

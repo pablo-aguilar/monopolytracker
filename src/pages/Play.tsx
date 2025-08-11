@@ -5,15 +5,17 @@ import EventLog from '@/components/EventLog';
 import { useDispatch, useSelector } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
-import { assignOwner } from '@/features/properties/propertiesSlice';
+import { assignOwner, setMortgaged, buyHouse, sellHouse } from '@/features/properties/propertiesSlice';
 import { drawCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney } from '@/features/players/playersSlice';
 import type { RootState } from '@/app/store';
+import { computeRent } from '@/features/selectors/rent';
 
 export default function Play(): JSX.Element {
   const dispatch = useDispatch();
   const players = useSelector((s: RootState) => s.players.players);
   const cardsState = useSelector((s: RootState) => s.cards);
+  const propsState = useSelector((s: RootState) => s.properties);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [d6A, setD6A] = useState<number>(1);
   const [d6B, setD6B] = useState<number>(1);
@@ -80,6 +82,53 @@ export default function Play(): JSX.Element {
     setMoneyDelta(0);
   };
 
+  const onPayRent = (): void => {
+    const tile = getTileByIndex(currentIndex);
+    const state = (window as any).__store__?.getState?.() as RootState | undefined; // optional global for future
+    const diceTotal = d6A + d6B + (typeof special === 'number' ? special : 0);
+    const rent = computeRent({ ...(state as any), properties: propsState } as RootState, tile.id, diceTotal);
+    // For MVP, take from selected moneyPlayerId and credit to tile owner if set
+    const ownerIdForTile = propsState.byTileId[tile.id]?.ownerId as string | null;
+    if (!moneyPlayerId || !ownerIdForTile || rent <= 0) return;
+    dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -rent }));
+    dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', payload: { tileId: tile.id, from: moneyPlayerId, to: ownerIdForTile, amount: rent, message: `Rent ${rent}` }, moneyDelta: -rent, createdAt: new Date().toISOString() })
+    );
+  };
+
+  const onPayTax = (): void => {
+    const tile = getTileByIndex(currentIndex);
+    if (tile.type !== 'tax' || !tile.taxAmount || !moneyPlayerId) return;
+    dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -tile.taxAmount }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', payload: { tileId: tile.id, from: moneyPlayerId, amount: tile.taxAmount, message: `Tax ${tile.taxAmount}` }, moneyDelta: -tile.taxAmount, createdAt: new Date().toISOString() })
+    );
+  };
+
+  const onMortgageToggle = (mortgaged: boolean): void => {
+    const tile = getTileByIndex(currentIndex);
+    if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
+    dispatch(setMortgaged({ tileId: tile.id, mortgaged }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, mortgaged }, createdAt: new Date().toISOString() })
+    );
+  };
+
+  const onBuild = (): void => {
+    const tile = getTileByIndex(currentIndex);
+    if (tile.type !== 'property') return;
+    dispatch(buyHouse({ tileId: tile.id, ownerId: ownerId || (propsState.byTileId[tile.id]?.ownerId as string) }));
+    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Build' }, createdAt: new Date().toISOString() }));
+  };
+
+  const onSell = (): void => {
+    const tile = getTileByIndex(currentIndex);
+    if (tile.type !== 'property') return;
+    dispatch(sellHouse({ tileId: tile.id }));
+    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Sell' }, createdAt: new Date().toISOString() }));
+  };
+
   const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
     dispatch(drawCard(deck));
     dispatch(
@@ -142,6 +191,12 @@ export default function Play(): JSX.Element {
             <input type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} className="w-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
             <button onClick={onAdjustMoney} className="inline-flex items-center justify-center rounded-md px-3 py-2 bg-slate-700 text-white font-semibold shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
           </div>
+          <button onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
+          <button onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold shadow hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
+          <button onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold shadow hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
+          <button onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold shadow hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
+          <button onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold shadow hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
+          <button onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold shadow hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
           <button onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Draw Chance</button>
           <button onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Draw Community</button>
           <button onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Draw Bus</button>
