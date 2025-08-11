@@ -3828,7 +3828,410 @@ I need to set up the tasks for creating the "Turn console (GM)" page with forms.
 I see that we can continue with milestone 1c, but they want the core flow prioritized. Building houses and hotels might not be urgent, so I’ll suggest implementing the GM console next. The user mentioned starting with 1b, which I’ve completed. Now, I’ll propose next steps: implementing the "GM Turn Console (Milestone 2A)" along with event reducer logic and deck state management. For the MVP, we'll need forms for tracking purchases, rent, taxes, and card draws while ensuring the engine checks legal actions. I’ll work on the "Turn Advisory Engine" functions to clarify obligations from the last roll.
 **Creating card slices and deck logic**
 
-I need to implement new feature slices for `cardsSlice` related to decks and event types. I should be cautious about code changes, especially regarding linter errors. It seems like I can move forward with creating the rules module and the `cardsSlice`. Since they want to track used cards and manage drawing, I’ll develop the deck state and draw logic. I’ll set up `src/features/cards/cardsSlice.ts` for shuffled deck arrays, initialize with seed, and manage actions like drawing and discarding cards, ensuring minimal functionality to track both draw and discard piles efficiently.</details></think>
+I need to implement new feature slices for `cardsSlice` related to decks and event types. I should be cautious about code changes, especially regarding linter errors. It seems like I can move forward with creating the rules module and the `cardsSlice`. Since they want to track used cards and manage drawing, I’ll develop the deck state and draw logic. I’ll set up `src/features/cards/cardsSlice.ts` for shuffled deck arrays, initialize with seed, and manage actions like drawing and discarding cards, ensuring minimal functionality to track both draw and discard piles efficiently.
+**Implementing game features and milestones**
+
+I’m planning to store the seed in `GameSettings.freeParkingSeed`, which will be reused for each deck. I’ll create `src/lib/rules.ts` for functions like `computeRollOutcome` to manage game events. The GM will receive advisories instead of auto-appending actions, which adds moderate complexity that I can handle by starting with basic property detection.
+
+Next, I’ll update the UI on the Play page to allow GM roll input and advisory panel display. I need to proceed with Milestone 2A, focusing on the GM Turn Console and cards state management while respecting development guidelines. I’ll tackle `cardsSlice`, `rules.ts`, and the Play page updates to enhance the user experience. After implementing, I’ll propose reordering future tasks.</details></think>
+
+---
+
+I’m going to implement the GM-driven turn console foundation:
+- Add a deck state slice for Chance/Community/Bus so we can draw and track cards.
+- Add a minimal rules evaluator to produce advisories from a roll.
+- Update the Play page to accept a roll and display advisories.
+Then I’ll commit as the start of Milestone 2A.
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/cards/cardsSlice.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 70, lines removed: 1
+
+```diff
+@@ -1,1 +1,70 @@
+- 
++ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
++ import type { CardDefinition, CardDeck } from '@/data/cards';
++ import { buildShuffledDeck } from '@/data/cards';
++ 
++ export interface DeckState {
++   drawPile: CardDefinition[];
++   discardPile: CardDefinition[];
++ }
++ 
++ export interface CardsState {
++   seed: number | string;
++   decks: Record<CardDeck, DeckState>;
++ }
++ 
++ const initialState: CardsState = {
++   seed: 0,
++   decks: {
++     chance: { drawPile: [], discardPile: [] },
++     community: { drawPile: [], discardPile: [] },
++     bus: { drawPile: [], discardPile: [] },
++   },
++ };
++ 
++ function initDeck(baseSeed: number | string, deck: CardDeck): DeckState {
++   return {
++     drawPile: buildShuffledDeck(deck, `${baseSeed}:${deck}:0`),
++     discardPile: [],
++   };
++ }
++ 
++ const cardsSlice = createSlice({
++   name: 'cards',
++   initialState,
++   reducers: {
++     setSeed(state, action: PayloadAction<number | string>) {
++       state.seed = action.payload;
++       state.decks.chance = initDeck(state.seed, 'chance');
++       state.decks.community = initDeck(state.seed, 'community');
++       state.decks.bus = initDeck(state.seed, 'bus');
++     },
++     drawCard(state, action: PayloadAction<CardDeck>) {
++       const deckKey = action.payload;
++       const deck = state.decks[deckKey];
++       if (deck.drawPile.length === 0) {
++         // reshuffle discard into draw with a new shuffle seed derived from discard length
++         const reshuffled = buildShuffledDeck(deckKey, `${state.seed}:${deckKey}:r${deck.discardPile.length}`);
++         deck.drawPile = reshuffled;
++         deck.discardPile = [];
++       }
++       // move top of draw pile to discard pile
++       const card = deck.drawPile.shift();
++       if (card) {
++         deck.discardPile.unshift(card);
++       }
++     },
++     putCardOnBottom(state, action: PayloadAction<{ deck: CardDeck; cardId: string }>) {
++       const { deck: deckKey, cardId } = action.payload;
++       const deck = state.decks[deckKey];
++       // remove from discard if present
++       const idx = deck.discardPile.findIndex((c) => c.id === cardId);
++       if (idx >= 0) {
++         const [card] = deck.discardPile.splice(idx, 1);
++         deck.drawPile.push(card);
++       }
++     },
++   },
++ });
++ 
++ export const { setSeed, drawCard, putCardOnBottom } = cardsSlice.actions;
++ export default cardsSlice.reducer;
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/app/store.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -3,4 +3,5 @@
+  import playersReducer from '@/features/players/playersSlice';
+  import eventsReducer from '@/features/events/eventsSlice';
++ import cardsReducer from '@/features/cards/cardsSlice';
+  
+  export const store = configureStore({
+```
+
+**Chunk 2**
+Lines added: 1, lines removed: undefined
+
+```diff
+@@ -9,4 +10,5 @@
+      players: playersReducer,
+      events: eventsReducer,
++     cards: cardsReducer,
+    },
+  });
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/rules/advisories.ts</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 73, lines removed: 1
+
+```diff
+@@ -1,1 +1,73 @@
+- 
++ import type { DieRoll } from '@/types/monopoly-schema';
++ import { BOARD_TILES, getTileByIndex, passedGo, GO_TO_JAIL_INDEX, JAIL_INDEX } from '@/data/board';
++ 
++ type AdvisoryType =
++   | 'MOVE_TO'
++   | 'TELEPORT_CHOOSE'
++   | 'JAIL'
++   | 'CAN_BUY'
++   | 'PAY_RENT'
++   | 'PAY_TAX'
++   | 'DRAW_CARD'
++   | 'NOTHING';
++ 
++ export interface Advisory {
++   type: AdvisoryType;
++   message: string;
++   tileIndex?: number;
++   tileId?: string;
++   passedGo?: boolean;
++ }
++ 
++ export interface EvaluateContext {
++   currentIndex: number;
++   isOwned: (tileId: string) => boolean;
++   isOwnedByOther: (tileId: string) => boolean;
++ }
++ 
++ export function evaluateRollAdvisories(roll: DieRoll, ctx: EvaluateContext): Advisory[] {
++   const advisories: Advisory[] = [];
++ 
++   // Simple baseline: no triples/doubles precedence handled here — that will be part of a fuller engine.
++   const totalSteps = roll.d6A + roll.d6B + (typeof roll.special === 'number' ? roll.special : 0);
++   const targetIndex = (ctx.currentIndex + totalSteps) % BOARD_TILES.length;
++   const tile = getTileByIndex(targetIndex);
++ 
++   // Go to Jail tile
++   if (tile.index === GO_TO_JAIL_INDEX) {
++     advisories.push({ type: 'JAIL', message: 'Go directly to Jail. Do not pass GO, do not collect $200.' });
++     return advisories;
++   }
++ 
++   // Movement
++   advisories.push({
++     type: 'MOVE_TO',
++     message: `Move to ${tile.name}.` + (passedGo(ctx.currentIndex, targetIndex) ? ' Passed GO (+$200).' : ''),
++     tileIndex: tile.index,
++     tileId: tile.id,
++     passedGo: passedGo(ctx.currentIndex, targetIndex),
++   });
++ 
++   // Tile effects
++   if (tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility') {
++     if (!ctx.isOwned(tile.id)) {
++       advisories.push({ type: 'CAN_BUY', message: 'Property is unowned. You may buy it.' });
++     } else if (ctx.isOwnedByOther(tile.id)) {
++       advisories.push({ type: 'PAY_RENT', message: 'Property owned by another player. Pay rent.' });
++     } else {
++       advisories.push({ type: 'NOTHING', message: 'You own this property.' });
++     }
++   } else if (tile.type === 'tax') {
++     advisories.push({ type: 'PAY_TAX', message: 'Pay tax.' });
++   } else if (tile.type === 'chance' || tile.type === 'community') {
++     advisories.push({ type: 'DRAW_CARD', message: `Draw a ${tile.type === 'chance' ? 'Chance' : 'Community Chest'} card.` });
++   } else if (tile.type === 'goToJail') {
++     advisories.push({ type: 'JAIL', message: 'Go directly to Jail.' });
++   } else if (tile.type === 'jail') {
++     advisories.push({ type: 'NOTHING', message: 'Just Visiting.' });
++   } else {
++     advisories.push({ type: 'NOTHING', message: 'No immediate action.' });
++   }
++ 
++   return advisories;
++ }
+```
+
+</details>
+
+---
+
+<details><summary>Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/pages/Play.tsx</summary>
+
+undefined
+
+**Chunk 1**
+Lines added: 63, lines removed: 4
+
+```diff
+@@ -1,10 +1,69 @@
+- import React from 'react';
++ import React, { useMemo, useState } from 'react';
++ import type { DieRoll, SpecialDieFace } from '@/types/monopoly-schema';
++ import { evaluateRollAdvisories } from '@/features/rules/advisories';
+  
+  export default function Play(): JSX.Element {
++   const [currentIndex, setCurrentIndex] = useState<number>(0);
++   const [d6A, setD6A] = useState<number>(1);
++   const [d6B, setD6B] = useState<number>(1);
++   const [special, setSpecial] = useState<SpecialDieFace>(1);
++   const [advice, setAdvice] = useState<string[]>([]);
++ 
++   const roll: DieRoll = useMemo(
++     () => ({ d6A, d6B, special, isDouble: d6A === d6B, isTriple: d6A === d6B && typeof special === 'number' && special === d6A, isTripleOnes: d6A === 1 && d6B === 1 && special === 1 }),
++     [d6A, d6B, special]
++   );
++ 
++   const onEvaluate = (): void => {
++     const result = evaluateRollAdvisories(roll, {
++       currentIndex,
++       isOwned: () => false,
++       isOwnedByOther: () => false,
++     });
++     setAdvice(result.map((r) => r.message));
++   };
++ 
+    return (
+      <div className="min-h-dvh flex items-center justify-center p-6 bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
+-       <div className="w-full max-w-3xl space-y-4">
+-         <h1 className="text-2xl font-semibold">Play</h1>
+-         <p className="text-sm opacity-80">Milestone 2: Rules engine & turn flow – placeholder</p>
++       <div className="w-full max-w-3xl space-y-6">
++         <h1 className="text-2xl font-semibold">GM Console</h1>
++         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
++           <div className="space-y-2">
++             <label className="block text-sm font-medium">Current Tile Index</label>
++             <input type="number" value={currentIndex} onChange={(e) => setCurrentIndex(parseInt(e.target.value || '0', 10))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
++           </div>
++           <div className="space-y-2">
++             <label className="block text-sm font-medium">D6 A</label>
++             <input type="number" min={1} max={6} value={d6A} onChange={(e) => setD6A(Math.max(1, Math.min(6, parseInt(e.target.value || '1', 10))))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
++           </div>
++           <div className="space-y-2">
++             <label className="block text-sm font-medium">D6 B</label>
++             <input type="number" min={1} max={6} value={d6B} onChange={(e) => setD6B(Math.max(1, Math.min(6, parseInt(e.target.value || '1', 10))))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
++           </div>
++           <div className="space-y-2 md:col-span-3">
++             <label className="block text-sm font-medium">Special Die</label>
++             <select value={String(special)} onChange={(e) => setSpecial((isNaN(Number(e.target.value)) ? (e.target.value as SpecialDieFace) : (Number(e.target.value) as SpecialDieFace)))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
++               <option value="1">1</option>
++               <option value="2">2</option>
++               <option value="3">3</option>
++               <option value="+1">+1</option>
++               <option value="-1">-1</option>
++               <option value="Bus">Bus</option>
++             </select>
++           </div>
++         </div>
++         <div className="flex gap-3">
++           <button onClick={onEvaluate} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
++             Evaluate Roll
++           </button>
++         </div>
++         <div className="space-y-2">
++           <h2 className="text-lg font-medium">Advisories</h2>
++           <ul className="list-disc pl-5 space-y-1 text-sm opacity-90">
++             {advice.map((msg, i) => (
++               <li key={i}>{msg}</li>
++             ))}
++           </ul>
++         </div>
+        </div>
+      </div>
+```
+
+</details>
+
+---
+
+```bash
+npm run build | cat
+```
+
+```
+➜  monopolytracker git:(main) npm run build | cat
+
+> monopolytracker@0.1.0 build
+> tsc -b && vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 54 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:  0.27 kB
+dist/assets/index-C6p9k-ty.css   12.06 kB │ gzip:  3.09 kB
+dist/assets/index--5mYVhdT.js   202.52 kB │ gzip: 65.63 kB
+✓ built in 615ms
+```
+
+---
+
+```bash
+git add -A && git commit -m "feat(rules+gm): Milestone 2A - add deck state, basic advisories, and GM roll console"
+```
+
+```
+➜  monopolytracker git:(main) ✗ git add -A && git commit -m "feat(rules+gm): Milestone 2A - add deck state, 
+basic advisories, and GM roll console"
+[main d4ec1ec] feat(rules+gm): Milestone 2A - add deck state, basic advisories, and GM roll console
+ 6 files changed, 396 insertions(+), 6 deletions(-)
+ create mode 100644 src/features/cards/cardsSlice.ts
+ create mode 100644 src/features/rules/advisories.ts
+```
+
+---
+
+Got it: MVP will be GM-driven, tracking a live tabletop game. I started Milestone 2A accordingly.
+
+What I implemented now:
+- Deck state management: `cards` slice tracks Chance/Community/Bus decks with seeded shuffling and draw/discard.
+- Advisory engine: basic evaluator that, given a roll and current index, suggests what happens (move target, pass GO, can buy, pay rent, pay tax, draw card, jail).
+- GM console: the `Play` page now accepts dice input (2d6 + special), evaluates, and shows advisories.
+
+Next steps I’ll do for GM flow:
+- Add pre-roll actions panel (buy/sell/mortgage) as buttons that log actions.
+- Add “Resolve tile” actions after advisories (buy property, pay rent/tax, draw specific card from deck and display its text).
+- Append events to the log and update current position so the next roll uses the new index.
+
+- Built Milestone 2A foundation: card decks, advisory evaluator, and a minimal GM turn console in `Play`.
+- Ready to expand GM actions and event logging next.
+
+---
+
+_**User**_
+
+all so not, that spectator mode, so other players can view the current progress of the game. How many houses left, property open, how much money individuel person has, what they own..
+
+---
+
+_**Assistant**_
+
+<think><details><summary>Thought Process</summary>**Planning spectator view implementation**
+
+We need to respond clearly regarding the spectator view. The user wants to see progress, remaining houses, open properties, money per person, and ownership details. Our current app is GM-driven and local. To create a spectator view in the MVP, we could use a read-only page with Redux state. For multi-user viewing, implementing cloud save and a share link (via Supabase) will be necessary later on, although it was planned post-MVP. They're likely hoping to see spectator mode sooner.
+**Outlining spectator mode enhancements**
+
+I need to propose some minimal additions for the spectator mode. This includes computed selectors for stats, a UI page called `Spectate`, and a state to track bank houses, hotels, property availability, player money, and ownership. Currently, our types don't fully capture players' money and properties. For the MVP spectator page, I can either show placeholder totals or update the player slice. While they aren't asking for immediate implementation, they want to track necessary game data. I’ll suggest a plan for implementation and commit to the next steps.
+**Updating spectator mode implementation**
+
+I should keep the status update in mind and get started on implementing selectors while updating the playersSlice to include money and properties. Since they've accepted the Play.tsx and store, adding the spectator page might be part of the next milestone. Our instructions emphasize proceeding with code implementation. I'll focus on minimal selectors and updating the `Spectate` page to present summary stubs from the store. However, we currently lack the game state for houses available. Let's ensure we track counts of built houses, hotels, and any mentioned skyscrapers.
+**Implementing basic spectator stats**
+
+I can set up basic spectator stats without including buildings for now. This will involve showing players, their money, owned properties, and available properties. We can delay tracking houses left until we implement building features. For now, I’ll create a spectator view page utilizing the store state. I'll extend the playersSlice to include money and owned property IDs, ensuring we don't break anything. After that, I’ll update `Spectate.tsx` to list players along with their stats and placeholders for bank counts. We can manually set the bank counts for now and derive them later.
+**Planning spectator mode enhancements**
+
+I’m considering adding a `bank` slice with adjustable counters for the GM. Although they didn’t ask for immediate implementation of this, they did mention noting the spectator mode. It seems best to propose a plan while continuing with development. I’ll focus on implementing the spectator view and minimal selectors first, postponing the bank details for now. 
+
+Here’s the plan: I'll extend `playersSlice` to include money and properties, add a placeholder for `propertiesOwned`, and create new selectors to compute unowned properties and improvements. Then, I'll update `Spectate.tsx` to display all relevant information. Finally, I'll ensure imports are managed correctly, using Tailwind for styling before running the build and committing the changes.</details></think>
+
+---
+
+I’m adding a basic spectator stats view: extend players to include money and owned properties, add selectors to compute unowned properties and bank piece counts (placeholder until building is in), and render these on the `Spectate` page. Then I’ll build and commit.
+
+---
+
+
+
+---
+
+
 
 ---
 

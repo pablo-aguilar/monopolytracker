@@ -5,6 +5,8 @@ export type PlayerLite = {
   nickname: string;
   color: string;
   avatarKey: string;
+  money: number;
+  properties: string[]; // board tile ids
 };
 
 type PlayersState = {
@@ -28,8 +30,20 @@ const playersSlice = createSlice({
     resetPlayers(state) {
       state.players = [];
     },
+    setPlayerMoney(state, action: PayloadAction<{ id: string; money: number }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p) p.money = action.payload.money;
+    },
+    assignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p && !p.properties.includes(action.payload.tileId)) p.properties.push(action.payload.tileId);
+    },
+    unassignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p) p.properties = p.properties.filter((t) => t !== action.payload.tileId);
+    },
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
 export default playersSlice.reducer; 
