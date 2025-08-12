@@ -55,6 +55,14 @@ export default function Setup(): JSX.Element {
                 </option>
               ))}
             </select>
+            <div className="flex items-center gap-2">
+              <div
+                className="h-6 w-10 rounded-md border border-neutral-300 dark:border-neutral-700"
+                style={{ backgroundColor: color }}
+                aria-label="Selected color preview"
+              />
+              <span className="text-xs font-mono opacity-80">{color}</span>
+            </div>
           </div>
           <div className="space-y-2 md:col-span-3">
             <label className="block text-sm font-medium">Avatar</label>
@@ -87,12 +95,14 @@ export default function Setup(): JSX.Element {
             {players.map((p) => (
               <div key={p.id} className="rounded-md border border-neutral-300 dark:border-neutral-700 p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl" style={{ color: p.color }}>
-                    ●
-                  </div>
+                  <div
+                    className="h-5 w-5 rounded-sm border border-neutral-300 dark:border-neutral-700"
+                    style={{ backgroundColor: p.color }}
+                    aria-label={`${p.nickname} color`}
+                  />
                   <div>
                     <div className="font-semibold">{p.nickname}</div>
-                    <div className="text-xs opacity-70">${p.money}</div>
+                    <div className="text-xs opacity-70 font-mono">{p.color}</div>
                   </div>
                 </div>
                 <button onClick={() => dispatch(removePlayer(p.id))} className="inline-flex items-center justify-center rounded-md px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">
