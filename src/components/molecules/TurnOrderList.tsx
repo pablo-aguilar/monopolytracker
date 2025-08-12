@@ -1,9 +1,10 @@
 // #index
-// - //#component: draggable turn order list using Framer Motion with delete support
+// - //#component: draggable turn order list using Framer Motion with delete support and race pot toggle
 
 import React from 'react';
 import { Reorder } from 'framer-motion';
 import AvatarToken from '@/components/atoms/AvatarToken';
+import Toggle from '@/components/atoms/Toggle';
 
 export type TurnPlayer = {
   id: string;
@@ -11,15 +12,17 @@ export type TurnPlayer = {
   color: string;
   avatarKey: string;
   emoji?: string; // if provided
+  racePotOptIn?: boolean;
 };
 
 export type TurnOrderListProps = {
   players: TurnPlayer[];
   onReorder: (newOrderIds: string[]) => void;
   onRemove?: (id: string) => void;
+  onOptInChange?: (id: string, optIn: boolean) => void;
 };
 
-export default function TurnOrderList({ players, onReorder, onRemove }: TurnOrderListProps): JSX.Element {
+export default function TurnOrderList({ players, onReorder, onRemove, onOptInChange }: TurnOrderListProps): JSX.Element {
   const [order, setOrder] = React.useState(players);
 
   React.useEffect(() => {
@@ -57,8 +60,21 @@ export default function TurnOrderList({ players, onReorder, onRemove }: TurnOrde
             </div>
             {/* Nickname */}
             <div className="font-medium">{p.nickname}</div>
-            {/* Actions: delete + drag handle */}
-            <div className="ml-auto flex items-center gap-2">
+            {/* Race pot toggle */}
+            <div className="ml-auto flex items-center gap-3">
+              <div className="flex items-center gap-2" title="Race pot.  cost:$100. First to go wins the pot.">
+                <button
+                  type="button"
+                  onClick={() => onOptInChange?.(p.id, !p.racePotOptIn)}
+                  className="text-base"
+                  aria-label="Toggle race pot"
+                >
+                  <span role="img" aria-hidden>
+                    🏃‍➡️💰
+                  </span>
+                </button>
+                <Toggle checked={Boolean(p.racePotOptIn)} onChange={(next) => onOptInChange?.(p.id, next)} qa={`toggle-race-${p.id}`} />
+              </div>
               {onRemove && (
                 <button
                   data-qa={`btn-remove-${p.id}`}

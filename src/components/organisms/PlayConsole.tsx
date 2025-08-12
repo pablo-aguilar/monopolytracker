@@ -24,6 +24,7 @@ export default function PlayConsole(): JSX.Element {
   const players = useSelector((s: RootState) => s.players.players);
   const cardsState = useSelector((s: RootState) => s.cards);
   const propsState = useSelector((s: RootState) => s.properties);
+  const racePot = useSelector((s: RootState) => s.session.racePot);
 
   // //#local-state
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -189,7 +190,15 @@ export default function PlayConsole(): JSX.Element {
   // //#render
   return (
     <div className="w-full max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">GM Console</h1>
+      <h1 className="text-2xl font-semibold flex items-center gap-3">
+        GM Console
+        {racePot.active && (
+          <span data-qa="badge-race-pot" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white text-xs font-semibold px-3 py-1">
+            <span role="img" aria-label="Race pot">🏃‍➡️💰</span>
+            ${racePot.amount} · {racePot.participants.length} players
+          </span>
+        )}
+      </h1>
 
       {/* //#gm-inputs: dice/current index inputs */}
       <div data-qa="gm-inputs" className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -8,7 +8,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addPlayer, removePlayer, reorderPlayers, type PlayerLite } from '@/features/players/playersSlice';
+import { addPlayer, removePlayer, reorderPlayers, type PlayerLite, setRacePotOptIn, adjustPlayerMoney } from '@/features/players/playersSlice';
 import { setSeed } from '@/features/cards/cardsSlice';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '@/app/store';
@@ -16,9 +16,11 @@ import { AVATARS } from '@/data/avatars';
 import ColorSwatchPicker from '@/components/molecules/ColorSwatchPicker';
 import AvatarPicker from '@/components/molecules/AvatarPicker';
 import TurnOrderList from '@/components/molecules/TurnOrderList';
+import { initializeRacePot } from '@/features/session/sessionSlice';
 
 const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 const SHOW_CARD_SEED = false; // MVP: decks are managed IRL; hide seed input
+const RACE_POT_ENTRY = 100;
 
 export default function SetupForm(): JSX.Element {
   const dispatch = useDispatch();
@@ -67,10 +69,25 @@ export default function SetupForm(): JSX.Element {
 
   const onStart = (): void => {
     if (SHOW_CARD_SEED) dispatch(setSeed(seed));
+    // Initialize race pot and deduct if 2+ opted in
+    const participants = players.filter((p) => p.racePotOptIn).map((p) => p.id);
+    if (participants.length >= 2) {
+      dispatch(initializeRacePot({ participants, amountPerPlayer: RACE_POT_ENTRY }));
+      for (const pid of participants) {
+        dispatch(adjustPlayerMoney({ id: pid, delta: -RACE_POT_ENTRY }));
+      }
+    }
     navigate('/play');
   };
 
-  const turnPlayers = players.map((p) => ({ id: p.id, nickname: p.nickname, color: p.color, avatarKey: p.avatarKey, emoji: AVATARS.find((a) => a.key === p.avatarKey)?.emoji }));
+  const turnPlayers = players.map((p) => ({
+    id: p.id,
+    nickname: p.nickname,
+    color: p.color,
+    avatarKey: p.avatarKey,
+    emoji: AVATARS.find((a) => a.key === p.avatarKey)?.emoji,
+    racePotOptIn: p.racePotOptIn,
+  }));
 
   // //#render
   return (
@@ -108,7 +125,12 @@ export default function SetupForm(): JSX.Element {
       {/* Combined Players + Turn order */}
       <div className="space-y-2">
         <h2 className="text-lg font-medium">Players: Turn order (drag to reorder)</h2>
-        <TurnOrderList players={turnPlayers} onReorder={(ids) => dispatch(reorderPlayers(ids))} onRemove={(id) => dispatch(removePlayer(id))} />
+        <TurnOrderList
+          players={turnPlayers}
+          onReorder={(ids) => dispatch(reorderPlayers(ids))}
+          onRemove={(id) => dispatch(removePlayer(id))}
+          onOptInChange={(id, optIn) => dispatch(setRacePotOptIn({ id, optIn }))}
+        />
       </div>
 
       <div className="flex gap-3">

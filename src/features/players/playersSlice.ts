@@ -7,6 +7,7 @@ export type PlayerLite = {
   avatarKey: string;
   money: number;
   properties: string[]; // board tile ids
+  racePotOptIn?: boolean; // MVP: player opts into race pot
 };
 
 type PlayersState = {
@@ -22,7 +23,7 @@ const playersSlice = createSlice({
   initialState,
   reducers: {
     addPlayer(state, action: PayloadAction<PlayerLite>) {
-      state.players.push(action.payload);
+      state.players.push({ racePotOptIn: false, ...action.payload });
     },
     removePlayer(state, action: PayloadAction<string>) {
       state.players = state.players.filter((p) => p.id !== action.payload);
@@ -51,8 +52,12 @@ const playersSlice = createSlice({
       const idToPlayer = new Map(state.players.map((pl) => [pl.id, pl] as const));
       state.players = idOrder.map((id) => idToPlayer.get(id)!).filter(Boolean);
     },
+    setRacePotOptIn(state, action: PayloadAction<{ id: string; optIn: boolean }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p) p.racePotOptIn = action.payload.optIn;
+    },
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty, reorderPlayers } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn } = playersSlice.actions;
 export default playersSlice.reducer; 
