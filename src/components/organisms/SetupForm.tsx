@@ -4,20 +4,21 @@
 // - //#local-state: inputs for nickname/color/avatar/seed
 // - //#effects: keep selections valid
 // - //#handlers: add player and start game
-// - //#render: form layout and players list
+// - //#render: form layout and combined players/turn order list
 
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addPlayer, removePlayer, type PlayerLite } from '@/features/players/playersSlice';
+import { addPlayer, removePlayer, reorderPlayers, type PlayerLite } from '@/features/players/playersSlice';
 import { setSeed } from '@/features/cards/cardsSlice';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '@/app/store';
 import { AVATARS } from '@/data/avatars';
 import ColorSwatchPicker from '@/components/molecules/ColorSwatchPicker';
 import AvatarPicker from '@/components/molecules/AvatarPicker';
-import PlayerCard from '@/components/molecules/PlayerCard';
+import TurnOrderList from '@/components/molecules/TurnOrderList';
 
 const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
+const SHOW_CARD_SEED = false; // MVP: decks are managed IRL; hide seed input
 
 export default function SetupForm(): JSX.Element {
   const dispatch = useDispatch();
@@ -65,9 +66,11 @@ export default function SetupForm(): JSX.Element {
   };
 
   const onStart = (): void => {
-    dispatch(setSeed(seed));
+    if (SHOW_CARD_SEED) dispatch(setSeed(seed));
     navigate('/play');
   };
+
+  const turnPlayers = players.map((p) => ({ id: p.id, nickname: p.nickname, color: p.color, avatarKey: p.avatarKey, emoji: AVATARS.find((a) => a.key === p.avatarKey)?.emoji }));
 
   // //#render
   return (
@@ -89,10 +92,12 @@ export default function SetupForm(): JSX.Element {
           <AvatarPicker options={AVATARS} used={usedAvatars} value={avatarKey} onChange={(key) => setAvatarKey(key)} />
         </div>
 
-        <div data-qa="seed-section" className="space-y-2 md:col-span-2">
-          <label className="block text-sm font-medium">Card Shuffle Seed</label>
-          <input value={seed} onChange={(e) => setSeedInput(e.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
-        </div>
+        {SHOW_CARD_SEED && (
+          <div data-qa="seed-section" className="space-y-2 md:col-span-2">
+            <label className="block text-sm font-medium">Card Shuffle Seed</label>
+            <input value={seed} onChange={(e) => setSeedInput(e.target.value)} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
+          </div>
+        )}
         <div className="flex items-end">
           <button data-qa="btn-add-player" onClick={onAdd} disabled={!nickname.trim() || selectionInvalid} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 disabled:bg-blue-300 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
             Add Player
@@ -100,13 +105,10 @@ export default function SetupForm(): JSX.Element {
         </div>
       </div>
 
-      <div data-qa="players-list" className="space-y-2">
-        <h2 className="text-lg font-medium">Players</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {players.map((p) => (
-            <PlayerCard key={p.id} id={p.id} nickname={p.nickname} color={p.color} avatarKey={p.avatarKey} onRemove={(id) => dispatch(removePlayer(id))} />
-          ))}
-        </div>
+      {/* Combined Players + Turn order */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-medium">Players: Turn order (drag to reorder)</h2>
+        <TurnOrderList players={turnPlayers} onReorder={(ids) => dispatch(reorderPlayers(ids))} onRemove={(id) => dispatch(removePlayer(id))} />
       </div>
 
       <div className="flex gap-3">

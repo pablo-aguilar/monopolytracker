@@ -27,12 +27,12 @@ export default function AvatarPicker({ options, used, value, onChange }: AvatarP
             data-qa={`avatar-${a.key}`}
             disabled={taken && !selected}
             onClick={() => onChange(a.key)}
-            className={`rounded-md border px-3 py-2 ${selected ? 'border-blue-500 ring-2 ring-blue-300' : 'border-neutral-300 dark:border-neutral-700'} ${taken && !selected ? 'opacity-40 cursor-not-allowed' : 'hover:opacity-90'}`}
+            className={`rounded-md border px-3 py-2 flex items-center justify-center ${selected ? 'border-teal-500 ring-2 ring-teal-300' : 'border-neutral-300 dark:border-neutral-700'} ${taken && !selected ? 'opacity-40 cursor-not-allowed' : 'hover:opacity-90'}`}
             aria-pressed={selected}
             aria-label={`${a.label}${taken && !selected ? ' (taken)' : ''}`}
             title={a.label}
           >
-            <AvatarToken emoji={a.emoji} color={selected ? '#3b82f6' : '#d1d5db'} size={40} />
+            <AvatarToken emoji={a.emoji} borderColorClass={selected ? 'border-teal-500' : 'border-neutral-300 dark:border-neutral-700'} size={40} ring={false} />
           </button>
         );
       })}

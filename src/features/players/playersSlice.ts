@@ -46,8 +46,13 @@ const playersSlice = createSlice({
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p) p.properties = p.properties.filter((t) => t !== action.payload.tileId);
     },
+    reorderPlayers(state, action: PayloadAction<string[]>) {
+      const idOrder = action.payload;
+      const idToPlayer = new Map(state.players.map((pl) => [pl.id, pl] as const));
+      state.players = idOrder.map((id) => idToPlayer.get(id)!).filter(Boolean);
+    },
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty, reorderPlayers } = playersSlice.actions;
 export default playersSlice.reducer; 

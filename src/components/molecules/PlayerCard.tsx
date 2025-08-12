@@ -18,7 +18,9 @@ export default function PlayerCard({ id, nickname, color, avatarKey, onRemove }:
   return (
     <div className="rounded-md border border-neutral-300 dark:border-neutral-700 p-3 flex items-center justify-between">
       <div data-qa="players-list--avatar" className="flex items-center gap-3">
-        <AvatarToken emoji={avatar?.emoji ?? '🙂'} color={color} size={64} />
+        <div style={{ ['--player-color' as any]: color } as React.CSSProperties}>
+          <AvatarToken emoji={avatar?.emoji ?? '🙂'} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={64} />
+        </div>
         <div>
           <div className="font-semibold">{nickname}</div>
         </div>
