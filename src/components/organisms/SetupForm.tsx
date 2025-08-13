@@ -51,7 +51,7 @@ export default function SetupForm(): JSX.Element {
   // //#handlers
   const onAdd = (): void => {
     if (!nickname.trim() || selectionInvalid) return;
-    const p: PlayerLite = {
+    const p: Omit<PlayerLite, 'positionIndex'> = {
       id: crypto.randomUUID(),
       nickname: nickname.trim(),
       color,

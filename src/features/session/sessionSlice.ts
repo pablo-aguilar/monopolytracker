@@ -10,6 +10,7 @@ type RacePotState = {
 type SessionState = {
   currentGameId: string | null;
   racePot: RacePotState;
+  turnIndex: number; // index into players array
 };
 
 const defaultRacePot = (): RacePotState => ({ active: false, amount: 0, participants: [], winnerId: null });
@@ -17,6 +18,7 @@ const defaultRacePot = (): RacePotState => ({ active: false, amount: 0, particip
 const initialState: SessionState = {
   currentGameId: null,
   racePot: defaultRacePot(),
+  turnIndex: 0,
 };
 
 const sessionSlice = createSlice({
@@ -39,8 +41,24 @@ const sessionSlice = createSlice({
     resetRacePot(state) {
       state.racePot = defaultRacePot();
     },
+    setRacePotWinner(state, action: PayloadAction<string>) {
+      if (!state.racePot) state.racePot = defaultRacePot();
+      if (!state.racePot.active || state.racePot.winnerId) return;
+      state.racePot.winnerId = action.payload;
+    },
+    setTurnIndex(state, action: PayloadAction<number>) {
+      state.turnIndex = Math.max(0, action.payload);
+    },
+    advanceTurn(state, action: PayloadAction<{ playerCount: number }>) {
+      const n = action.payload.playerCount;
+      if (n <= 0) {
+        state.turnIndex = 0;
+      } else {
+        state.turnIndex = (state.turnIndex + 1) % n;
+      }
+    },
   },
 });
 
-export const { setCurrentGameId, initializeRacePot, resetRacePot } = sessionSlice.actions;
+export const { setCurrentGameId, initializeRacePot, resetRacePot, setRacePotWinner, setTurnIndex, advanceTurn } = sessionSlice.actions;
 export default sessionSlice.reducer; 

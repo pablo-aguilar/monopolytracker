@@ -8,6 +8,7 @@ export type PlayerLite = {
   money: number;
   properties: string[]; // board tile ids
   racePotOptIn?: boolean; // MVP: player opts into race pot
+  positionIndex: number; // board index position
 };
 
 type PlayersState = {
@@ -22,8 +23,8 @@ const playersSlice = createSlice({
   name: 'players',
   initialState,
   reducers: {
-    addPlayer(state, action: PayloadAction<PlayerLite>) {
-      state.players.push({ racePotOptIn: false, ...action.payload });
+    addPlayer(state, action: PayloadAction<Omit<PlayerLite, 'positionIndex'>>) {
+      state.players.push({ positionIndex: 0, racePotOptIn: false, ...action.payload });
     },
     removePlayer(state, action: PayloadAction<string>) {
       state.players = state.players.filter((p) => p.id !== action.payload);
@@ -38,6 +39,10 @@ const playersSlice = createSlice({
     adjustPlayerMoney(state, action: PayloadAction<{ id: string; delta: number }>) {
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p) p.money += action.payload.delta;
+    },
+    setPlayerPosition(state, action: PayloadAction<{ id: string; index: number }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (p) p.positionIndex = action.payload.index;
     },
     assignProperty(state, action: PayloadAction<{ id: string; tileId: string }>) {
       const p = state.players.find((x) => x.id === action.payload.id);
@@ -59,5 +64,5 @@ const playersSlice = createSlice({
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, setPlayerPosition, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn } = playersSlice.actions;
 export default playersSlice.reducer; 
