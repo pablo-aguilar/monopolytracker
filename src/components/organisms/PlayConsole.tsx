@@ -72,8 +72,9 @@ export default function PlayConsole(): JSX.Element {
   const [taxSelected, setTaxSelected] = useState<boolean>(false);
   const [busSelectedCardId, setBusSelectedCardId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null }>(() => ({ deck: null }));
-  const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | null }>(() => ({ type: null }));
+  const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | 'tripleTeleport' | null }>(() => ({ type: null }));
   const [busTeleportTo, setBusTeleportTo] = useState<number | null>(null);
+  const [tripleTeleportTo, setTripleTeleportTo] = useState<number | null>(null);
   const [busTicketsAvailableThisTurn, setBusTicketsAvailableThisTurn] = useState<number>(0);
   const [shakeRent, setShakeRent] = useState<boolean>(false);
   const [shakeTax, setShakeTax] = useState<boolean>(false);
@@ -138,6 +139,7 @@ export default function PlayConsole(): JSX.Element {
     setHighestStep(0);
     setPredictedTo(null);
     setBusTeleportTo(null);
+    setTripleTeleportTo(null);
     setBuySelected(false);
     setRentSelected(false);
     setTaxSelected(false);
@@ -182,6 +184,7 @@ export default function PlayConsole(): JSX.Element {
   // Reset confirmation if any die changes
   React.useEffect(() => {
     setRollConfirmed(false);
+    setTripleTeleportTo(null);
   }, [d6A, d6B, special]);
 
   // //#derived
@@ -202,6 +205,8 @@ export default function PlayConsole(): JSX.Element {
   const hasRollWithSpecialSelected = d6A !== null && d6B !== null && (special !== null && (special === 'Bus' || special === '+1' || special === '-1' || typeof special === 'number'));
   const requiresBusCard = special === 'Bus';
   const rollTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+  const isTriple = d6A !== null && d6B !== null && d6A === d6B && typeof special === 'number' && special === d6A;
+  const isTripleOnes = isTriple && d6A === 1;
 
   const bankUnownedCount = useMemo(() => {
     return Object.values(propsState.byTileId).filter((ps) => ps && ps.ownerId === null).length;
@@ -311,7 +316,7 @@ export default function PlayConsole(): JSX.Element {
   // Finalize turn now (used by hold expiry and Summary overlay)
   const finalizeTurn = (pid: string): void => {
     const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
-    const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null);
+    const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
     let resolvedQueuedThisCall = false;
     // Record this segment into the ribbon before applying stateful movement
     try {
@@ -545,6 +550,33 @@ export default function PlayConsole(): JSX.Element {
     } else if (busTeleportTo != null) {
       // Teleport move ignores doubles chaining; advance immediately
       onApplyMove(pid, busTeleportTo, true);
+    } else if (tripleTeleportTo != null) {
+      // Triple teleport ignores doubles chaining; advance immediately
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'TELEPORT',
+          actorPlayerId: pid,
+          payload: { playerId: pid, from: currentIndex, to: tripleTeleportTo, message: `Teleported to ${getTileByIndex(tripleTeleportTo).name}` },
+          createdAt: new Date().toISOString(),
+        })
+      );
+      if (isTripleOnes) {
+        dispatch(adjustPlayerMoney({ id: pid, delta: +1000 }));
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'JACKPOT_111',
+            actorPlayerId: pid,
+            payload: { playerId: pid, amount: 1000, message: '+$1000 jackpot (1-1-1)' },
+            moneyDelta: +1000,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
+      onApplyMove(pid, tripleTeleportTo, true);
     } else if (isDoubles) {
       // Apply move but do NOT advance; prepare for next roll in the same turn
       onApplyMove(pid, undefined, false);
@@ -557,6 +589,7 @@ export default function PlayConsole(): JSX.Element {
       setSpecial(null);
       setRollConfirmed(false);
       setPredictedTo(null);
+      setTripleTeleportTo(null);
       setPostAction('None');
       setBuySelected(false);
       setRentSelected(false);
@@ -571,7 +604,7 @@ export default function PlayConsole(): JSX.Element {
   const onEndTurnHoldStart = (pid: string): void => {
     // Require confirmation; allow either a numeric roll or a bus teleport
     if (!rollConfirmed) return;
-    if (!hasRoll && busTeleportTo == null) return;
+    if (!hasRoll && busTeleportTo == null && tripleTeleportTo == null) return;
     // Block hold if Bus was rolled but no Bus card has been selected yet
     if (requiresBusCard && !busSelectedCardId) return;
     // Block hold if rent is required but not selected
@@ -703,7 +736,11 @@ export default function PlayConsole(): JSX.Element {
     exit: { opacity: 0, x: -20 },
   };
 
-  const rollSummary = busTeleportTo != null ? `Bus → ${getTileByIndex(busTeleportTo).name}` : (hasRoll ? `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}` : '—');
+  const rollSummary = busTeleportTo != null
+    ? `Bus → ${getTileByIndex(busTeleportTo).name}`
+    : tripleTeleportTo != null
+      ? `Teleport → ${getTileByIndex(tripleTeleportTo).name}${isTripleOnes ? ' (+$1000)' : ''}`
+      : (hasRoll ? `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}` : '—');
 
   const canGoNext = (step: 0 | 1 | 2): boolean => {
     if (step === 0) return true;
@@ -714,7 +751,11 @@ export default function PlayConsole(): JSX.Element {
       if (pl?.inJail && jailChoice === 'roll') {
         return d6A !== null && d6B !== null;
       }
-      return (busTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
+      // Triples require choosing a teleport destination before continuing.
+      if (isTriple) {
+        return tripleTeleportTo != null;
+      }
+      return (busTeleportTo != null) || (tripleTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
     }
     return false;
   };
@@ -775,9 +816,10 @@ export default function PlayConsole(): JSX.Element {
           }
         }
       }
-      // Always compute landing tile from dice (or bus teleport). When Bus is rolled, player still moves by dice
+      // Always compute landing tile from dice (or teleport). When Bus is rolled, player still moves by dice
       // and must complete tile action (tax, rent, etc.) AND draw bus.
-      const toIndex = busTeleportTo != null ? busTeleportTo : ((fromIndex + ((d6A as number) + (d6B as number) + specialNumeric)) % BOARD_TILES.length);
+      const teleportTo = busTeleportTo ?? tripleTeleportTo;
+      const toIndex = teleportTo != null ? teleportTo : ((fromIndex + ((d6A as number) + (d6B as number) + specialNumeric)) % BOARD_TILES.length);
       const t = getTileByIndex(toIndex);
       let suggested: string = 'None';
       if (t.type === 'property' || t.type === 'railroad' || t.type === 'utility') {
@@ -810,8 +852,11 @@ export default function PlayConsole(): JSX.Element {
       if (pl?.inJail && jailChoice === 'roll') {
         return !(d6A !== null && d6B !== null);
       }
+      if (isTriple) {
+        return tripleTeleportTo == null;
+      }
       // Only require a valid roll or teleport selection during Roll step
-      const hasRollOrTeleport = (busTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
+      const hasRollOrTeleport = (busTeleportTo != null) || (tripleTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
       return !hasRollOrTeleport;
     }
     return false;
@@ -1262,7 +1307,18 @@ export default function PlayConsole(): JSX.Element {
                         <div className="text-xs font-medium flex items-center gap-2">
                           <span>Roll {rollCount}</span>
                           {hasRoll && <span className="inline-flex items-center rounded bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px]">Total: {rollTotal}</span>}
-                          {(d6A !== null && d6B !== null && d6A === d6B) && <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>}
+                          {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
+                            <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>
+                          )}
+                          {isTriple && (
+                            <span
+                              className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
+                                isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
+                              }`}
+                            >
+                              {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
+                            </span>
+                          )}
                         </div>
                         {(() => {
                           const pid = players[turnIndex]?.id || players[0]?.id;
@@ -1308,6 +1364,52 @@ export default function PlayConsole(): JSX.Element {
                                   onClick={() => setCenterOverlay({ type: 'busTeleport' })}
                                 >
                                   Use Bus Ticket
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Triple teleport (1-1-1 / 2-2-2 / 3-3-3) */}
+                        {(() => {
+                          if (!isTriple) return null;
+                          const cl =
+                            isTripleOnes
+                              ? {
+                                  ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
+                                  selected:
+                                    'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
+                                }
+                              : {
+                                  ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
+                                  selected:
+                                    'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
+                                };
+                          return (
+                            <div className="pt-1">
+                              {tripleTeleportTo != null ? (
+                                <button
+                                  type="button"
+                                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
+                                  onClick={() => {
+                                    setTripleTeleportTo(null);
+                                    setPredictedTo(null);
+                                  }}
+                                >
+                                  <span>✓</span>
+                                  🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={busTeleportTo != null}
+                                  className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
+                                  onClick={() => {
+                                    setBusTeleportTo(null);
+                                    setCenterOverlay({ type: 'tripleTeleport' });
+                                  }}
+                                >
+                                  Teleport (3-of-a-kind)
                                 </button>
                               )}
                             </div>
@@ -1473,18 +1575,24 @@ export default function PlayConsole(): JSX.Element {
                   {/* Navigation */}
                   <div className="flex items-center justify-between pt-1">
                     {activeStep < 2 ? (
-                      <button
-                        type="button"
-                        className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
-                          nextBtnDisabled()
-                            ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
-                            : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                        }`}
-                        disabled={nextBtnDisabled()}
-                        onClick={goNext}
-                      >
-                        Next
-                      </button>
+                      activeStep === 1 && isTriple && tripleTeleportTo == null ? (
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          Choose a teleport destination to continue.
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
+                            nextBtnDisabled()
+                              ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
+                              : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                          }`}
+                          disabled={nextBtnDisabled()}
+                          onClick={goNext}
+                        >
+                          Next
+                        </button>
+                      )
                     ) : (
                       (() => {
                         const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
@@ -1849,7 +1957,7 @@ export default function PlayConsole(): JSX.Element {
                 <div className="opacity-80">Current: {rollSummary}</div>
                 {(() => {
                   const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
-                  const thirdDoubles = rollCount >= 3 && isDoubles && (busTeleportTo == null);
+                  const thirdDoubles = rollCount >= 3 && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
                   if (!thirdDoubles) return null;
                   return (
                     <div className="text-xs inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1">
@@ -1860,6 +1968,7 @@ export default function PlayConsole(): JSX.Element {
                 <div className="flex items-center gap-2 text-xs">
                   {(d6A === d6B) && <span className="inline-flex items-center rounded-full bg-emerald-600 text-white px-2 py-0.5">Doubles ✓</span>}
                   {busTeleportTo != null && <span className="inline-flex items-center rounded-full bg-sky-600 text-white px-2 py-0.5">Bus used</span>}
+                  {tripleTeleportTo != null && <span className="inline-flex items-center rounded-full bg-indigo-600 text-white px-2 py-0.5">Teleported</span>}
                 </div>
                 <div className="opacity-80">Tile: {predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(currentIndex).name}</div>
                 <div className="opacity-80">Actions: {[
@@ -1899,13 +2008,13 @@ export default function PlayConsole(): JSX.Element {
         )}
       </AnimatePresence>
 
-      {/* Centered board picker for Bus teleport */}
+      {/* Centered board picker for teleports */}
       <AnimatePresence>
-        {centerOverlay.type === 'busTeleport' && (
+        {centerOverlay.type && (
           <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold">Select destination (Bus)</div>
+                <div className="text-sm font-semibold">{centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}</div>
                 <button onClick={() => setCenterOverlay({ type: null })} className="text-sm opacity-70 hover:opacity-100">Close</button>
               </div>
               <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto">
@@ -1929,13 +2038,22 @@ export default function PlayConsole(): JSX.Element {
                       )}
                       <button
                         onClick={() => {
-                          setBusTeleportTo(t.index);
+                          if (centerOverlay.type === 'busTeleport') {
+                            setBusTeleportTo(t.index);
+                            setTripleTeleportTo(null);
+                            setCenterOverlay({ type: null });
+                            // Consume one ticket now; actual move happens on End Turn via onApplyMove logic using predictedTo
+                            const pid = players[turnIndex]?.id || players[0]?.id;
+                            if (pid) dispatch(consumeBusTicket({ id: pid, count: 1 }));
+                            setPredictedTo(t.index);
+                            setBusTicketsAvailableThisTurn((n) => Math.max(0, n - 1));
+                            return;
+                          }
+                          // Triple teleport: no ticket consumption
+                          setTripleTeleportTo(t.index);
+                          setBusTeleportTo(null);
                           setCenterOverlay({ type: null });
-                          // Consume one ticket now; actual move happens on End Turn via onApplyMove logic using predictedTo
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          if (pid) dispatch(consumeBusTicket({ id: pid, count: 1 }));
                           setPredictedTo(t.index);
-                          setBusTicketsAvailableThisTurn((n) => Math.max(0, n - 1));
                         }}
                         className={`relative rounded-xl border text-[11px] text-left bg-white dark:bg-neutral-900 ${t.index === (players[turnIndex]?.positionIndex ?? 0) ? 'border-emerald-500' : 'border-neutral-200 dark:border-neutral-700'} hover:shadow w-full`}
                         title={t.name}
