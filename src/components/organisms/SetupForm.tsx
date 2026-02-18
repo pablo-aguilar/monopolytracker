@@ -6,7 +6,7 @@
 // - //#handlers: add player and start game
 // - //#render: form layout and combined players/turn order list
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addPlayer, removePlayer, reorderPlayers, type PlayerLite, setRacePotOptIn, adjustPlayerMoney } from '@/features/players/playersSlice';
 import { setSeed } from '@/features/cards/cardsSlice';
@@ -38,6 +38,7 @@ export default function SetupForm(): JSX.Element {
   const [nickname, setNickname] = useState('');
   const [color, setColor] = useState(firstAvailableColor);
   const [avatarKey, setAvatarKey] = useState<string>(firstAvailableAvatar);
+  const [colorPickerOpen, setColorPickerOpen] = useState<boolean>(false);
   const [seed, setSeedInput] = useState<string>('monopoly');
 
   // //#effects
@@ -45,6 +46,19 @@ export default function SetupForm(): JSX.Element {
     if (usedColors.has(color)) setColor(firstAvailableColor);
     if (usedAvatars.has(avatarKey)) setAvatarKey(firstAvailableAvatar);
   }, [usedColors, usedAvatars, color, avatarKey, firstAvailableColor, firstAvailableAvatar]);
+
+  useEffect(() => {
+    if (!colorPickerOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      if (el.closest('[data-qa="color-popover"]')) return;
+      if (el.closest('[data-qa="avatar-selected"]')) return;
+      setColorPickerOpen(false);
+    };
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => window.removeEventListener('pointerdown', onPointerDown);
+  }, [colorPickerOpen]);
 
   const selectionInvalid = usedColors.has(color) || usedAvatars.has(avatarKey);
 
@@ -61,6 +75,7 @@ export default function SetupForm(): JSX.Element {
     };
     dispatch(addPlayer(p));
     setNickname('');
+    setColorPickerOpen(false);
     const nextColor = COLORS.find((c) => !usedColors.has(c) && c !== color) ?? firstAvailableColor;
     const nextAvatar = AVATARS.find((a) => !usedAvatars.has(a.key) && a.key !== avatarKey)?.key ?? firstAvailableAvatar;
     setColor(nextColor);
@@ -94,19 +109,51 @@ export default function SetupForm(): JSX.Element {
     <div className="w-full max-w-3xl space-y-6">
       <h1 className="text-3xl font-bold">Monopoly Tracker — Setup</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div data-qa="avatar-section" className="space-y-2 md:col-span-3">
+          <label className="block text-sm font-medium">Avatar <span className="text-xs font-normal opacity-70">(tap selected to change color)</span></label>
+          <AvatarPicker
+            options={AVATARS}
+            used={usedAvatars}
+            value={avatarKey}
+            selectedColor={color}
+            colorPopoverOpen={colorPickerOpen}
+            onSelectedClick={() => setColorPickerOpen((v) => !v)}
+            onChange={(key) => {
+              setAvatarKey(key);
+              setColorPickerOpen(false);
+            }}
+            colorPopoverContent={
+              <div className="space-y-2">
+                <div className="text-xs font-semibold">Pick a color</div>
+                <ColorSwatchPicker
+                  colors={COLORS}
+                  usedColors={usedColors}
+                  value={color}
+                  onChange={(c) => {
+                    setColor(c);
+                    setColorPickerOpen(false);
+                  }}
+                />
+              </div>
+            }
+          />
+        </div>
+
         <div data-qa="player-nickname" className="space-y-2 md:col-span-3">
           <label className="block text-sm font-medium">Nickname</label>
-          <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Player name" className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
-        </div>
-
-        <div data-qa="color-section" className="space-y-2 md:col-span-3">
-          <label className="block text-sm font-medium">Color</label>
-          <ColorSwatchPicker colors={COLORS} usedColors={usedColors} value={color} onChange={setColor} />
-        </div>
-
-        <div data-qa="avatar-section" className="space-y-2 md:col-span-3">
-          <label className="block text-sm font-medium">Avatar</label>
-          <AvatarPicker options={AVATARS} used={usedAvatars} value={avatarKey} onChange={(key) => setAvatarKey(key)} />
+          <input
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+            enterKeyHint="done"
+            placeholder="Player name"
+            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700"
+          />
         </div>
 
         {SHOW_CARD_SEED && (
@@ -116,7 +163,12 @@ export default function SetupForm(): JSX.Element {
           </div>
         )}
         <div className="flex items-end">
-          <button data-qa="btn-add-player" onClick={onAdd} disabled={!nickname.trim() || selectionInvalid} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 disabled:bg-blue-300 text-white font-semibold shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+          <button
+            data-qa="btn-add-player"
+            onClick={onAdd}
+            disabled={!nickname.trim() || selectionInvalid}
+            className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 text-white font-semibold shadow hover:enabled:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+          >
             Add Player
           </button>
         </div>
@@ -134,9 +186,15 @@ export default function SetupForm(): JSX.Element {
       </div>
 
       <div className="flex gap-3">
-        <button data-qa="btn-start-game" onClick={onStart} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" disabled={players.length === 0}>
-          Start Game
-        </button>
+        {players.length >= 2 && (
+          <button
+            data-qa="btn-start-game"
+            onClick={onStart}
+            className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          >
+            Start Game
+          </button>
+        )}
       </div>
     </div>
   );
