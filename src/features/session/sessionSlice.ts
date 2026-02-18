@@ -11,6 +11,7 @@ type SessionState = {
   currentGameId: string | null;
   racePot: RacePotState;
   turnIndex: number; // index into players array
+  freeParkingPot: number;
 };
 
 const defaultRacePot = (): RacePotState => ({ active: false, amount: 0, participants: [], winnerId: null });
@@ -19,6 +20,7 @@ const initialState: SessionState = {
   currentGameId: null,
   racePot: defaultRacePot(),
   turnIndex: 0,
+  freeParkingPot: 1000,
 };
 
 const sessionSlice = createSlice({
@@ -57,8 +59,15 @@ const sessionSlice = createSlice({
         state.turnIndex = (state.turnIndex + 1) % n;
       }
     },
+    addToFreeParking(state, action: PayloadAction<number>) {
+      state.freeParkingPot += action.payload;
+      if (state.freeParkingPot < 0) state.freeParkingPot = 0;
+    },
+    resetFreeParking(state) {
+      state.freeParkingPot = 0;
+    },
   },
 });
 
-export const { setCurrentGameId, initializeRacePot, resetRacePot, setRacePotWinner, setTurnIndex, advanceTurn } = sessionSlice.actions;
+export const { setCurrentGameId, initializeRacePot, resetRacePot, setRacePotWinner, setTurnIndex, advanceTurn, addToFreeParking, resetFreeParking } = sessionSlice.actions;
 export default sessionSlice.reducer; 

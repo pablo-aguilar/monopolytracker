@@ -31,6 +31,7 @@ export type EventType =
   | 'MOVE' // standard movement by steps including +1/-1, Bus choice resolution
   | 'PASSED_GO'
   | 'PURCHASE'
+  | 'AUCTION'
   | 'RENT'
   | 'FEE'
   | 'CARD'

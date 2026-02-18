@@ -8,27 +8,49 @@
 // //#imports
 import React, { useMemo, useState, useRef } from 'react';
 import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
-import { evaluateRollAdvisories } from '@/features/rules/advisories';
 import EventLog from '@/components/molecules/EventLog';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
-import { BOARD_TILES, getTileByIndex, passedGo } from '@/data/board';
-import { assignOwner, setMortgaged, buyHouse, sellHouse } from '@/features/properties/propertiesSlice';
-import { drawCard } from '@/features/cards/cardsSlice';
-import { adjustPlayerMoney, setPlayerPosition } from '@/features/players/playersSlice';
+import { addToFreeParking } from '@/features/session/sessionSlice';
+import { BOARD_TILES, getTileByIndex, passedGo, JAIL_INDEX, type ColorGroup } from '@/data/board';
+import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
+import { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
+import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
+import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail } from '@/features/players/playersSlice';
+import { consumeBusTicket } from '@/features/players/playersSlice';
 import type { RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
 import AvatarToken from '@/components/atoms/AvatarToken';
+import AnimatedNumber from '@/components/atoms/AnimatedNumber';
+import FromToIndicator from '@/components/atoms/FromToIndicator';
+import HudBadge from '@/components/atoms/HudBadge';
+import Tooltip from '@/components/atoms/Tooltip';
 import { AVATARS } from '@/data/avatars';
+import TogglePillButton from '@/components/atoms/TogglePillButton';
+import StatPill from '@/components/atoms/StatPill';
+import HudBar from '@/components/molecules/HudBar';
+import BuyButton from '@/components/atoms/BuyButton';
 import { AnimatePresence, motion } from 'framer-motion';
 import { advanceTurn, setRacePotWinner } from '@/features/session/sessionSlice';
+import DiceSelector from '@/components/molecules/DiceSelector';
+import StepNavigator from '@/components/molecules/StepNavigator';
+import TurnRibbon, { type TurnSegment } from '@/components/molecules/TurnRibbon';
+import JailAttemptRibbon from '@/components/molecules/JailAttemptRibbon';
+import PostActionsBar from '@/components/molecules/PostActionsBar';
+import PurchaseActionsRow from '@/components/molecules/PurchaseActionsRow';
+import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
+import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
+import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
+import AuctionOverlay from '@/components/molecules/AuctionOverlay';
 
 export default function PlayConsole(): JSX.Element {
   const dispatch = useDispatch();
+  const store = useStore<RootState>();
   const players = useSelector((s: RootState) => s.players.players);
   const cardsState = useSelector((s: RootState) => s.cards);
   const propsState = useSelector((s: RootState) => s.properties);
   const racePot = useSelector((s: RootState) => s.session.racePot);
+  const freeParkingPot = useSelector((s: RootState) => (s as any).session?.freeParkingPot ?? 0);
   const turnIndexRaw = useSelector((s: RootState) => (s as any).session?.turnIndex);
   const turnIndex: number = typeof turnIndexRaw === 'number' && turnIndexRaw >= 0 ? turnIndexRaw : 0;
 
@@ -39,24 +61,69 @@ export default function PlayConsole(): JSX.Element {
   const [special, setSpecial] = useState<SpecialDieFace | null>(null);
   const [rollConfirmed, setRollConfirmed] = useState<boolean>(false);
   const [activeStep, setActiveStep] = useState<0 | 1 | 2>(0); // 0=pre,1=roll,2=post
-  const [advice, setAdvice] = useState<string[]>([]);
-  const [ownerId, setOwnerId] = useState<string>('');
   const [moneyDelta, setMoneyDelta] = useState<number>(0);
   const [moneyPlayerId, setMoneyPlayerId] = useState<string>('');
   const [preAction, setPreAction] = useState<string>('None');
   const [postAction, setPostAction] = useState<string>('None');
   const [highestStep, setHighestStep] = useState<0 | 1 | 2>(0);
+  const [predictedTo, setPredictedTo] = useState<number | null>(null);
+  const [buySelected, setBuySelected] = useState<boolean>(false);
+  const [rentSelected, setRentSelected] = useState<boolean>(false);
+  const [taxSelected, setTaxSelected] = useState<boolean>(false);
+  const [busSelectedCardId, setBusSelectedCardId] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null }>(() => ({ deck: null }));
+  const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | null }>(() => ({ type: null }));
+  const [busTeleportTo, setBusTeleportTo] = useState<number | null>(null);
+  const [busTicketsAvailableThisTurn, setBusTicketsAvailableThisTurn] = useState<number>(0);
+  const [shakeRent, setShakeRent] = useState<boolean>(false);
+  const [shakeTax, setShakeTax] = useState<boolean>(false);
+  const [shakeBus, setShakeBus] = useState<boolean>(false);
+  const [buildOverlayOpen, setBuildOverlayOpen] = useState<boolean>(false);
+  const [boardOverlayOpen, setBoardOverlayOpen] = useState<boolean>(false);
+  const [auctionOpen, setAuctionOpen] = useState<boolean>(false);
+  const [auctionCompleted, setAuctionCompleted] = useState<boolean>(false);
+  const [auctionItSelected, setAuctionItSelected] = useState<boolean>(false);
+  const [stagedAuction, setStagedAuction] = useState<{ tileId: string; winnerId: string; amount: number } | null>(null);
+  // jailChoice declared once
+  const [jailChoice, setJailChoice] = useState<'pay' | 'gojf' | 'roll' | null>(null);
+  const [stagedChanceCardId, setStagedChanceCardId] = useState<string | null>(null);
+  const [stagedCommunityCardId, setStagedCommunityCardId] = useState<string | null>(null);
+  // Staging for Bus flow and Summary overlay
+  const [stagedBusTickets, setStagedBusTickets] = useState<number>(0);
+  const [stagedBigBus, setStagedBigBus] = useState<boolean>(false);
+  const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
+  const [gmToolsOpen, setGmToolsOpen] = useState<boolean>(false);
+  const [rollCount, setRollCount] = useState<number>(1);
+  const [turnSegments, setTurnSegments] = useState<TurnSegment[]>([]);
+  // Post-action queue for chained movements from Chance/Community cards
+  const [postActionQueue, setPostActionQueue] = useState<number[]>([]);
+  const [queuedPostPending, setQueuedPostPending] = useState<boolean>(false);
+  const events = useSelector((s: RootState) => s.events.events);
+
+  // Backfill decks if persisted state is empty
+  const didInitDecksRef = useRef(false);
+  React.useEffect(() => {
+    if (didInitDecksRef.current) return;
+    const ch = cardsState.decks.chance;
+    const cm = cardsState.decks.community;
+    const bs = cardsState.decks.bus;
+    const total = (d: typeof ch) => d.drawPile.length + d.discardPile.length;
+    const needsInit = (d: typeof ch, required: number) => total(d) < required;
+    if (needsInit(ch, 16) || needsInit(cm, 16) || needsInit(bs, 16)) {
+      dispatch(setCardsSeed(cardsState.seed || 'monopoly'));
+    }
+    didInitDecksRef.current = true;
+  }, [dispatch, cardsState.seed, cardsState.decks]);
 
   // hold-to-confirm for End Turn
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const holdTimerRef = useRef<number | null>(null);
   const holdIntervalRef = useRef<number | null>(null);
 
-  // Sync currentIndex and reset roll per active player
+  // Sync and reset only on turn change; avoid resetting when drawing Bus updates state
   const activePlayer = players[turnIndex] ?? players[0];
+  const activePos = activePlayer?.positionIndex ?? 0;
   React.useEffect(() => {
-    const idx = activePlayer?.positionIndex ?? 0;
-    setCurrentIndex(idx);
     // reset roll selections for new active player
     setD6A(null);
     setD6B(null);
@@ -69,7 +136,48 @@ export default function PlayConsole(): JSX.Element {
     setPreAction('None');
     setPostAction('None');
     setHighestStep(0);
-  }, [turnIndex, players, activePlayer?.positionIndex]);
+    setPredictedTo(null);
+    setBusTeleportTo(null);
+    setBuySelected(false);
+    setRentSelected(false);
+    setTaxSelected(false);
+    setBusSelectedCardId(null);
+    setAuctionCompleted(false);
+    setAuctionItSelected(false);
+    setStagedAuction(null);
+    setJailChoice(null);
+    setStagedChanceCardId(null);
+    setStagedCommunityCardId(null);
+    // snapshot bus tickets available at start of turn
+    const pid = (players[turnIndex] ?? players[0])?.id;
+    const startCount = pid ? (players.find((x) => x.id === pid)?.busTickets ?? 0) : 0;
+    setBusTicketsAvailableThisTurn(startCount);
+    // reset staging
+    setStagedBusTickets(0);
+    setStagedBigBus(false);
+    setSummaryOpen(false);
+    setRollCount(1);
+    setTurnSegments([]);
+    setPostActionQueue([]);
+    setQueuedPostPending(false);
+  }, [turnIndex]);
+  React.useEffect(() => {
+    setCurrentIndex(activePos);
+  }, [activePos]);
+
+  // helper: events within a segment window, focusing on purchases and cards
+  const getSegmentEvents = (segIndex: number): GameEvent[] => {
+    const seg = turnSegments[segIndex];
+    if (!seg) return [];
+    const start = new Date(seg.at).getTime();
+    const end = segIndex + 1 < turnSegments.length ? new Date(turnSegments[segIndex + 1].at).getTime() : Number.POSITIVE_INFINITY;
+    return (events as GameEvent[]).filter((ev: GameEvent) => {
+      const t = new Date(ev.createdAt).getTime();
+      if (Number.isNaN(t)) return false;
+      if (t < start || t >= end) return false;
+      return ev.type === 'PURCHASE' || ev.type === 'CARD';
+    });
+  };
 
   // Reset confirmation if any die changes
   React.useEffect(() => {
@@ -85,54 +193,65 @@ export default function PlayConsole(): JSX.Element {
     if (special === '+1') return 1;
     if (special === '-1') return -1;
     if (typeof special === 'number') return special;
+    // Treat Bus (string) as 0 steps
     return 0;
   }, [special]);
 
   const hasRoll = d6A !== null && d6B !== null; 
   const hasFullNumericRoll = d6A !== null && d6B !== null && typeof special === 'number';
+  const hasRollWithSpecialSelected = d6A !== null && d6B !== null && (special !== null && (special === 'Bus' || special === '+1' || special === '-1' || typeof special === 'number'));
+  const requiresBusCard = special === 'Bus';
   const rollTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
-
-  const rollForEval: DieRoll | null = useMemo(() => {
-    if (!hasRoll) return null;
-    const sp: SpecialDieFace = (special ?? 1) as SpecialDieFace; // fallback only for typing
-    return {
-      d6A: d6A as number,
-      d6B: d6B as number,
-      special: sp,
-      isDouble: (d6A as number) === (d6B as number),
-      isTriple: (d6A as number) === (d6B as number) && (typeof sp === 'number' ? sp === (d6A as number) : false),
-      isTripleOnes: (d6A as number) === 1 && (d6B as number) === 1 && sp === 1,
-    };
-  }, [d6A, d6B, special, hasRoll]);
 
   const bankUnownedCount = useMemo(() => {
     return Object.values(propsState.byTileId).filter((ps) => ps && ps.ownerId === null).length;
   }, [propsState.byTileId]);
 
-  // //#handlers
-  const onEvaluate = (): void => {
-    if (!rollForEval) return;
-    const result = evaluateRollAdvisories(rollForEval, {
-      currentIndex,
-      isOwned: () => false,
-      isOwnedByOther: () => false,
-    });
-    setAdvice(result.map((r) => r.message));
-  };
+  const depotsInstalled = useMemo(() => {
+    return BOARD_TILES.filter((t) => t.type === 'railroad').reduce((acc, t) => (propsState.byTileId[t.id]?.depotInstalled ? acc + 1 : acc), 0);
+  }, [propsState.byTileId]);
+  const DEPOT_MAX = 4;
+  const depotsLeft = Math.max(0, DEPOT_MAX - depotsInstalled);
 
-  const onApplyMove = (playerId?: string): void => {
-    if (!hasRoll) return;
+  const chanceLeft = cardsState.decks.chance.drawPile.length;
+  const communityLeft = cardsState.decks.community.drawPile.length;
+  const busLeft = cardsState.decks.bus.drawPile.length;
+
+  // //#handlers
+  const onApplyMove = (playerId?: string, toIndexOverride?: number, advanceAfterMove: boolean = true): void => {
+    if (!hasRoll && toIndexOverride == null) return;
     const pid = playerId ?? (players[turnIndex]?.id || players[0]?.id);
     if (!pid) return;
     const fromIndex = players.find((p) => p.id === pid)?.positionIndex ?? 0;
     const moveSteps = (d6A as number) + (d6B as number) + specialNumeric;
-    const toIndex = (fromIndex + moveSteps) % BOARD_TILES.length;
+    const toIndex = toIndexOverride != null ? toIndexOverride : ((fromIndex + moveSteps) % BOARD_TILES.length);
     const tile = getTileByIndex(toIndex);
+    // Handle Go To Jail tile immediately per classic rules
+    if (tile.type === 'goToJail') {
+      const pid2 = pid;
+      // Move to Jail, mark inJail, reset attempts, end turn
+      dispatch(setPlayerPosition({ id: pid2, index: JAIL_INDEX }));
+      (dispatch as any)({ type: 'players/setInJail', payload: { id: pid2, value: true } });
+      (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid2, attempts: 0 } });
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'JAIL',
+          actorPlayerId: pid2,
+          payload: { playerId: pid2, reason: 'GO_TO_JAIL_TILE', from: fromIndex, to: JAIL_INDEX, message: 'Go to Jail' },
+          createdAt: new Date().toISOString(),
+        })
+      );
+      dispatch(advanceTurn({ playerCount: players.length }));
+      return;
+    }
     const ev: GameEvent = {
       id: crypto.randomUUID(),
       gameId: 'local',
       type: 'MOVE',
-      payload: { playerId: pid, from: fromIndex, to: toIndex, steps: moveSteps, message: `Moved to ${tile.name}` },
+      actorPlayerId: pid,
+      payload: { playerId: pid, from: fromIndex, to: toIndex, steps: toIndexOverride != null ? 0 : moveSteps, message: `Moved to ${tile.name}` },
       createdAt: new Date().toISOString(),
     };
     dispatch(appendEvent(ev));
@@ -144,6 +263,7 @@ export default function PlayConsole(): JSX.Element {
           id: crypto.randomUUID(),
           gameId: 'local',
           type: 'PASSED_GO',
+          actorPlayerId: pid,
           payload: { playerId: pid, amount: 200, message: '+$200 for passing GO' },
           moneyDelta: +200,
           createdAt: new Date().toISOString(),
@@ -161,6 +281,7 @@ export default function PlayConsole(): JSX.Element {
               id: crypto.randomUUID(),
               gameId: 'local',
               type: 'MONEY_ADJUST',
+              actorPlayerId: pid,
               payload: { playerId: pid, amount: racePot.amount, message: 'Race pot winner' },
               moneyDelta: racePot.amount,
               createdAt: new Date().toISOString(),
@@ -171,31 +292,292 @@ export default function PlayConsole(): JSX.Element {
     }
 
     dispatch(setPlayerPosition({ id: pid, index: toIndex }));
+    // Mark player as having passed GO at least once for first-round lock
+    try {
+      // passed was computed above
+      if (passed) {
+        (dispatch as any)({ type: 'players/setHasPassedGo', payload: { id: pid, value: true } });
+      }
+    } catch {}
     setCurrentIndex(toIndex);
     setRollConfirmed(false);
 
-    // Tile-aware prompt suggestion (basic): set advisory messages
-    const suggestions: string[] = [];
-    const t = tile;
-    if (t.type === 'property' || t.type === 'railroad' || t.type === 'utility') {
-      const owner = propsState.byTileId[t.id]?.ownerId as string | null;
-      if (owner && owner !== pid) suggestions.push('Consider: Pay Rent');
-      else if (!owner) suggestions.push('Consider: Buy Property');
-    } else if (t.type === 'tax') {
-      suggestions.push('Consider: Pay Tax');
-    } else if (t.type === 'chance' || t.type === 'community') {
-      suggestions.push(`Consider: Draw ${t.type === 'community' ? 'Community Chest' : 'Chance'} card`);
-    } else if (t.type === 'goToJail') {
-      suggestions.push('Go to Jail');
+    // Advance turn after applying move (can be disabled for doubles multi-roll flow)
+    if (advanceAfterMove) {
+      dispatch(advanceTurn({ playerCount: players.length }));
     }
-    setAdvice(suggestions);
+  };
 
-    // Advance turn after applying move
-    dispatch(advanceTurn({ playerCount: players.length }));
+  // Finalize turn now (used by hold expiry and Summary overlay)
+  const finalizeTurn = (pid: string): void => {
+    const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
+    const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null);
+    let resolvedQueuedThisCall = false;
+    // Record this segment into the ribbon before applying stateful movement
+    try {
+      const fromIndexSeg = players.find((p) => p.id === pid)?.positionIndex ?? 0;
+      const moveStepsSeg = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+      let toIndexSeg = fromIndexSeg;
+      if (thirdDoubles) {
+        toIndexSeg = JAIL_INDEX;
+      } else if (busTeleportTo != null) {
+        toIndexSeg = busTeleportTo;
+      } else if (d6A != null && d6B != null) {
+        toIndexSeg = (fromIndexSeg + moveStepsSeg) % BOARD_TILES.length;
+      } else if (predictedTo != null) {
+        toIndexSeg = predictedTo;
+      }
+      const seg: TurnSegment = {
+        roll: rollCount,
+        d6A: d6A as number | null,
+        d6B: d6B as number | null,
+        special: special as any,
+        busUsed: busTeleportTo != null,
+        from: fromIndexSeg,
+        to: toIndexSeg,
+        tileName: getTileByIndex(toIndexSeg).name,
+        at: new Date().toISOString(),
+      };
+      setTurnSegments((arr) => {
+        // avoid duplicate append if somehow called twice for same roll
+        if (arr.some((s) => s.roll === seg.roll)) return arr;
+        return [...arr, seg];
+      });
+    } catch {}
+    // Commit staged Bus effects now (skip if third doubles sends to jail)
+    if (!thirdDoubles) {
+      if (stagedBusTickets > 0) {
+        dispatch(grantBusTicket({ id: pid, count: stagedBusTickets }));
+        setStagedBusTickets(0);
+      }
+      if (stagedBigBus) {
+        dispatch(clearBusTicketsExcept({ winnerId: pid }));
+        dispatch(
+          appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck: 'bus', cardId: 'bb-*', message: "Big Bus: cleared other players' tickets" }, createdAt: new Date().toISOString() })
+        );
+        setStagedBigBus(false);
+      }
+    }
+
+    // If Buy was toggled, execute purchase before movement effects (skip on third doubles)
+    if (!thirdDoubles && buySelected && predictedTo != null) {
+      const t = getTileByIndex(predictedTo);
+      const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
+      dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
+      if (price > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -price }));
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'PURCHASE',
+          actorPlayerId: pid,
+          payload: { tileId: t.id, ownerId: pid, amount: price, message: `Purchased ${t.name}` },
+          moneyDelta: -price,
+          createdAt: new Date().toISOString(),
+        })
+      );
+    }
+    // If Auction (property-tied or tile) was staged and confirmed, apply before movement
+    if (stagedAuction) {
+      const t = BOARD_TILES.find((x) => x.id === stagedAuction.tileId)!;
+      dispatch(assignOwner({ tileId: t.id, ownerId: stagedAuction.winnerId }));
+      if (stagedAuction.amount > 0) dispatch(adjustPlayerMoney({ id: stagedAuction.winnerId, delta: -stagedAuction.amount }));
+      dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'AUCTION', actorPlayerId: stagedAuction.winnerId, payload: { tileId: t.id, ownerId: stagedAuction.winnerId, amount: stagedAuction.amount, message: `Auction: ${t.name} sold for $${stagedAuction.amount}` }, moneyDelta: -stagedAuction.amount, createdAt: new Date().toISOString() }));
+      setStagedAuction(null);
+      setAuctionCompleted(false);
+      setAuctionItSelected(false);
+    }
+
+    // Apply staged Chance/Community effects and mutate decks now
+    const applyStagedCard = (deck: 'chance' | 'community', cardId: string) => {
+      // Move chosen card to top of discard by simulating: put all cards before it to bottom, then draw
+      const draw = cardsState.decks[deck].drawPile;
+      const idx = draw.findIndex((c) => c.id === cardId);
+      if (idx > 0) {
+        for (let i = 0; i < idx; i++) {
+          const id = draw[i].id;
+          dispatch(putCardOnBottom({ deck, cardId: id }));
+        }
+      }
+      dispatch(drawCard(deck));
+      dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck, cardId, message: `Drew ${deck}` }, createdAt: new Date().toISOString() }));
+      // Apply effects based on the known definition for the selected card id
+      const def = (deck === 'chance' ? CHANCE : COMMUNITY_CHEST).find((c) => c.id === cardId);
+      const effect = def?.effect as { type: string; amount?: number; amountPerPlayer?: number; steps?: number; tileId?: string; awardGoIfPassed?: boolean } | undefined;
+      if (effect && pid) {
+        if (effect.type === 'payBank' && typeof effect.amount === 'number' && effect.amount > 0) {
+          dispatch(adjustPlayerMoney({ id: pid, delta: -effect.amount }));
+          dispatch(addToFreeParking(effect.amount));
+        } else if (effect.type === 'receiveBank' && typeof effect.amount === 'number' && effect.amount > 0) {
+          dispatch(adjustPlayerMoney({ id: pid, delta: +effect.amount }));
+        } else if (effect.type === 'getOutOfJail') {
+          // Award GOJF card to the active player; deck determines which counter
+          dispatch(grantGetOutOfJail({ id: pid, deck }));
+        } else if (effect.type === 'payEachPlayer' && typeof effect.amountPerPlayer === 'number' && effect.amountPerPlayer > 0) {
+          const others = players.filter((pl) => pl.id !== pid);
+          const total = effect.amountPerPlayer * others.length;
+          if (total > 0) {
+            dispatch(adjustPlayerMoney({ id: pid, delta: -total }));
+            others.forEach((pl) => dispatch(adjustPlayerMoney({ id: pl.id, delta: +effect.amountPerPlayer! })));
+          }
+        } else if (effect.type === 'receiveFromPlayers' && typeof effect.amountPerPlayer === 'number' && effect.amountPerPlayer > 0) {
+          const others = players.filter((pl) => pl.id !== pid);
+          const total = effect.amountPerPlayer * others.length;
+          if (total > 0) {
+            others.forEach((pl) => dispatch(adjustPlayerMoney({ id: pl.id, delta: -effect.amountPerPlayer! })));
+            dispatch(adjustPlayerMoney({ id: pid, delta: +total }));
+          }
+        } else if (effect.type === 'moveTo') {
+          const dest = BOARD_TILES.find((t) => t.id === effect.tileId)?.index;
+          if (typeof dest === 'number') {
+            setPostActionQueue((q) => [...q, dest]);
+          }
+        } else if (effect.type === 'moveSteps') {
+          const from = players.find((x) => x.id === pid)?.positionIndex ?? 0;
+          const steps = typeof effect.steps === 'number' ? effect.steps : 0;
+          const len = BOARD_TILES.length;
+          const dest = ((from + steps) % len + len) % len;
+          setPostActionQueue((q) => [...q, dest]);
+        }
+      }
+    };
+
+    if (!thirdDoubles) {
+      if (stagedChanceCardId) {
+        applyStagedCard('chance', stagedChanceCardId);
+        setStagedChanceCardId(null);
+      }
+      if (stagedCommunityCardId) {
+        applyStagedCard('community', stagedCommunityCardId);
+        setStagedCommunityCardId(null);
+      }
+    }
+
+    // If a queued Post destination exists and we haven't opened it yet this cycle, open it now and stop.
+    if (!queuedPostPending && postActionQueue.length > 0) {
+      const nextDest = postActionQueue[0];
+      setPostActionQueue((q) => q.slice(1));
+      setPredictedTo(nextDest);
+      setActiveStep(2);
+      setHighestStep(2);
+      setQueuedPostPending(true);
+      // Clear current selections for the new Post segment
+      setPostAction('None');
+      setBuySelected(false);
+      setRentSelected(false);
+      setTaxSelected(false);
+      setSummaryOpen(false);
+      return;
+    }
+
+    // If Rent was toggled, apply rent transfer before moving (skip on third doubles)
+    if (!thirdDoubles && rentSelected) {
+      const idx2 = predictedTo ?? currentIndex;
+      const t2 = getTileByIndex(idx2);
+      if (t2 && (t2.type === 'property' || t2.type === 'railroad' || t2.type === 'utility')) {
+        const ps2 = propsState.byTileId[t2.id];
+        const ownerIdForTile2 = ps2?.ownerId as string | null;
+        const mortgaged2 = ps2?.mortgaged === true;
+        if (ownerIdForTile2 && ownerIdForTile2 !== pid && !mortgaged2) {
+          const diceTotal2 = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+          const state2 = (window as any).__store__?.getState?.() as RootState | undefined;
+          const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
+          if (rent2 > 0) {
+            dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
+            dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
+            dispatch(
+              appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: `Rent ${rent2}` }, moneyDelta: -rent2, createdAt: new Date().toISOString() })
+            );
+          }
+        }
+      }
+    }
+
+    // If Tax was toggled, apply to Free Parking and log (skip on third doubles)
+    if (!thirdDoubles && taxSelected) {
+      const idx3 = predictedTo ?? currentIndex;
+      const t3 = getTileByIndex(idx3);
+      if (t3 && t3.type === 'tax' && t3.taxAmount) {
+        dispatch(adjustPlayerMoney({ id: pid, delta: -t3.taxAmount }));
+        dispatch(addToFreeParking(t3.taxAmount));
+        dispatch(
+          appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', actorPlayerId: pid, payload: { tileId: t3.id, from: pid, amount: t3.taxAmount, message: `Tax ${t3.taxAmount}` }, moneyDelta: -t3.taxAmount, createdAt: new Date().toISOString() })
+        );
+      }
+    }
+
+    // If we are resolving a queued Post (predictedTo set from queue), move now but do not advance turn.
+    if (queuedPostPending && predictedTo != null) {
+      onApplyMove(pid, predictedTo, false);
+      setPredictedTo(null);
+      setQueuedPostPending(false);
+      resolvedQueuedThisCall = true;
+      // If more queued items remain, immediately open the next and stop here
+      if (postActionQueue.length > 0) {
+        const nextDest2 = postActionQueue[0];
+        setPostActionQueue((q) => q.slice(1));
+        setPredictedTo(nextDest2);
+        setActiveStep(2);
+        setHighestStep(2);
+        setQueuedPostPending(true);
+        setPostAction('None');
+        setBuySelected(false);
+        setRentSelected(false);
+        setTaxSelected(false);
+        setSummaryOpen(false);
+        return;
+      }
+      // No more queued posts; continue to normal end-of-turn handling below
+    }
+
+    if (resolvedQueuedThisCall) {
+      // We just resolved a queued movement into its Post segment; do not apply any additional roll/doubles logic now.
+      return;
+    }
+
+    if (thirdDoubles) {
+      // Go directly to Jail on third doubles
+      dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+      dispatch(
+        appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MOVE', actorPlayerId: pid, payload: { playerId: pid, from: currentIndex, to: JAIL_INDEX, steps: 0, message: 'Go to Jail (3rd doubles)' }, createdAt: new Date().toISOString() })
+      );
+      dispatch(advanceTurn({ playerCount: players.length }));
+    } else if (busTeleportTo != null) {
+      // Teleport move ignores doubles chaining; advance immediately
+      onApplyMove(pid, busTeleportTo, true);
+    } else if (isDoubles) {
+      // Apply move but do NOT advance; prepare for next roll in the same turn
+      onApplyMove(pid, undefined, false);
+      setRollCount((n) => n + 1);
+      // Reset flow for next roll
+      setActiveStep(1);
+      setHighestStep(1);
+      setD6A(null);
+      setD6B(null);
+      setSpecial(null);
+      setRollConfirmed(false);
+      setPredictedTo(null);
+      setPostAction('None');
+      setBuySelected(false);
+      setRentSelected(false);
+      setTaxSelected(false);
+      setSummaryOpen(false);
+    } else {
+      // Apply movement normally and advance turn (only if no queued post is pending)
+      onApplyMove(pid, undefined, true);
+    }
   };
 
   const onEndTurnHoldStart = (pid: string): void => {
-    if (!hasRoll || !rollConfirmed) return;
+    // Require confirmation; allow either a numeric roll or a bus teleport
+    if (!rollConfirmed) return;
+    if (!hasRoll && busTeleportTo == null) return;
+    // Block hold if Bus was rolled but no Bus card has been selected yet
+    if (requiresBusCard && !busSelectedCardId) return;
+    // Block hold if rent is required but not selected
+    if (rentRequiredButNotSelected()) return;
+    // Block hold if tax is required but not selected
+    if (taxRequiredButNotSelected()) return;
     setHoldProgress(0);
     const start = Date.now();
     const duration = 3000;
@@ -208,7 +590,8 @@ export default function PlayConsole(): JSX.Element {
       // Confirmed
       if (holdIntervalRef.current) window.clearInterval(holdIntervalRef.current);
       setHoldProgress(100);
-      onApplyMove(pid);
+
+      finalizeTurn(pid);
     }, duration) as unknown as number;
   };
 
@@ -216,22 +599,6 @@ export default function PlayConsole(): JSX.Element {
     if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
     if (holdIntervalRef.current) window.clearInterval(holdIntervalRef.current);
     setHoldProgress(0);
-  };
-
-  const onBuyProperty = (): void => {
-    const tile = getTileByIndex(currentIndex);
-    if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
-    if (!ownerId) return;
-    dispatch(assignOwner({ tileId: tile.id, ownerId }));
-    dispatch(
-      appendEvent({
-        id: crypto.randomUUID(),
-        gameId: 'local',
-        type: 'PURCHASE',
-        payload: { tileId: tile.id, ownerId, message: `Purchased ${tile.name}` },
-        createdAt: new Date().toISOString(),
-      })
-    );
   };
 
   const onAdjustMoney = (): void => {
@@ -242,6 +609,7 @@ export default function PlayConsole(): JSX.Element {
         id: crypto.randomUUID(),
         gameId: 'local',
         type: 'MONEY_ADJUST',
+        actorPlayerId: moneyPlayerId,
         payload: { playerId: moneyPlayerId, amount: moneyDelta, message: `${moneyDelta > 0 ? '+' : ''}${moneyDelta}` },
         moneyDelta,
         createdAt: new Date().toISOString(),
@@ -251,10 +619,8 @@ export default function PlayConsole(): JSX.Element {
   };
 
   const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
-    dispatch(drawCard(deck));
-    dispatch(
-      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', payload: { deck, message: `Drew from ${deck}` }, createdAt: new Date().toISOString() })
-    );
+    // Open overlay for all supported decks to allow IRL selection
+    setOverlay({ deck: deck === 'bus' ? 'bus' : deck });
   };
 
   const onPayRent = (): void => {
@@ -262,8 +628,10 @@ export default function PlayConsole(): JSX.Element {
     const state = (window as any).__store__?.getState?.() as RootState | undefined;
     const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
     const rent = computeRent({ ...(state as any), properties: propsState } as RootState, tile.id, diceTotal);
-    const ownerIdForTile = propsState.byTileId[tile.id]?.ownerId as string | null;
-    if (!moneyPlayerId || !ownerIdForTile || rent <= 0) return;
+    const ps = propsState.byTileId[tile.id];
+    const ownerIdForTile = ps?.ownerId as string | null;
+    const mortgaged = ps?.mortgaged === true;
+    if (!moneyPlayerId || !ownerIdForTile || ownerIdForTile === moneyPlayerId || mortgaged || rent <= 0) return;
     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -rent }));
     dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
     dispatch(
@@ -271,6 +639,7 @@ export default function PlayConsole(): JSX.Element {
         id: crypto.randomUUID(),
         gameId: 'local',
         type: 'RENT',
+        actorPlayerId: moneyPlayerId,
         payload: { tileId: tile.id, from: moneyPlayerId, to: ownerIdForTile, amount: rent, message: `Rent ${rent}` },
         moneyDelta: -rent,
         createdAt: new Date().toISOString(),
@@ -287,32 +656,40 @@ export default function PlayConsole(): JSX.Element {
         id: crypto.randomUUID(),
         gameId: 'local',
         type: 'FEE',
+        actorPlayerId: moneyPlayerId,
         payload: { tileId: tile.id, from: moneyPlayerId, amount: tile.taxAmount, message: `Tax ${tile.taxAmount}` },
         moneyDelta: -tile.taxAmount,
         createdAt: new Date().toISOString(),
       })
     );
+    dispatch(addToFreeParking(tile.taxAmount));
   };
 
   const onMortgageToggle = (mortgaged: boolean): void => {
     const tile = getTileByIndex(currentIndex);
     if (!(tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')) return;
     dispatch(setMortgaged({ tileId: tile.id, mortgaged }));
-    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, mortgaged }, createdAt: new Date().toISOString() }));
+    const tileOwner = propsState.byTileId[tile.id]?.ownerId as string | null;
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: tileOwner ?? pid, payload: { tileId: tile.id, mortgaged }, createdAt: new Date().toISOString() }));
   };
 
   const onBuild = (): void => {
     const tile = getTileByIndex(currentIndex);
     if (tile.type !== 'property') return;
-    dispatch(buyHouse({ tileId: tile.id, ownerId: ownerId || (propsState.byTileId[tile.id]?.ownerId as string) }));
-    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Build' }, createdAt: new Date().toISOString() }));
+    const tileOwner = propsState.byTileId[tile.id]?.ownerId as string | undefined;
+    if (!tileOwner) return;
+    dispatch(buyHouse({ tileId: tile.id, ownerId: tileOwner }));
+    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: tileOwner, payload: { tileId: tile.id, message: 'Build' }, createdAt: new Date().toISOString() }));
   };
 
   const onSell = (): void => {
     const tile = getTileByIndex(currentIndex);
     if (tile.type !== 'property') return;
+    const tileOwner = propsState.byTileId[tile.id]?.ownerId as string | undefined;
+    if (!tileOwner) return;
     dispatch(sellHouse({ tileId: tile.id }));
-    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', payload: { tileId: tile.id, message: 'Sell' }, createdAt: new Date().toISOString() }));
+    dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: tileOwner, payload: { tileId: tile.id, message: 'Sell' }, createdAt: new Date().toISOString() }));
   };
 
   const currentTileName = getTileByIndex(currentIndex)?.name ?? '—';
@@ -326,40 +703,374 @@ export default function PlayConsole(): JSX.Element {
     exit: { opacity: 0, x: -20 },
   };
 
-  const rollSummary = hasRoll ? `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}` : '—';
+  const rollSummary = busTeleportTo != null ? `Bus → ${getTileByIndex(busTeleportTo).name}` : (hasRoll ? `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}` : '—');
 
   const canGoNext = (step: 0 | 1 | 2): boolean => {
     if (step === 0) return true;
-    if (step === 1) return hasFullNumericRoll; // Next confirms the roll when all three dice are numeric
+    if (step === 1) {
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const pl = players.find((x) => x.id === pid);
+      // In jail: allow proceeding with just D6 dice when "Try Doubles" is chosen
+      if (pl?.inJail && jailChoice === 'roll') {
+        return d6A !== null && d6B !== null;
+      }
+      return (busTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
+    }
     return false;
   };
 
   const goNext = (): void => {
     if (activeStep === 0) {
+      // If in jail, require a choice first
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const pl = players.find((x) => x.id === pid);
+      if (pl?.inJail) {
+        if (!jailChoice) return;
+        if (jailChoice === 'pay') {
+          if ((pl.money ?? 0) < 50) return;
+          dispatch(adjustPlayerMoney({ id: pid!, delta: -50 }));
+          (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: false } });
+          (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+        } else if (jailChoice === 'gojf') {
+          if ((pl.gojfChance ?? 0) > 0) (dispatch as any)({ type: 'players/consumeGetOutOfJail', payload: { id: pid, deck: 'chance', count: 1 } });
+          else if ((pl.gojfCommunity ?? 0) > 0) (dispatch as any)({ type: 'players/consumeGetOutOfJail', payload: { id: pid, deck: 'community', count: 1 } });
+          else return;
+          (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: false } });
+          (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+        }
+      }
       setActiveStep(1);
       setHighestStep(1);
     } else if (activeStep === 1 && canGoNext(1)) {
+      // Confirm roll or bus teleport and prepare post actions
       setRollConfirmed(true);
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const fromIndex = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+      // Jail attempt resolution
+      const pl = players.find((x) => x.id === pid);
+      if (pl?.inJail && jailChoice === 'roll') {
+        const isDbl = (d6A !== null && d6B !== null && d6A === d6B);
+        if (isDbl) {
+          // Exit jail and move by this roll immediately
+          (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: false } });
+          (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+          const toIndex = (fromIndex + ((d6A as number) + (d6B as number))) % BOARD_TILES.length;
+          setPredictedTo(toIndex);
+        } else {
+          const nextAtt = (pl.jailAttempts ?? 0) + 1;
+          if (nextAtt >= 3) {
+            // Auto pay $50 and move by this third roll
+            dispatch(adjustPlayerMoney({ id: pid!, delta: -50 }));
+            (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: false } });
+            (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+            const toIndex = (fromIndex + ((d6A as number) + (d6B as number))) % BOARD_TILES.length;
+            setPredictedTo(toIndex);
+          } else {
+            // Stay in jail; record attempt and end turn without moving
+            (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: nextAtt } });
+            setPredictedTo(fromIndex);
+            // Advance turn now; skip post-actions for failed attempt
+            dispatch(advanceTurn({ playerCount: players.length }));
+            return;
+          }
+        }
+      }
+      // Always compute landing tile from dice (or bus teleport). When Bus is rolled, player still moves by dice
+      // and must complete tile action (tax, rent, etc.) AND draw bus.
+      const toIndex = busTeleportTo != null ? busTeleportTo : ((fromIndex + ((d6A as number) + (d6B as number) + specialNumeric)) % BOARD_TILES.length);
+      const t = getTileByIndex(toIndex);
+      let suggested: string = 'None';
+      if (t.type === 'property' || t.type === 'railroad' || t.type === 'utility') {
+        const owner = propsState.byTileId[t.id]?.ownerId as string | null;
+        if (owner && owner !== pid) suggested = 'Pay Rent';
+        else if (!owner) suggested = 'Buy Property';
+      } else if (t.type === 'tax') {
+        suggested = 'Pay Tax';
+      } else if (t.type === 'chance' || t.type === 'community') {
+        suggested = 'Draw Card';
+      }
+      setPredictedTo(toIndex);
+      setPostAction(suggested);
+      setBuySelected(false);
+      setAuctionCompleted(false);
+      setAuctionItSelected(false);
+      setStagedAuction(null);
       setActiveStep(2);
       setHighestStep(2);
+      // Removed auto-open for Bus; overlay opens only when user taps Draw Bus
     }
   };
 
   // helper for nav button styles
-  const nextBtnDisabled = (): boolean => activeStep >= 2 || (activeStep === 1 && !hasFullNumericRoll);
+  const nextBtnDisabled = (): boolean => {
+    if (activeStep >= 2) return true;
+    if (activeStep === 1) {
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const pl = players.find((x) => x.id === pid);
+      if (pl?.inJail && jailChoice === 'roll') {
+        return !(d6A !== null && d6B !== null);
+      }
+      // Only require a valid roll or teleport selection during Roll step
+      const hasRollOrTeleport = (busTeleportTo != null) || (d6A !== null && d6B !== null && special !== null);
+      return !hasRollOrTeleport;
+    }
+    return false;
+  };
+  // Require purchase or auction resolution when applicable
+  const purchaseOrAuctionRequiredButNotResolved = (): boolean => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    if (!pid) return false;
+    if (t.type === 'auction') {
+      return !auctionCompleted;
+    }
+    const isBuyable = (t.type === 'property' || t.type === 'railroad' || t.type === 'utility');
+    if (!isBuyable) return false;
+    const owner = propsState.byTileId[t.id]?.ownerId as string | null;
+    const unowned = !owner;
+    if (!unowned) return false;
+    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
+    const willPassGoThisMove = predictedTo != null ? passedGo(fromPos, predictedTo) : false;
+    const pl = players.find((x) => x.id === pid);
+    const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+    if (firstRoundLocked) return false;
+    // require either Buy toggle OR a staged/confirmed auction-it for this tile
+    const auctionResolved = stagedAuction && stagedAuction.tileId === t.id;
+    return !(buySelected || auctionResolved);
+  };
+
+  // Map board tile to buy button style with good contrast
+  function getBuyStyle(tile: ReturnType<typeof getTileByIndex>): { bgClass: string; textClass: string; borderClass: string; textStrongClass: string } {
+    if (tile.type === 'utility') return { bgClass: 'bg-zinc-200', textClass: 'text-neutral-900', borderClass: 'border-zinc-300', textStrongClass: 'text-neutral-900' };
+    if (tile.type === 'property') {
+      switch (tile.group) {
+        case 'brown':
+          return { bgClass: 'bg-amber-800', textClass: 'text-white', borderClass: 'border-amber-800', textStrongClass: 'text-amber-800' };
+        case 'lightBlue':
+          return { bgClass: 'bg-sky-300', textClass: 'text-neutral-900', borderClass: 'border-sky-300', textStrongClass: 'text-sky-400' };
+        case 'pink':
+          return { bgClass: 'bg-pink-400', textClass: 'text-neutral-900', borderClass: 'border-pink-400', textStrongClass: 'text-pink-400' };
+        case 'orange':
+          return { bgClass: 'bg-orange-400', textClass: 'text-neutral-900', borderClass: 'border-orange-400', textStrongClass: 'text-orange-400' };
+        case 'red':
+          return { bgClass: 'bg-red-600', textClass: 'text-white', borderClass: 'border-red-600', textStrongClass: 'text-red-600' };
+        case 'yellow':
+          return { bgClass: 'bg-yellow-300', textClass: 'text-neutral-900', borderClass: 'border-yellow-300', textStrongClass: 'text-yellow-400' };
+        case 'green':
+          return { bgClass: 'bg-green-600', textClass: 'text-white', borderClass: 'border-green-600', textStrongClass: 'text-green-600' };
+        case 'darkBlue':
+          return { bgClass: 'bg-blue-900', textClass: 'text-white', borderClass: 'border-blue-900', textStrongClass: 'text-blue-900' };
+        default:
+          return { bgClass: 'bg-amber-600', textClass: 'text-white', borderClass: 'border-amber-600', textStrongClass: 'text-amber-600' };
+      }
+    }
+    if (tile.type === 'railroad') return { bgClass: 'bg-stone-300', textClass: 'text-neutral-900', borderClass: 'border-stone-400', textStrongClass: 'text-stone-600' };
+    return { bgClass: 'bg-amber-600', textClass: 'text-white', borderClass: 'border-amber-600', textStrongClass: 'text-amber-600' };
+  }
+
+  function getTileHeaderBg(tile: ReturnType<typeof getTileByIndex>): string {
+    if (tile.type === 'property') {
+      switch (tile.group) {
+        case 'brown':
+          return 'bg-amber-800';
+        case 'lightBlue':
+          return 'bg-sky-300';
+        case 'pink':
+          return 'bg-pink-400';
+        case 'orange':
+          return 'bg-orange-400';
+        case 'red':
+          return 'bg-red-600';
+        case 'yellow':
+          return 'bg-yellow-300';
+        case 'green':
+          return 'bg-green-600';
+        case 'darkBlue':
+          return 'bg-blue-900';
+      }
+    }
+    if (tile.type === 'railroad') return 'bg-stone-300';
+    if (tile.type === 'utility') return 'bg-zinc-200';
+    return 'bg-neutral-200';
+  }
+
+  function getGroupBorderClass(group: ColorGroup): string {
+    switch (group) {
+      case 'brown':
+        return 'border-amber-800';
+      case 'lightBlue':
+        return 'border-sky-300';
+      case 'pink':
+        return 'border-pink-400';
+      case 'orange':
+        return 'border-orange-400';
+      case 'red':
+        return 'border-red-600';
+      case 'yellow':
+        return 'border-yellow-300';
+      case 'green':
+        return 'border-green-600';
+      case 'darkBlue':
+        return 'border-blue-900';
+      default:
+        return 'border-neutral-400';
+    }
+  }
+
+  function improvementLabel(imp: number): string {
+    if (imp <= 0) return 'None';
+    if (imp >= 6) return 'Skyscraper';
+    if (imp === 5) return 'Hotel';
+    return `${imp} house${imp > 1 ? 's' : ''}`;
+  }
+
+  function groupTooltipForPlayer(playerId: string, group: ColorGroup): string {
+    const tiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === group);
+    const lines: string[] = [];
+    for (const t of tiles) {
+      const ps = propsState.byTileId[t.id];
+      const owned = ps?.ownerId === playerId;
+      if (!owned) continue;
+      const imp = ps?.improvements ?? 0;
+      const impText = improvementLabel(imp);
+      lines.push(`${t.name}${imp > 0 ? ` — ${impText}` : ''}`);
+    }
+    if (lines.length === 0) return '';
+    return lines.join('\n');
+  }
+
+  function railroadTooltipForPlayer(playerId: string): string {
+    const tiles = BOARD_TILES.filter((t) => t.type === 'railroad');
+    const lines: string[] = [];
+    for (const t of tiles) {
+      const ps = propsState.byTileId[t.id];
+      const owned = ps?.ownerId === playerId;
+      if (!owned) continue;
+      const depot = ps?.depotInstalled === true;
+      lines.push(`${t.name}${depot ? ' — Depot' : ''}`);
+    }
+    if (lines.length === 0) return '';
+    return lines.join('\n');
+  }
+
+  function utilitiesTooltipForPlayer(playerId: string): string {
+    const tiles = BOARD_TILES.filter((t) => t.type === 'utility');
+    const lines: string[] = [];
+    for (const t of tiles) {
+      const ps = propsState.byTileId[t.id];
+      const owned = ps?.ownerId === playerId;
+      if (!owned) continue;
+      lines.push(`${t.name}`);
+    }
+    if (lines.length === 0) return '';
+    return lines.join('\n');
+  }
+
+  const tileFooterIcon = (tileId: string): JSX.Element | null => {
+    const t = BOARD_TILES.find((x) => x.id === tileId)!;
+    if (t.type === 'property') {
+      const imp = propsState.byTileId[tileId]?.improvements ?? 0;
+      if (imp === 0) return null;
+      if (imp >= 5) return <span title="Hotel">🏨</span>;
+      return (
+        <span title={`${imp} house${imp > 1 ? 's' : ''}`}> {'🏠'.repeat(Math.min(4, imp))}</span>
+      );
+    }
+    if (t.type === 'railroad') {
+      const owned = propsState.byTileId[tileId]?.ownerId;
+      return owned ? <span title="Depot">🚉</span> : null;
+    }
+    if (t.type === 'utility') {
+      const owned = propsState.byTileId[tileId]?.ownerId;
+      return owned ? <span title="Utility">⚡</span> : null;
+    }
+    return null;
+  };
 
   const stepItems = [
-    { id: 0 as const, title: 'Pre Action', desc: preAction || 'None' },
-    { id: 1 as const, title: 'Roll', desc: rollSummary },
-    { id: 2 as const, title: 'Post-action', desc: postAction || 'None' },
+    { id: 0 as const, title: `Pre ${rollCount}` , desc: preAction || 'None' },
+    { id: 1 as const, title: `Roll ${rollCount}`, desc: rollSummary },
+    { id: 2 as const, title: `Post ${rollCount}`, desc: postAction || 'None' },
   ];
+
+  const rentRequiredButNotSelected = (): boolean => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
+    const ps = propsState.byTileId[t.id];
+    const owner = ps?.ownerId as string | null;
+    const mortgaged = ps?.mortgaged === true;
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    const mustPay = !!owner && owner !== pid && !mortgaged;
+    if (!mustPay) return false;
+    return !rentSelected;
+  };
+
+  const taxRequiredButNotSelected = (): boolean => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (t.type !== 'tax') return false;
+    return !taxSelected;
+  };
+
+  const doQuickBuy = (pid: string): void => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return;
+    const ps = propsState.byTileId[t.id];
+    if (ps?.ownerId) return;
+    dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'PURCHASE', actorPlayerId: pid, payload: { tileId: t.id, ownerId: pid, message: `Purchased ${t.name}` }, createdAt: new Date().toISOString() })
+    );
+  };
+
+  const doQuickPayRent = (pid: string): void => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return;
+    const ownerIdForTile = propsState.byTileId[t.id]?.ownerId as string | null;
+    const mortgaged = propsState.byTileId[t.id]?.mortgaged === true;
+    if (!ownerIdForTile || ownerIdForTile === pid || mortgaged) return;
+    const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+    const state = (window as any).__store__?.getState?.() as RootState | undefined;
+    const rent = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+    if (rent <= 0) return;
+    dispatch(adjustPlayerMoney({ id: pid, delta: -rent }));
+    dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
+    dispatch(
+      appendEvent({
+        id: crypto.randomUUID(),
+        gameId: 'local',
+        type: 'RENT',
+        actorPlayerId: pid,
+        payload: { tileId: t.id, from: pid, to: ownerIdForTile, amount: rent, message: `Rent ${rent}` },
+        moneyDelta: -rent,
+        createdAt: new Date().toISOString(),
+      })
+    );
+  };
+
+  const doQuickPayTax = (pid: string): void => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (t.type !== 'tax' || !t.taxAmount) return;
+    dispatch(adjustPlayerMoney({ id: pid, delta: -t.taxAmount }));
+    dispatch(
+      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', actorPlayerId: pid, payload: { tileId: t.id, from: pid, amount: t.taxAmount, message: `Tax ${t.taxAmount}` }, moneyDelta: -t.taxAmount, createdAt: new Date().toISOString() })
+    );
+    dispatch(addToFreeParking(t.taxAmount));
+  };
 
   // //#render
   return (
     <div className="w-full max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center flex-col sm:flex-row sm:items-start justify-between">
         <h1 className="text-2xl font-semibold flex items-center gap-3">
-          GM Console
+          <button type="button" onClick={() => setBoardOverlayOpen(true)} className="hover:underline">
+            GM Console
+          </button>
           {racePot.active && (
             <span data-qa="badge-race-pot" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white text-xs font-semibold px-3 py-1">
               <span role="img" aria-label="Race pot">🏃‍➡️💰</span>
@@ -368,17 +1079,18 @@ export default function PlayConsole(): JSX.Element {
           )}
         </h1>
         {/* HUD summary */}
-        <div data-qa="hud-bank" className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1">
-            Houses: <strong>{propsState.housesRemaining}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1">
-            Hotels: <strong>{propsState.hotelsRemaining}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-neutral-100 dark:bg-neutral-800 px-2 py-1">
-            Bank props: <strong>{bankUnownedCount}</strong>
-          </span>
-        </div>
+        <HudBar
+          className="mt-2 sm:mt-0"
+          housesRemaining={propsState.housesRemaining}
+          hotelsRemaining={propsState.hotelsRemaining}
+          skyscrapersRemaining={propsState.skyscrapersRemaining}
+          depotsLeft={depotsLeft}
+          freeParkingPot={freeParkingPot}
+          bankUnownedCount={bankUnownedCount}
+          chanceLeft={chanceLeft}
+          communityLeft={communityLeft}
+          busLeft={busLeft}
+        />
       </div>
 
       {/* Player turn cards */}
@@ -386,123 +1098,374 @@ export default function PlayConsole(): JSX.Element {
         {players.map((p, idx) => {
           const isActive = idx === turnIndex;
           const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
+          const loc = getTileByIndex(p.positionIndex);
           return (
-            <div key={p.id} className={`rounded-lg border ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'} p-3 bg-white dark:bg-neutral-900`}> 
-              <div className="flex items-center gap-3">
-                <div className="font-semibold">{idx + 1}</div>
-                <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
-                  <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={36} />
+            <div key={p.id} className={`rounded-2xl overflow-hidden border ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'}  bg-white dark:bg-neutral-900`}> 
+              <div className=" pl-8 py-2 pr-5 gap-2 relative bg-white dark:bg-neutral-800 rounded-tl-2xl flex flex-col">
+                {/* player number */}
+                <div className={`font-semibold text-sm rounded-br-3xl ${isActive ? 'bg-emerald-400 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-800'}  w-[30px] h-[30px] pr-1 absolute top-0 left-0 flex items-center justify-center`}>{idx + 1}</div>
+                {/* player avatar & name */}
+                <div className="flex items-center gap-3 relative">
+                  <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
+                    <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={36} />
+                  </div>
+                  <div className="font-semibold flex flex-col">
+                    <span>{p.nickname}</span>
+                    <span className="text-sm font-normal opacity-70"> {loc.name} <span className="opacity-60">{p.positionIndex}</span></span>
+                  </div>
+                  <div className="ml-auto text-[18px] font-bold opacity-90">
+                    <AnimatedNumber value={p.money} prefix="$" />
+                  </div>
                 </div>
-                <div className="font-semibold"> {p.nickname}</div>
-                <div className="ml-auto text-sm opacity-80">${p.money}</div>
+                {/* inventory HUD */}
+                <div className="flex items-center gap-3 text-[11px] opacity-80">
+                  {(p.busTickets ?? 0) > 0 && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={p.busTickets ?? 0} />)}
+                  {((p.gojfChance ?? 0) + (p.gojfCommunity ?? 0)) > 0 && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={(p.gojfChance ?? 0) + (p.gojfCommunity ?? 0)} />)}
+                  {(() => {
+                    const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsState.byTileId[t.id]?.ownerId === p.id)).length;
+                    if (rrCount <= 0) return null;
+                    const tip = railroadTooltipForPlayer(p.id);
+                    return (
+                      <Tooltip content={tip || `Railroads x${rrCount}`}>
+                        <HudBadge title="Railroads owned" icon={<span>🚂</span>} count={rrCount} variant="pill" borderClassName="border-white" />
+                      </Tooltip>
+                    );
+                  })()}
+                  {(() => {
+                    const utilCount = BOARD_TILES.filter((t) => t.type === 'utility' && (propsState.byTileId[t.id]?.ownerId === p.id)).length;
+                    if (utilCount <= 0) return null;
+                    const tip = utilitiesTooltipForPlayer(p.id);
+                    return (
+                      <Tooltip content={tip || `Utilities x${utilCount}`}>
+                        <HudBadge title="Utilities owned" icon={<span>🛠️</span>} count={utilCount} variant="pill" borderClassName="border-white" />
+                      </Tooltip>
+                    );
+                  })()}
+                  {/* per-group property indicators */}
+                  <div className="inline-flex items-center gap-1 flex-wrap">
+                    {(['brown','lightBlue','pink','orange','red','yellow','green','darkBlue'] as ColorGroup[]).map((g) => {
+                      const ownedIds = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g && (propsState.byTileId[t.id]?.ownerId === p.id));
+                      if (ownedIds.length === 0) return null;
+                      const tip = groupTooltipForPlayer(p.id, g);
+                      return (
+                        <Tooltip key={g} content={tip || `${g} x${ownedIds.length}`}>
+                          <HudBadge icon={<span>🏠</span>} count={ownedIds.length} variant="pill" borderClassName={getGroupBorderClass(g)} />
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
               {isActive && (
-                <div className="mt-3 space-y-4">
+                <div className="p-4 space-y-4">
+                  {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
+                  {((rollCount > 1) || (turnSegments.length > 1)) && (
+                    <TurnRibbon
+                      segments={turnSegments}
+                      currentDraft={{ roll: rollCount, d6A, d6B, special, busUsed: busTeleportTo != null, from: players[turnIndex]?.positionIndex ?? 0, to: predictedTo ?? (players[turnIndex]?.positionIndex ?? 0), tileName: (predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(players[turnIndex]?.positionIndex ?? 0).name) }}
+                    />
+                  )}
+                  {/* Jail attempts ribbon (only when in jail) */}
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    const pl = players.find((x) => x.id === pid);
+                    if (!pl?.inJail) return null;
+                    return <JailAttemptRibbon attemptsCompleted={pl.jailAttempts ?? 0} />;
+                  })()}
+
                   {/* Stepper navigation */}
-                  <div className="pb-2">
-                    <div className="flex items-center">
-                      {stepItems.map((s, i) => {
-                        const status = s.id < activeStep ? 'done' : s.id === activeStep ? 'current' : 'upcoming';
-                        const clickable = s.id <= highestStep || s.id === activeStep;
-                        return (
-                          <div key={s.id} className="flex-1 flex flex-col items-center text-center">
-                            {/* top label */}
-                            <div className="text-xs font-medium mb-1">{s.title}</div>
-                            {/* circle */}
-                            <button
-                              type="button"
-                              disabled={!clickable}
-                              onClick={() => clickable && setActiveStep(s.id)}
-                              className={`relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${
-                                status === 'done'
-                                  ? 'bg-emerald-600 border-emerald-600 text-white'
-                                  : status === 'current'
-                                  ? 'bg-white dark:bg-neutral-900 border-emerald-500 text-emerald-600'
-                                  : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-400'
-                              } ${!clickable ? 'opacity-60 cursor-not-allowed' : ''}`}
-                            >
-                              {status === 'done' ? '✓' : s.id + 1}
-                            </button>
-                            {/* connector line */}
-                            {i < stepItems.length - 1 && (
-                              <div className={`h-1 w-full -mt-4 ${i < activeStep ? 'bg-emerald-500' : 'bg-neutral-200 dark:bg-neutral-800'}`} aria-hidden />
-                            )}
-                            {/* desc */}
-                            <div className="text-[11px] opacity-70 mt-2 min-h-4 px-1">{s.desc}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
 
                   <AnimatePresence mode="wait">
                     {activeStep === 0 && (
                       <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
                         <div className="text-xs font-medium">Pre-actions</div>
-                        <div>
-                          <select className="w-full rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm dark:bg-neutral-900 dark:border-neutral-700" value={preAction} onChange={(e) => setPreAction(e.target.value)}>
-                            <option>None</option>
-                            <option>Mortgage</option>
-                            <option>Unmortgage</option>
-                            <option>Build</option>
-                            <option>Sell</option>
-                            <option>Money Adjust</option>
-                          </select>
-                        </div>
+                        {(() => {
+                          // Jail choices when in jail
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          const pl = players.find((x) => x.id === pid);
+                          if (!pl?.inJail) return null;
+                          const gojfTotal = (pl.gojfChance ?? 0) + (pl.gojfCommunity ?? 0);
+                          return (
+                            <div className="flex flex-wrap gap-2">
+                              <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
+                              {gojfTotal > 0 && (
+                                <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
+                              )}
+                              <TogglePillButton label={<span>Try Doubles</span>} active={jailChoice === 'roll'} onToggle={() => setJailChoice(jailChoice === 'roll' ? null : 'roll')} variant="emerald" />
+                            </div>
+                          );
+                        })()}
+
+                        {/* Build & Sell quick access when eligible per ownership thresholds */}
+                        {(() => {
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (!pid) return null;
+                          // Check any color group eligibility: partial sets allow to hotel; full set allows skyscraper
+                          const groups = ['brown','lightBlue','pink','orange','red','yellow','green','darkBlue'] as ColorGroup[];
+                          const eligibleForAny = groups.some((g) => {
+                            const tiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g);
+                            const owned = tiles.filter((t) => propsState.byTileId[t.id]?.ownerId === pid);
+                            const ownedCount = owned.length;
+                            const size = tiles.length;
+                            const hotelThreshold = size === 4 ? 3 : size === 3 ? 2 : size === 2 ? 2 : Number.POSITIVE_INFINITY;
+                            // Eligible if can at least build to hotel by threshold, or if already have improvements to sell
+                            const hasAnyImprovements = owned.some((t) => (propsState.byTileId[t.id]?.improvements ?? 0) > 0);
+                            return ownedCount >= hotelThreshold || hasAnyImprovements;
+                          });
+                          if (!eligibleForAny) return null;
+                          return (
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                              onClick={() => setBuildOverlayOpen(true)}
+                            >
+                              Build & Sell
+                            </button>
+                          );
+                        })()}
+                        {/* Contextual depot install/remove if active player owns current railroad */}
+                        {(() => {
+                          const tile = getTileByIndex(currentIndex);
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (tile.type !== 'railroad' || !pid) return null;
+                          const ps = propsState.byTileId[tile.id];
+                          if (!ps || ps.ownerId !== pid) return null;
+                          const installed = ps.depotInstalled === true;
+                          const cost = 100;
+                          const canAfford = (players.find((x) => x.id === pid)?.money ?? 0) >= cost;
+                          return (
+                            <RailroadDepotControl
+                              installed={installed}
+                              canAfford={canAfford}
+                              onInstall={() => {
+                                dispatch(setDepotInstalled({ tileId: tile.id, installed: true }));
+                                dispatch(adjustPlayerMoney({ id: pid, delta: -cost }));
+                                dispatch(
+                                  appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, amount: -cost, message: 'Depot installed' }, moneyDelta: -cost, createdAt: new Date().toISOString() })
+                                );
+                              }}
+                              onRemove={() => {
+                                dispatch(setDepotInstalled({ tileId: tile.id, installed: false }));
+                                dispatch(
+                                  appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, message: 'Depot removed' }, createdAt: new Date().toISOString() })
+                                );
+                              }}
+                            />
+                          );
+                        })()}
                       </motion.div>
                     )}
 
                     {activeStep === 1 && (
                       <motion.div key="roll" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
                         <div className="text-xs font-medium flex items-center gap-2">
-                          <span>Roll</span>
+                          <span>Roll {rollCount}</span>
                           {hasRoll && <span className="inline-flex items-center rounded bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px]">Total: {rollTotal}</span>}
+                          {(d6A !== null && d6B !== null && d6A === d6B) && <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>}
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs opacity-80 w-12">D6 A:</span>
-                            {[1, 2, 3, 4, 5, 6].map((n) => (
-                              <button key={`a-${n}`} type="button" className={getToggleBtnClass(d6A === n)} onClick={() => setD6A(n)}>
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs opacity-80 w-12">D6 B:</span>
-                            {[1, 2, 3, 4, 5, 6].map((n) => (
-                              <button key={`b-${n}`} type="button" className={getToggleBtnClass(d6B === n)} onClick={() => setD6B(n)}>
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs opacity-80 w-12">Special:</span>
-                            {(['1', '2', '3', '+1', '-1', 'Bus'] as const).map((label) => (
-                              <button
-                                key={`s-${label}`}
-                                type="button"
-                                className={getToggleBtnClass(String(special ?? '') === label)}
-                                onClick={() => setSpecial((isNaN(Number(label)) ? (label as SpecialDieFace) : (Number(label) as SpecialDieFace)))}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                        {(() => {
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          const pl = players.find((x) => x.id === pid);
+                          const inJailRolling = pl?.inJail && jailChoice === 'roll';
+                          return (
+                            <div className={busTeleportTo != null ? 'opacity-50 pointer-events-none' : ''}>
+                              <div className={inJailRolling ? '' : ''}>
+                                {/* Render D6 selector; hide Special row if in-jail trying doubles */}
+                                <DiceSelector d6A={d6A} d6B={d6B} special={inJailRolling ? null : (special as any)} onSelectA={setD6A} onSelectB={setD6B} onSelectSpecial={(v) => setSpecial(v as SpecialDieFace)} showSpecial={!inJailRolling} />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        {/* Draw Bus moved to Post-actions */}
+
+                        {/* Use Bus Ticket (teleport) if player holds at least one */}
+                        {(() => {
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          const available = busTicketsAvailableThisTurn + stagedBusTickets;
+                          if (available <= 0) return null;
+                          return (
+                            <div className="pt-1">
+                              {busTeleportTo != null ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                                  onClick={() => {
+                                    // cancel selection; restore ticket availability and inventory
+                                    const pid = players[turnIndex]?.id || players[0]?.id;
+                                    if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
+                                    setBusTicketsAvailableThisTurn((n) => n + 1);
+                                    setBusTeleportTo(null);
+                                  }}
+                                >
+                                  <span>✓</span>
+                                  🚐 to {getTileByIndex(busTeleportTo).name}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                                  onClick={() => setCenterOverlay({ type: 'busTeleport' })}
+                                >
+                                  Use Bus Ticket
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </motion.div>
                     )}
 
                     {activeStep === 2 && (
                       <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
                         <div className="text-xs font-medium">Post-actions</div>
-                        <div>
-                          <select className="w-full rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm dark:bg-neutral-900 dark:border-neutral-700" value={postAction} onChange={(e) => setPostAction(e.target.value)}>
-                            <option>None</option>
-                            <option>Pay Rent</option>
-                            <option>Pay Tax</option>
-                            <option>Draw Card</option>
-                          </select>
-                        </div>
+                        {/* From → To preview for GM */}
+                        {(() => {
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+                          const fromTileName = getTileByIndex(fromIdx).name;
+                          const isDblNow = (d6A !== null && d6B !== null && d6A === d6B);
+                          const thirdDbl = (rollCount >= 3) && isDblNow && (busTeleportTo == null);
+                          let toIdx: number | null = null;
+                          if (thirdDbl) toIdx = JAIL_INDEX;
+                          else if (predictedTo != null) toIdx = predictedTo;
+                          const toTileName = toIdx != null ? getTileByIndex(toIdx).name : '—';
+                          return <FromToIndicator from={fromTileName} to={toTileName} subtleTo alert={thirdDbl} />;
+                        })()}
+                        {/* Recap moved into Summary overlay */}
+          
+                        {/* Draw Bus control now consolidated via PostActionsBar (avoid duplicates) */}
+                        {/* Quick action: Buy or Auction resolution */}
+                        {(() => {
+                          if (predictedTo == null) return null;
+                          const t = getTileByIndex(predictedTo);
+                          const isBuyable = (t.type === 'property' || t.type === 'railroad' || t.type === 'utility');
+                          const isAuctionSpace = t.type === 'auction';
+                          if (!isBuyable && !isAuctionSpace) return null;
+                          const stateTile = propsState.byTileId[t.id];
+                          const owner = stateTile?.ownerId as string | null;
+                          const pid2 = players[turnIndex]?.id || players[0]?.id;
+                          const mortgaged = stateTile?.mortgaged === true;
+                          const canBuy = isBuyable && (!owner || (mortgaged && !!owner && owner !== pid2));
+                          const pl = players.find((x) => x.id === pid2);
+                          const fromPos = players.find((x) => x.id === pid2)?.positionIndex ?? 0;
+                          const willPassGoThisMove = predictedTo != null ? passedGo(fromPos, predictedTo) : false;
+                          const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+                          const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
+                          const playerMoney = p.money;
+                          const isUnownedBuyable = isBuyable && !owner;
+                          const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
+                          return (
+                            <>
+                              {owner && (
+                                <div className="text-[11px]">
+                                  <span className="inline-flex items-center rounded-full border border-neutral-300 dark:border-neutral-700 px-2 py-0.5">
+                                    Owned {mortgaged ? '(Mortgaged) ' : ''}by {players.find(pl => pl.id === owner)?.nickname ?? 'owner'}
+                                  </span>
+                                </div>
+                              )}
+                              <PurchaseActionsRow
+                                tileName={t.name}
+                                price={price}
+                                firstRoundLocked={firstRoundLocked}
+                                isUnownedBuyable={!!isUnownedBuyable}
+                                isAuctionTile={isAuctionSpace}
+                                groupVariant={groupVariant}
+                                buySelected={buySelected}
+                                onToggleBuy={() => {
+                                  const next = !buySelected;
+                                  setBuySelected(next);
+                                  if (next) setAuctionItSelected(false);
+                                  setPostAction(next ? 'Buy Property' : postAction === 'Buy Property' ? 'None' : postAction);
+                                }}
+                                canAffordBuy={playerMoney >= price}
+                                auctionItSelected={auctionItSelected}
+                                onToggleAuctionIt={() => {
+                                  const next = !auctionItSelected;
+                                  if (next) setBuySelected(false);
+                                  setAuctionItSelected(next);
+                                  if (next) setAuctionOpen(true);
+                                  if (!next) setStagedAuction(null);
+                                }}
+                              />
+                            </>
+                          );
+                        })()}
+                        {/* Quick-actions based on predicted tile */}
+                        {(() => {
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          const idx = predictedTo ?? currentIndex;
+                          const t = getTileByIndex(idx);
+                          const ps = propsState.byTileId[t.id];
+                          const owner = ps?.ownerId as string | null;
+                          const mortgaged = ps?.mortgaged === true;
+                          const maybeRentLabel = () => {
+                            if (!pid || !(t.type === 'property' || t.type === 'railroad' || t.type === 'utility') || !owner || owner === pid || mortgaged) return null;
+                            const ownerPlayer = players.find((pl) => pl.id === owner);
+                            const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+                            const state = (window as any).__store__?.getState?.() as RootState | undefined;
+                            const rentAmount = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+                            const imp = propsState.byTileId[t.id]?.improvements ?? 0;
+                            const impSuffix = imp > 0 ? ` (${improvementLabel(imp)})` : '';
+                            return `Pay ${ownerPlayer?.nickname ?? 'owner'} $${rentAmount} for ${t.name}${impSuffix}`;
+                          };
+                          const maybeTaxLabel = () => (t.type === 'tax' ? `Pay Tax $${t.taxAmount}` : null);
+                          const isAuctionTile = t.type === 'auction';
+                          const chanceVisible = t.type === 'chance';
+                          const communityVisible = t.type === 'community';
+                          return (
+                            <PostActionsBar
+                              rentLabel={maybeRentLabel()}
+                              rentSelected={rentSelected}
+                              onToggleRent={() => setRentSelected((v) => !v)}
+                              rentShake={shakeRent}
+                              taxLabel={maybeTaxLabel()}
+                              taxSelected={taxSelected}
+                              onToggleTax={() => setTaxSelected((v) => !v)}
+                              taxShake={shakeTax}
+                              busVisible={(() => {
+                                const bySpecial = special === 'Bus' ? 1 : 0;
+                                const byTile = t.type === 'busStop' ? 1 : 0;
+                                // Render one control; if both sources present, PostActionsBar renders a single control used once
+                                return bySpecial + byTile > 0;
+                              })()}
+                              busActive={!!busSelectedCardId}
+                              onDrawBus={() => {
+                                if (busSelectedCardId) {
+                                  dispatch(putCardOnBottom({ deck: 'bus', cardId: busSelectedCardId }));
+                                  setBusSelectedCardId(null);
+                                } else {
+                                  setOverlay({ deck: 'bus' });
+                                }
+                              }}
+                              busShake={shakeBus}
+                              chanceVisible={chanceVisible}
+                              chanceActive={!!stagedChanceCardId}
+                              onToggleChance={() => {
+                                if (!chanceVisible) return;
+                                setOverlay({ deck: 'chance' });
+                              }}
+                              communityVisible={communityVisible}
+                              communityActive={!!stagedCommunityCardId}
+                              onToggleCommunity={() => {
+                                if (!communityVisible) return;
+                                setOverlay({ deck: 'community' });
+                              }}
+                              auctionVisible={isAuctionTile}
+                              auctionActive={auctionCompleted}
+                              onAuction={() => {
+                                if (auctionCompleted) {
+                                  // undo staged auction
+                                  setAuctionCompleted(false);
+                                  setStagedAuction(null);
+                                } else {
+                                  setAuctionOpen(true);
+                                }
+                              }}
+                            />
+                          );
+                        })()}
+                        {/* Auction tile action handled via PostActionsBar toggle above */}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -523,19 +1486,89 @@ export default function PlayConsole(): JSX.Element {
                         Next
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        className="relative inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white text-sm font-semibold shadow select-none"
-                        disabled={!hasFullNumericRoll || !rollConfirmed}
-                        onMouseDown={() => onEndTurnHoldStart(p.id)}
-                        onMouseUp={onEndTurnHoldCancel}
-                        onMouseLeave={onEndTurnHoldCancel}
-                        onTouchStart={() => onEndTurnHoldStart(p.id)}
-                        onTouchEnd={onEndTurnHoldCancel}
-                      >
-                        End Turn
-                        <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
-                      </button>
+                      (() => {
+                        const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
+                        const isDoublesNow = d6A !== null && d6B !== null && d6A === d6B;
+                        const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null);
+                        const continueRoll = isDoublesNow && !thirdDoublesNow && (busTeleportTo == null);
+                        const blocked = isQueuedFlowActive
+                          ? (rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
+                          : (!(((hasRollWithSpecialSelected && rollConfirmed) || (busTeleportTo != null && rollConfirmed))) || (requiresBusCard && !busSelectedCardId) || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
+                        if (isQueuedFlowActive) {
+                          return (
+                            <button
+                              type="button"
+                              className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                              disabled={blocked}
+                              onClick={() => {
+                                if (blocked) return;
+                                const pid = players[turnIndex]?.id || players[0]?.id;
+                                if (!pid) return;
+                                finalizeTurn(pid);
+                              }}
+                            >
+                              Next
+                            </button>
+                          );
+                        }
+                        if (continueRoll) {
+                          return (
+                            <button
+                              type="button"
+                              className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                              disabled={blocked}
+                              onClick={() => {
+                                if (blocked) return;
+                                const pid = players[turnIndex]?.id || players[0]?.id;
+                                if (!pid) return;
+                                finalizeTurn(pid);
+                              }}
+                            >
+                              Next Roll
+                            </button>
+                          );
+                        }
+                        // End-of-turn: show Summary button with hold-to-end
+                        return (
+                          <motion.button
+                            type="button"
+                            className={`relative inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
+                              blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white'
+                            }`}
+                            disabled={blocked}
+                            onMouseDown={() => {
+                              if (blocked) {
+                                if (rentRequiredButNotSelected()) {
+                                  setShakeRent(true);
+                                  window.setTimeout(() => setShakeRent(false), 400);
+                                }
+                                if (taxRequiredButNotSelected()) {
+                                  setShakeTax(true);
+                                  window.setTimeout(() => setShakeTax(false), 400);
+                                }
+                                if (requiresBusCard && !busSelectedCardId) {
+                                  setShakeBus(true);
+                                  window.setTimeout(() => setShakeBus(false), 400);
+                                }
+                                return;
+                              }
+                              onEndTurnHoldStart(p.id);
+                            }}
+                            onClick={() => {
+                              if (blocked) return;
+                              setSummaryOpen(true);
+                            }}
+                            onMouseUp={onEndTurnHoldCancel}
+                            onMouseLeave={onEndTurnHoldCancel}
+                            onTouchStart={() => onEndTurnHoldStart(p.id)}
+                            onTouchEnd={onEndTurnHoldCancel}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            Summary
+                            <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
+                          </motion.button>
+                        );
+                      })()
                     )}
                     <div className="text-xs opacity-70">Step {activeStep + 1} of 3</div>
                   </div>
@@ -546,57 +1579,106 @@ export default function PlayConsole(): JSX.Element {
         })}
       </div>
 
-      {/* Existing GM controls for power users (keep for now) */}
-      <div className="w-full max-w-3xl space-y-6">
-        {/* //#gm-inputs: dice/current index inputs */}
-        <div data-qa="gm-inputs" className="grid grid-cols-1 gap-4">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Current Tile: {currentTileName} ({currentIndex})</label>
-            <input data-qa="current-index" type="number" value={currentIndex} onChange={(e) => setCurrentIndex(parseInt(e.target.value || '0', 10))} className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
-          </div>
-        </div>
+      {/* GM Tools — manual actions and corrections */}
+      <div className="w-full max-w-3xl">
+        <button
+          type="button"
+          onClick={() => setGmToolsOpen((o) => !o)}
+          className="flex items-center justify-between w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        >
+          <span className="text-sm font-semibold">GM Tools</span>
+          <span className="text-xs text-neutral-500">Manual actions and corrections</span>
+          <span className="text-neutral-400">{gmToolsOpen ? '▼' : '▶'}</span>
+        </button>
+        {gmToolsOpen && (
+          <div className="mt-3 space-y-4">
+            {/* Context */}
+            <div data-qa="gm-context" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Context</h3>
+                {(() => {
+                  const p = players[turnIndex] ?? players[0];
+                  if (!p) return null;
+                  const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
+                  return (
+                    <div className="flex items-center gap-2" style={{ ['--player-color' as string]: p.color } as React.CSSProperties}>
+                      <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={24} />
+                      <span className="text-sm font-medium">{p.nickname}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+              <label className="block text-sm font-medium mb-1">Current Tile (for manual actions)</label>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">Actions below apply to this tile. Use 0–39 for board index.</p>
+              <input data-qa="current-index" type="number" min={0} max={39} value={currentIndex} onChange={(e) => setCurrentIndex(parseInt(e.target.value || '0', 10))} className="w-full rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              <p className="mt-1 text-xs opacity-80">{currentTileName} (index {currentIndex})</p>
+            </div>
 
-        {/* //#gm-actions: record board interactions and finances */}
-        <div data-qa="gm-actions" className="flex flex-wrap gap-3">
-          <button data-qa="btn-evaluate" onClick={onEvaluate} disabled={!hasRoll} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-blue-600 disabled:bg-blue-300 text-white font-semibold shadow hover:enabled:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">Evaluate Roll</button>
-          <button data-qa="btn-apply-move" onClick={() => onApplyMove()} disabled={!hasRoll} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 disabled:bg-emerald-300 text-white font-semibold shadow hover:enabled:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">Apply Move</button>
-          <div className="inline-flex items-center gap-2">
-            <select data-qa="owner-picker" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
-              <option value="">Select owner</option>
-              {players.map((p) => (
-                <option value={p.id} key={p.id}>
-                  {p.nickname}
-                </option>
-              ))}
-            </select>
-            <button data-qa="btn-buy-property" onClick={onBuyProperty} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-amber-600 text-white font-semibold shadow hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400">Buy Property</button>
+            {/* Movement */}
+            <div data-qa="gm-movement" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Movement</h3>
+              <div className="flex flex-wrap gap-2">
+                <button data-qa="btn-apply-move" onClick={() => onApplyMove()} disabled={!hasRoll} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow hover:enabled:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title={hasRoll ? 'Move by dice' : 'Select D6 A and D6 B first'}>Apply Move (dice)</button>
+                <button data-qa="btn-move-to-tile" onClick={() => onApplyMove(undefined, currentIndex)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold text-sm shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title="Move current player to Current Tile above">Move to Current Tile</button>
+              </div>
+              <p className="text-[11px] text-neutral-500 mt-2">Use dice from Roll step, or move directly to Current Tile.</p>
+            </div>
+
+            {/* Money & Payments */}
+            <div data-qa="gm-money" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Money & Payments</h3>
+              <div className="flex flex-wrap items-end gap-2 mb-3">
+                <div>
+                  <label className="block text-[11px] text-neutral-500 mb-0.5">Player</label>
+                  <select data-qa="money-player" value={moneyPlayerId} onChange={(e) => setMoneyPlayerId(e.target.value)} className="rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                    <option value="">Select player</option>
+                    {players.map((p) => (
+                      <option value={p.id} key={p.id}>{p.nickname}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-neutral-500 mb-0.5">Amount (+/-)</label>
+                  <input data-qa="money-delta" type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} placeholder="+200 or -50" className="w-28 rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                </div>
+                <button data-qa="btn-apply-money" onClick={onAdjustMoney} className="rounded-md px-3 py-2 bg-slate-700 text-white font-semibold text-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button data-qa="btn-pay-rent" onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
+                <button data-qa="btn-pay-tax" onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
+              </div>
+              <p className="text-[11px] text-neutral-500 mt-2">Uses current tile + selected player</p>
+            </div>
+
+            {/* Property */}
+            <div data-qa="gm-property" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Property (for current tile)</h3>
+              <div className="flex flex-wrap gap-2">
+                <button data-qa="btn-mortgage" onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold text-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
+                <button data-qa="btn-unmortgage" onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold text-sm hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
+                <button data-qa="btn-build" onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold text-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
+                <button data-qa="btn-sell" onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold text-sm hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
+              </div>
+              <p className="text-[11px] text-neutral-500 mt-2">Owner inferred from tile</p>
+            </div>
+
+            {/* Draw Cards */}
+            <div data-qa="gm-cards" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Draw Cards</h3>
+              <div className="flex flex-wrap gap-2">
+                <button data-qa="btn-draw-chance" onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Chance</button>
+                <button data-qa="btn-draw-community" onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold text-sm hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Community Chest</button>
+                {((special === 'Bus') || (predictedTo != null && getTileByIndex(predictedTo).type === 'busStop')) && (
+                  <button data-qa="btn-draw-bus" onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold text-sm hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Bus</button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="inline-flex items-center gap-2">
-            <select data-qa="money-player" value={moneyPlayerId} onChange={(e) => setMoneyPlayerId(e.target.value)} className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700">
-              <option value="">Select player</option>
-              {players.map((p) => (
-                <option value={p.id} key={p.id}>
-                  {p.nickname}
-                </option>
-              ))}
-            </select>
-            <input data-qa="money-delta" type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} className="w-28 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700" />
-            <button data-qa="btn-apply-money" onClick={onAdjustMoney} className="inline-flex items-center justify-center rounded-md px-3 py-2 bg-slate-700 text-white font-semibold shadow hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
-          </div>
-          <button data-qa="btn-pay-rent" onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
-          <button data-qa="btn-pay-tax" onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold shadow hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
-          <button data-qa="btn-mortgage" onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold shadow hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
-          <button data-qa="btn-unmortgage" onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold shadow hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
-          <button data-qa="btn-build" onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold shadow hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
-          <button data-qa="btn-sell" onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold shadow hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
-          <button data-qa="btn-draw-chance" onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Draw Chance</button>
-          <button data-qa="btn-draw-community" onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold shadow hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Draw Community</button>
-          <button data-qa="btn-draw-bus" onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold shadow hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Draw Bus</button>
-        </div>
+        )}
       </div>
 
       {/* //#cards-last: quick reference of last drawn cards for GM */}
-      <div data-qa="cards-last" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-qa="cards-last" className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
           <div className="font-semibold mb-1">Last Chance</div>
           <div className="opacity-80 min-h-10">{lastChance ? lastChance.text : '—'}</div>
@@ -611,18 +1693,471 @@ export default function PlayConsole(): JSX.Element {
         </div>
       </div>
 
-      {/* //#advisories: human-readable suggestions before committing actions */}
-      <div data-qa="advisories" className="space-y-2">
-        <h2 className="text-lg font-medium">Advisories</h2>
-        <ul className="list-disc pl-5 space-y-1 text-sm opacity-90">
-          {advice.map((msg, i) => (
-            <li key={i}>{msg}</li>
-          ))}
-        </ul>
-      </div>
-
       {/* //#event-log: chronological record of GM actions for spectators and undo later */}
       <EventLog />
+
+      {/* Card picker overlay */}
+      <AnimatePresence>
+        {overlay.deck && (
+          <motion.div
+            key="overlay"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 p-4 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">{
+                overlay.deck === 'community' ? 'Pick a Community Chest card' : overlay.deck === 'chance' ? 'Pick a Chance card' : 'Pick a Bus Ticket'
+              }</div>
+              <button onClick={() => setOverlay({ deck: null })} className="text-sm opacity-70 hover:opacity-100">Close</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
+              {overlay.deck === 'bus' ? (
+                (() => {
+                  const busDraw = cardsState.decks.bus.drawPile;
+                  const regularCount = busDraw.filter((c) => !c.id.startsWith('bb')).length;
+                  const bigCount = busDraw.filter((c) => c.id.startsWith('bb')).length;
+                  const handleBusPick = (type: 'regular' | 'big') => {
+                    dispatch(drawBusCardByType(type));
+                    const lastCard = selectLastDrawnCard(store.getState().cards, 'bus');
+                    const cardId = lastCard?.id ?? (type === 'regular' ? 'b1' : 'bb1');
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    dispatch(
+                      appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck: 'bus', cardId, text: lastCard?.text ?? (type === 'regular' ? 'Bus Ticket' : 'Big Bus'), message: `Drew ${type === 'regular' ? 'Bus' : 'Big Bus'}` }, createdAt: new Date().toISOString() })
+                    );
+                    setBusSelectedCardId(cardId);
+                    if (type === 'regular') {
+                      setStagedBusTickets((n) => n + 1);
+                    } else {
+                      setStagedBigBus(true);
+                    }
+                    setOverlay({ deck: null });
+                  };
+                  return (
+                    <div className="col-span-full space-y-4">
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50/50 dark:bg-neutral-800/50">
+                          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Little Buss ({regularCount} remaining)</div>
+                          <button
+                            onClick={() => handleBusPick('regular')}
+                            disabled={regularCount === 0}
+                            className="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 shadow-md transition-colors"
+                          >
+                            Little Buss
+                          </button>
+                        </div>
+                        <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-4 bg-neutral-50/50 dark:bg-neutral-800/50">
+                          <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Big Buss ({bigCount} remaining)</div>
+                          <button
+                            onClick={() => handleBusPick('big')}
+                            disabled={bigCount === 0}
+                            className="w-full rounded-lg border-2 border-neutral-400 dark:border-neutral-500 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium px-6 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Big Buss
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <>
+                  {cardsState.decks[overlay.deck].drawPile.length === 0 && (overlay.deck === 'chance' || overlay.deck === 'community') && (
+                    <div className="rounded-md border border-neutral-300 dark:border-neutral-700 p-3 text-sm flex items-center justify-between">
+                      <span>No cards left in {overlay.deck}. Reshuffle to continue.</span>
+                      <button
+                        className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-blue-500 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                        onClick={() => {
+                          const heldIds: string[] = [];
+                          dispatch(reshuffleIfEmpty({ deck: overlay.deck as any, heldExcludedIds: heldIds }));
+                        }}
+                      >
+                        Reshuffle {overlay.deck === 'chance' ? 'Chance' : 'Community'}
+                      </button>
+                    </div>
+                  )}
+                  {cardsState.decks[overlay.deck].drawPile.map((card) => (
+                    <button
+                      key={card.id}
+                      onClick={() => {
+                        const deck = overlay.deck!;
+                        if (deck === 'chance') setStagedChanceCardId(card.id);
+                        if (deck === 'community') setStagedCommunityCardId(card.id);
+                        setOverlay({ deck: null });
+                      }}
+                      className={`text-left rounded-md border p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 ${(
+                        (overlay.deck === 'chance' && stagedChanceCardId === card.id) ||
+                        (overlay.deck === 'community' && stagedCommunityCardId === card.id)
+                      ) ? 'border-emerald-500 dark:border-emerald-600' : 'border-neutral-200 dark:border-neutral-700'}`}
+                    >
+                      <div className="text-[11px] opacity-70 mb-1">#{card.id}</div>
+                      <div className="text-xs opacity-90 whitespace-pre-wrap">{card.text}</div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Summary overlay */}
+      <AnimatePresence>
+        {summaryOpen && (
+          <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold">Turn Summary</div>
+                <button onClick={() => setSummaryOpen(false)} className="text-sm opacity-70 hover:opacity-100">Close</button>
+              </div>
+              <div className="space-y-2 text-sm">
+                {/* Completed segments recap */}
+                {turnSegments.length > 0 && (
+                  <div className="space-y-1">
+                    {turnSegments.map((seg, idx) => (
+                      <div key={seg.roll} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800">
+                        <div className="flex items-center gap-2 text-xs px-2 py-1">
+                          <span className="font-semibold">Roll {seg.roll}</span>
+                          <span className="opacity-80">{seg.d6A != null && seg.d6B != null ? `${seg.d6A}+${seg.d6B}${seg.special != null ? `+${String(seg.special)}` : ''}` : '—'}</span>
+                          {seg.busUsed && <span title="Bus used">🚌</span>}
+                          <span className="opacity-80">→ {seg.tileName}</span>
+                          <span className="opacity-50 tabular-nums ml-auto">{new Date(seg.at).toLocaleTimeString()}</span>
+                        </div>
+                        {(() => {
+                          const list = getSegmentEvents(idx);
+                          if (!list || list.length === 0) return null;
+                          return (
+                            <ul className="text-xs px-3 pb-2 space-y-1">
+                              {list.map((ev) => (
+                                <li key={ev.id} className="flex items-center gap-2">
+                                  <span className="inline-flex items-center justify-center h-4 w-4 rounded-full text-[10px] bg-neutral-200 dark:bg-neutral-700">{ev.type === 'CARD' ? 'C' : 'P'}</span>
+                                  <span className="opacity-80">{String(ev.payload?.message ?? (ev.type === 'CARD' ? 'Card' : 'Purchase'))}</span>
+                                  {typeof ev.moneyDelta === 'number' && ev.moneyDelta !== 0 && (
+                                    <span className={`tabular-nums ${ev.moneyDelta > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{ev.moneyDelta > 0 ? `+$${ev.moneyDelta}` : `-$${Math.abs(ev.moneyDelta)}`}</span>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          );
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="opacity-80">Current: {rollSummary}</div>
+                {(() => {
+                  const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
+                  const thirdDoubles = rollCount >= 3 && isDoubles && (busTeleportTo == null);
+                  if (!thirdDoubles) return null;
+                  return (
+                    <div className="text-xs inline-flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1">
+                      <span>⚠️ Third doubles: Go to Jail</span>
+                    </div>
+                  );
+                })()}
+                <div className="flex items-center gap-2 text-xs">
+                  {(d6A === d6B) && <span className="inline-flex items-center rounded-full bg-emerald-600 text-white px-2 py-0.5">Doubles ✓</span>}
+                  {busTeleportTo != null && <span className="inline-flex items-center rounded-full bg-sky-600 text-white px-2 py-0.5">Bus used</span>}
+                </div>
+                <div className="opacity-80">Tile: {predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(currentIndex).name}</div>
+                <div className="opacity-80">Actions: {[
+                  buySelected ? 'Buy' : null,
+                  rentSelected ? 'Rent' : null,
+                  taxSelected ? 'Tax' : null,
+                ].filter(Boolean).join(', ') || 'None'}</div>
+                <div className="opacity-80">Staged Bus tickets: {stagedBusTickets}{stagedBigBus ? ' · Big Bus will clear others' : ''}</div>
+              </div>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button onClick={() => setSummaryOpen(false)} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Back</button>
+                {(() => {
+                  const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
+                  const blocked = isQueuedFlowActive
+                    ? (rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
+                    : ((requiresBusCard && !busSelectedCardId) || rentRequiredButNotSelected() || taxRequiredButNotSelected());
+                  const label = isQueuedFlowActive ? 'Next' : 'End Turn';
+                  return (
+                    <button
+                      className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${ blocked ? 'bg-emerald-600/40 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                      disabled={blocked}
+                      onClick={() => {
+                        if (blocked) return;
+                        const pid = players[turnIndex]?.id || players[0]?.id;
+                        if (!pid) return;
+                        finalizeTurn(pid);
+                        setSummaryOpen(false);
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })()}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Centered board picker for Bus teleport */}
+      <AnimatePresence>
+        {centerOverlay.type === 'busTeleport' && (
+          <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold">Select destination (Bus)</div>
+                <button onClick={() => setCenterOverlay({ type: null })} className="text-sm opacity-70 hover:opacity-100">Close</button>
+              </div>
+              <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto">
+                {BOARD_TILES.map((t) => {
+                  const onTile = players.filter((pl) => pl.positionIndex === t.index);
+                  const ownerIdForTile = (propsState.byTileId[t.id]?.ownerId as string | null) || null;
+                  const ownerColor = ownerIdForTile ? (players.find((pl) => pl.id === ownerIdForTile)?.color) : undefined;
+                  return (
+                    <div key={t.id} className="relative pt-2">
+                      {onTile.length > 0 && (
+                        <div className="pointer-events-none absolute -top-2 left-1/2 -translate-x-1/2 flex -space-x-2">
+                          {onTile.slice(0, 3).map((pl) => {
+                            const emoji = AVATARS.find((a) => a.key === pl.avatarKey)?.emoji ?? '🙂';
+                            return <span key={pl.id} className="inline-flex h-5 w-5 items-center justify-center rounded-full ring-2 ring-white dark:ring-neutral-900 bg-neutral-100 dark:bg-neutral-800 text-xs">{emoji}</span>;
+                          })}
+                          {onTile.length > 3 && <span className="ml-2 text-[10px] opacity-70">+{onTile.length - 3}</span>}
+                        </div>
+                      )}
+                      {ownerColor && (
+                        <div className="pointer-events-none absolute left-0 right-0 top-2 bottom-0 rounded-xl" style={{ outline: `3px solid ${ownerColor}` }} aria-hidden />
+                      )}
+                      <button
+                        onClick={() => {
+                          setBusTeleportTo(t.index);
+                          setCenterOverlay({ type: null });
+                          // Consume one ticket now; actual move happens on End Turn via onApplyMove logic using predictedTo
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (pid) dispatch(consumeBusTicket({ id: pid, count: 1 }));
+                          setPredictedTo(t.index);
+                          setBusTicketsAvailableThisTurn((n) => Math.max(0, n - 1));
+                        }}
+                        className={`relative rounded-xl border text-[11px] text-left bg-white dark:bg-neutral-900 ${t.index === (players[turnIndex]?.positionIndex ?? 0) ? 'border-emerald-500' : 'border-neutral-200 dark:border-neutral-700'} hover:shadow w-full`}
+                        title={t.name}
+                      >
+                        {/* colored header */}
+                        <div className={`h-2 rounded-t-xl ${getTileHeaderBg(t)}`} />
+                        <div className="p-2 space-y-1">
+                          <div className="font-semibold text-[12px] truncate">{t.name}</div>
+                        </div>
+                        {/* footer info */}
+                        <div className="px-2 pb-2 flex items-center justify-between text-[10px] opacity-80">
+                          <div>#{t.index}</div>
+                          <div className="flex items-center gap-1">{tileFooterIcon(t.id)}</div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-xs opacity-70">GO is at index 0 (top-right).</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Build & Sell overlay */}
+      <BuildSellOverlay
+        open={buildOverlayOpen}
+        onClose={() => setBuildOverlayOpen(false)}
+        playerId={players[turnIndex]?.id || players[0]?.id}
+        playerMoney={players[turnIndex]?.money || players[0]?.money || 0}
+        tileLevels={useMemo(() => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          const map: Record<string, number> = {};
+          if (pid) {
+            for (const t of BOARD_TILES) {
+              if (t.type !== 'property') continue;
+              const ps = propsState.byTileId[t.id];
+              if (ps?.ownerId === pid) map[t.id] = ps.improvements ?? 0;
+            }
+          }
+          return map;
+        }, [players, turnIndex, propsState.byTileId])}
+        tileMortgaged={useMemo(() => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          const map: Record<string, boolean> = {};
+          if (pid) {
+            for (const t of BOARD_TILES) {
+              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+              const ps = propsState.byTileId[t.id];
+              if (ps?.ownerId === pid) map[t.id] = ps.mortgaged === true;
+            }
+          }
+          return map;
+        }, [players, turnIndex, propsState.byTileId])}
+        railroadDepotInstalled={useMemo(() => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          const map: Record<string, boolean> = {};
+          if (pid) {
+            for (const t of BOARD_TILES) {
+              if (t.type !== 'railroad') continue;
+              const ps = propsState.byTileId[t.id];
+              if (ps?.ownerId === pid) map[t.id] = ps.depotInstalled === true;
+            }
+          }
+          return map;
+        }, [players, turnIndex, propsState.byTileId])}
+        ownedTileIds={useMemo(() => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          const list: string[] = [];
+          if (pid) {
+            for (const t of BOARD_TILES) {
+              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+              const ps = propsState.byTileId[t.id];
+              if (ps?.ownerId === pid) list.push(t.id);
+            }
+          }
+          return list;
+        }, [players, turnIndex, propsState.byTileId])}
+        housesRemaining={propsState.housesRemaining}
+        hotelsRemaining={propsState.hotelsRemaining}
+        onConfirm={({ targets, desiredMortgaged, desiredDepotInstalled }) => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          if (!pid) return;
+          let totalCost = 0;
+          let totalRefund = 0;
+          // Mortgage/unmortgage application computed in overlay net, but we still need to apply state changes
+          // We will compare desired vs current after money updates using a local copy sourced from DOM via custom event; for simplicity here, money reflects both build/sell and mortgage deltas
+          for (const t of BOARD_TILES) {
+            if (t.type !== 'property' || targets[t.id] == null) continue;
+            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+            const tar = targets[t.id];
+            if (tar > cur) {
+              for (let level = cur; level < tar; level += 1) {
+                totalCost += t.property!.houseCost; // uniform cost per level
+              }
+            } else if (tar < cur) {
+              for (let level = cur; level > tar; level -= 1) {
+                totalRefund += t.property!.houseCost / 2; // uniform refund
+              }
+            }
+          }
+          const net = Math.max(0, totalCost - totalRefund);
+          if (net > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -net }));
+          if (totalRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +totalRefund }));
+          // Apply mortgage/unmortgage flags and compute mortgage deltas
+          let mortCost = 0;
+          let mortRefund = 0;
+          if (desiredMortgaged) {
+            for (const t of BOARD_TILES) {
+              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+              const curMort = propsState.byTileId[t.id]?.mortgaged === true;
+              const desMort = desiredMortgaged[t.id] === true;
+              if (curMort === desMort) continue;
+              const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+              if (desMort && !curMort) {
+                mortRefund += mv;
+              } else if (!desMort && curMort) {
+                mortCost += mv;
+              }
+              dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+            }
+          }
+          // Apply depot install/remove
+          let depotCost = 0;
+          if (desiredDepotInstalled) {
+            for (const t of BOARD_TILES) {
+              if (t.type !== 'railroad') continue;
+              const cur = propsState.byTileId[t.id]?.depotInstalled === true;
+              const des = desiredDepotInstalled[t.id] === true;
+              if (cur === des) continue;
+              if (des && !cur) depotCost += 100;
+              dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
+            }
+          }
+          if (mortCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -mortCost }));
+          if (mortRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +mortRefund }));
+          if (depotCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -depotCost }));
+          const totalCostAll = totalCost + mortCost + depotCost;
+          const totalRefundAll = totalRefund + mortRefund;
+          const netAll = Math.max(0, totalCostAll - totalRefundAll);
+          if (totalCostAll > 0 || totalRefundAll > 0) {
+            const msg = `Build/Sell & Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}`;
+            dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { playerId: pid, message: msg }, moneyDelta: totalRefund - net, createdAt: new Date().toISOString() }));
+          }
+          for (const t of BOARD_TILES) {
+            if (t.type !== 'property' || targets[t.id] == null) continue;
+            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+            const tar = targets[t.id];
+            if (tar > cur) {
+              for (let level = cur; level < tar; level += 1) {
+                dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
+              }
+            } else if (tar < cur) {
+              for (let level = cur; level > tar; level -= 1) {
+                dispatch(sellHouse({ tileId: t.id }));
+              }
+            }
+          }
+          setBuildOverlayOpen(false);
+        }}
+      />
+
+      {/* Auction overlay */}
+      <AuctionOverlay
+        open={auctionOpen}
+        onClose={() => setAuctionOpen(false)}
+        bankOwnedByTileId={useMemo(() => {
+          const map: Record<string, boolean> = {};
+          for (const t of BOARD_TILES) {
+            if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+            const owner = propsState.byTileId[t.id]?.ownerId ?? null;
+            map[t.id] = owner == null;
+          }
+          return map;
+        }, [propsState.byTileId])}
+        players={players.map((pl) => ({ id: pl.id, nickname: pl.nickname, money: pl.money }))}
+        boardPlayers={players.map((pl) => ({ id: pl.id, avatarKey: pl.avatarKey, positionIndex: pl.positionIndex, color: pl.color }))}
+        presetTileId={(() => {
+          const idx = predictedTo ?? currentIndex;
+          const t = getTileByIndex(idx);
+          const isBuyable = (t.type === 'property' || t.type === 'railroad' || t.type === 'utility');
+          const owner = propsState.byTileId[t.id]?.ownerId as string | null;
+          const unowned = isBuyable && !owner;
+          return unowned ? t.id : null;
+        })()}
+        onConfirm={(tileId, winnerId, amount) => {
+          if (!tileId) { setAuctionOpen(false); return; }
+          if (amount < 0 || (!winnerId && amount > 0)) { setAuctionOpen(false); return; }
+          if (amount === 0) {
+            // Bank keeps; mark resolved but no staging
+            setAuctionCompleted(true);
+            setStagedAuction(null);
+            setAuctionItSelected(false);
+            setAuctionOpen(false);
+            return;
+          }
+          setStagedAuction({ tileId, winnerId: winnerId!, amount });
+          setAuctionCompleted(true);
+          setAuctionItSelected(true);
+          setAuctionOpen(false);
+        }}
+      />
+
+      {/* Reusable Board Picker overlay (view mode) */}
+      <BoardPickerOverlay
+        open={boardOverlayOpen}
+        title="Board"
+        mode="view"
+        onClose={() => setBoardOverlayOpen(false)}
+        players={players.map((pl) => ({ id: pl.id, avatarKey: pl.avatarKey, positionIndex: pl.positionIndex, color: pl.color }))}
+        activePlayerId={players[turnIndex]?.id}
+        ownedByTileId={useMemo(() => {
+          const map: Record<string, string | null> = {};
+          for (const t of BOARD_TILES) {
+            const ps = propsState.byTileId[t.id];
+            map[t.id] = (ps?.ownerId as string | null) ?? null;
+          }
+          return map;
+        }, [propsState.byTileId])}
+        tileFooterIcon={(id) => tileFooterIcon(id)}
+      />
     </div>
   );
 }

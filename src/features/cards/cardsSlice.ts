@@ -12,14 +12,7 @@ export interface CardsState {
   decks: Record<CardDeck, DeckState>;
 }
 
-const initialState: CardsState = {
-  seed: 0,
-  decks: {
-    chance: { drawPile: [], discardPile: [] },
-    community: { drawPile: [], discardPile: [] },
-    bus: { drawPile: [], discardPile: [] },
-  },
-};
+const DEFAULT_SEED: number | string = 'monopoly';
 
 function initDeck(baseSeed: number | string, deck: CardDeck): DeckState {
   return {
@@ -27,6 +20,15 @@ function initDeck(baseSeed: number | string, deck: CardDeck): DeckState {
     discardPile: [],
   };
 }
+
+const initialState: CardsState = {
+  seed: DEFAULT_SEED,
+  decks: {
+    chance: initDeck(DEFAULT_SEED, 'chance'),
+    community: initDeck(DEFAULT_SEED, 'community'),
+    bus: initDeck(DEFAULT_SEED, 'bus'),
+  },
+};
 
 const cardsSlice = createSlice({
   name: 'cards',
@@ -60,6 +62,33 @@ const cardsSlice = createSlice({
         deck.drawPile.push(card);
       }
     },
+    reshuffleIfEmpty(state, action: PayloadAction<{ deck: CardDeck; heldExcludedIds?: string[] }>) {
+      const { deck: deckKey, heldExcludedIds = [] } = action.payload;
+      const deck = state.decks[deckKey];
+      if (deck.drawPile.length === 0) {
+        // Combine discard + current draw (should be empty) minus excluded held cards
+        const pool = deck.discardPile.filter((c) => !heldExcludedIds.includes(c.id));
+        const reshuffled = buildShuffledDeck(deckKey, `${state.seed}:${deckKey}:manual-${Date.now()}`);
+        // Replace with reshuffled from base generator but preserve excluded behavior by ensuring pool length > 0
+        deck.drawPile = pool.length > 0 ? pool : reshuffled;
+        deck.discardPile = [];
+      }
+    },
+    drawBusCardByType(state, action: PayloadAction<'regular' | 'big'>) {
+      const deck = state.decks.bus;
+      const isBig = (id: string) => id.startsWith('bb');
+      const wantBig = action.payload === 'big';
+
+      const idx = deck.drawPile.findIndex((c) => isBig(c.id) === wantBig);
+      if (idx < 0) return;
+
+      for (let i = 0; i < idx; i++) {
+        const card = deck.drawPile.shift()!;
+        deck.drawPile.push(card);
+      }
+      const card = deck.drawPile.shift();
+      if (card) deck.discardPile.unshift(card);
+    },
   },
 });
 
@@ -68,5 +97,5 @@ export const selectLastDrawnCard = (state: CardsState, deck: CardDeck): CardDefi
   return d.discardPile.length > 0 ? d.discardPile[0] : null;
 };
 
-export const { setSeed, drawCard, putCardOnBottom } = cardsSlice.actions;
+export const { setSeed, drawCard, putCardOnBottom, reshuffleIfEmpty, drawBusCardByType } = cardsSlice.actions;
 export default cardsSlice.reducer;

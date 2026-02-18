@@ -4,6 +4,7 @@
 
 // //#imports
 import React from 'react';
+import AnimatedNumber from '@/components/atoms/AnimatedNumber';
 import { useSelector } from 'react-redux';
 import { selectSpectatorSummary, selectBankBuildingCounts, selectPlayerPropertyDetails, selectUnownedProperties, selectColorGroupOwnership, selectMostLandedTile } from '@/features/selectors/stats';
 
@@ -28,7 +29,9 @@ export default function SpectatorDashboard(): JSX.Element {
               <div key={p.id} className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold">{p.nickname}</div>
-                  <div className="text-sm">${p.money}</div>
+                  <div className="text-[18px] font-bold">
+                    <AnimatedNumber value={p.money} prefix="$" />
+                  </div>
                 </div>
                 <div className="mt-2 text-sm space-y-1">
                   <div className="opacity-70">Owns {p.properties.length} properties</div>

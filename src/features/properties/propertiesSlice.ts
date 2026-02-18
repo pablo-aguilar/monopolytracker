@@ -6,21 +6,24 @@ export type OwnerId = string | null;
 export interface PropertyState {
   ownerId: OwnerId;
   mortgaged: boolean;
-  improvements: number; // 0..4 houses, 5 = hotel
+  improvements: number; // 0..4 houses, 5 = hotel, 6 = skyscraper
+  depotInstalled?: boolean; // for railroads: doubles rent
 }
 
 export interface PropertiesState {
   byTileId: Record<string, PropertyState | undefined>;
   housesRemaining: number; // start 32
   hotelsRemaining: number; // start 12
+  skyscrapersRemaining: number; // start 12 (Mega Monopoly)
 }
 
 const initialState: PropertiesState = {
   byTileId: Object.fromEntries(
-    BOARD_TILES.filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility').map((t) => [t.id, { ownerId: null, mortgaged: false, improvements: 0 }])
+    BOARD_TILES.filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility').map((t) => [t.id, { ownerId: null, mortgaged: false, improvements: 0, depotInstalled: false }])
   ),
   housesRemaining: 32,
   hotelsRemaining: 12,
+  skyscrapersRemaining: 12,
 };
 
 function getGroupTileIds(tileId: string): string[] {
@@ -66,6 +69,9 @@ const propertiesSlice = createSlice({
       ps.ownerId = action.payload.ownerId;
       ps.mortgaged = false;
       ps.improvements = 0;
+      if (BOARD_TILES.find((t) => t.id === action.payload.tileId)?.type === 'railroad') {
+        ps.depotInstalled = false;
+      }
     },
     setMortgaged(state, action: PayloadAction<{ tileId: string; mortgaged: boolean }>) {
       const ps = state.byTileId[action.payload.tileId];
@@ -90,7 +96,7 @@ const propertiesSlice = createSlice({
       // Enforce even-building
       if (!canEvenBuild(state, tileId, ownerId)) return;
 
-      if (ps.improvements >= 5) return; // already hotel
+      if (ps.improvements >= 6) return; // already skyscraper
 
       if (ps.improvements < 4) {
         // buy a house
@@ -103,6 +109,12 @@ const propertiesSlice = createSlice({
         ps.improvements = 5;
         state.hotelsRemaining -= 1;
         state.housesRemaining += 4; // return four houses to bank
+      } else if (ps.improvements === 5) {
+        // upgrade to skyscraper (requires inventory); return hotel to bank
+        if (state.skyscrapersRemaining <= 0) return;
+        ps.improvements = 6;
+        state.skyscrapersRemaining -= 1;
+        state.hotelsRemaining += 1;
       }
     },
     sellHouse(state, action: PayloadAction<{ tileId: string }>) {
@@ -117,7 +129,13 @@ const propertiesSlice = createSlice({
       // Enforce even-selling
       if (!canEvenSell(state, tileId)) return;
 
-      if (ps.improvements === 5) {
+      if (ps.improvements === 6) {
+        // downgrade skyscraper to hotel requires hotel inventory available
+        if (state.hotelsRemaining <= 0) return;
+        ps.improvements = 5;
+        state.hotelsRemaining -= 1;
+        state.skyscrapersRemaining += 1;
+      } else if (ps.improvements === 5) {
         // downgrade hotel to 4 houses
         ps.improvements = 4;
         state.hotelsRemaining += 1;
@@ -129,8 +147,15 @@ const propertiesSlice = createSlice({
         state.housesRemaining += 1;
       }
     },
+    setDepotInstalled(state, action: PayloadAction<{ tileId: string; installed: boolean }>) {
+      const ps = state.byTileId[action.payload.tileId];
+      if (!ps) return;
+      const tile = BOARD_TILES.find((t) => t.id === action.payload.tileId);
+      if (!tile || tile.type !== 'railroad') return;
+      ps.depotInstalled = action.payload.installed;
+    },
   },
 });
 
-export const { assignOwner, setMortgaged, buyHouse, sellHouse } = propertiesSlice.actions;
+export const { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } = propertiesSlice.actions;
 export default propertiesSlice.reducer;
