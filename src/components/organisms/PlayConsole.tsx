@@ -1597,8 +1597,9 @@ export default function PlayConsole(): JSX.Element {
                       (() => {
                         const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
                         const isDoublesNow = d6A !== null && d6B !== null && d6A === d6B;
-                        const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null);
-                        const continueRoll = isDoublesNow && !thirdDoublesNow && (busTeleportTo == null);
+                        const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                        // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
+                        const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
                         const blocked = isQueuedFlowActive
                           ? (rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
                           : (!(((hasRollWithSpecialSelected && rollConfirmed) || (busTeleportTo != null && rollConfirmed))) || (requiresBusCard && !busSelectedCardId) || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
@@ -1966,7 +1967,18 @@ export default function PlayConsole(): JSX.Element {
                   );
                 })()}
                 <div className="flex items-center gap-2 text-xs">
-                  {(d6A === d6B) && <span className="inline-flex items-center rounded-full bg-emerald-600 text-white px-2 py-0.5">Doubles ✓</span>}
+                  {!isTriple && (d6A === d6B) && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-600 text-white px-2 py-0.5">Doubles ✓</span>
+                  )}
+                  {isTriple && (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 ${
+                        isTripleOnes ? 'bg-amber-400 text-neutral-900' : 'bg-indigo-600 text-white'
+                      }`}
+                    >
+                      {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
+                    </span>
+                  )}
                   {busTeleportTo != null && <span className="inline-flex items-center rounded-full bg-sky-600 text-white px-2 py-0.5">Bus used</span>}
                   {tripleTeleportTo != null && <span className="inline-flex items-center rounded-full bg-indigo-600 text-white px-2 py-0.5">Teleported</span>}
                 </div>
@@ -1976,7 +1988,12 @@ export default function PlayConsole(): JSX.Element {
                   rentSelected ? 'Rent' : null,
                   taxSelected ? 'Tax' : null,
                 ].filter(Boolean).join(', ') || 'None'}</div>
-                <div className="opacity-80">Staged Bus tickets: {stagedBusTickets}{stagedBigBus ? ' · Big Bus will clear others' : ''}</div>
+                {(stagedBusTickets > 0 || stagedBigBus) && (
+                  <div className="opacity-80">
+                    Bus tickets: {stagedBusTickets}
+                    {stagedBigBus ? ' · Big Bus will clear others' : ''}
+                  </div>
+                )}
               </div>
               <div className="mt-3 flex items-center justify-end gap-2">
                 <button onClick={() => setSummaryOpen(false)} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Back</button>
