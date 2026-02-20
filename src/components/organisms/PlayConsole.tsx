@@ -11,8 +11,8 @@ import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema
 import EventLog from '@/components/molecules/EventLog';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
-import { addToFreeParking } from '@/features/session/sessionSlice';
-import { BOARD_TILES, BOARD_SIZE, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
+import { addToFreeParking, resetFreeParking } from '@/features/session/sessionSlice';
+import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
 import { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
@@ -64,7 +64,8 @@ export default function PlayConsole(): JSX.Element {
     | 'card_community'
     | 'jail_three_doubles'
     | 'jail_go_to_jail_tile'
-    | 'jail_card';
+    | 'jail_card'
+    | 'jail_triple_ones_near_jail';
 
   type MoveDirection = 'forward' | 'backward';
 
@@ -382,6 +383,37 @@ export default function PlayConsole(): JSX.Element {
     }
 
     dispatch(setPlayerPosition({ id: pid, index: toIndex }));
+
+    // Free Parking pot: award only when landing via dice roll,
+    // or via the special 1-1-1 case when exactly 3 spaces away and choosing Free Parking.
+    if (tile.type === 'freeParking') {
+      const fromW = wrapIndex(fromIndex);
+      const toW = wrapIndex(toIndex);
+      const isOnFreeParking = toW === wrapIndex(FREE_PARKING_INDEX);
+      const distanceToFreeParking = getForwardDistance(fromW, wrapIndex(FREE_PARKING_INDEX));
+      const isSpecial111TeleportToFreeParking =
+        resolvedMeta.source === 'teleport_triple' &&
+        isTripleOnes &&
+        isOnFreeParking &&
+        distanceToFreeParking === 3;
+      const shouldAwardPot = (resolvedMeta.source === 'dice') || isSpecial111TeleportToFreeParking;
+      if (shouldAwardPot && freeParkingPot > 0) {
+        dispatch(adjustPlayerMoney({ id: pid, delta: freeParkingPot }));
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'FREE_PARKING_WIN',
+            actorPlayerId: pid,
+            payload: { playerId: pid, amount: freeParkingPot, message: `Free Parking pot $${freeParkingPot}` },
+            moneyDelta: freeParkingPot,
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(resetFreeParking());
+      }
+    }
+
     // Mark player as having passed GO at least once for first-round lock
     try {
       // passed was computed above
@@ -751,6 +783,46 @@ export default function PlayConsole(): JSX.Element {
       onApplyMove(pid, busTeleportTo, true, { source: 'teleport_bus', direction: 'forward' });
     } else if (tripleTeleportTo != null) {
       // Triple teleport ignores doubles chaining; advance immediately
+      const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+      const nearGoToJail111 = isTripleOnes && (getForwardDistance(wrapIndex(fromIdx), wrapIndex(GO_TO_JAIL_INDEX)) === 3);
+      if (nearGoToJail111) {
+        // House rule: if 1-1-1 while 3 spaces from Go To Jail, go directly to Jail (no teleport, no +$1000).
+        dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+        (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });
+        (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'JAIL',
+            actorPlayerId: pid,
+            payload: { playerId: pid, reason: 'TRIPLE_ONES_NEAR_JAIL', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail (1-1-1 near Go To Jail)' },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'MOVE',
+            actorPlayerId: pid,
+            payload: {
+              playerId: pid,
+              from: fromIdx,
+              to: JAIL_INDEX,
+              steps: 0,
+              distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),
+              direction: 'forward',
+              source: 'jail_triple_ones_near_jail',
+              message: 'Moved to Jail (1-1-1 near Go To Jail)',
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(advanceTurn({ playerCount: players.length }));
+        return;
+      }
+
       dispatch(
         appendEvent({
           id: crypto.randomUUID(),
