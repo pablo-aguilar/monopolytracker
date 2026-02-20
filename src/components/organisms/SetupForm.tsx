@@ -17,6 +17,7 @@ import ColorSwatchPicker from '@/components/molecules/ColorSwatchPicker';
 import AvatarPicker from '@/components/molecules/AvatarPicker';
 import TurnOrderList from '@/components/molecules/TurnOrderList';
 import { initializeRacePot } from '@/features/session/sessionSlice';
+import RulesModal from '@/components/molecules/RulesModal';
 
 const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 const SHOW_CARD_SEED = false; // MVP: decks are managed IRL; hide seed input
@@ -40,6 +41,7 @@ export default function SetupForm(): JSX.Element {
   const [avatarKey, setAvatarKey] = useState<string>(firstAvailableAvatar);
   const [colorPickerOpen, setColorPickerOpen] = useState<boolean>(false);
   const [seed, setSeedInput] = useState<string>('monopoly');
+  const [rulesOpen, setRulesOpen] = useState<boolean>(false);
 
   // //#effects
   React.useEffect(() => {
@@ -186,6 +188,14 @@ export default function SetupForm(): JSX.Element {
       </div>
 
       <div className="flex gap-3">
+        <button
+          type="button"
+          data-qa="btn-rules"
+          onClick={() => setRulesOpen(true)}
+          className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-white text-neutral-900 font-semibold border border-neutral-300 shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-blue-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Rules
+        </button>
         {players.length >= 2 && (
           <button
             data-qa="btn-start-game"
@@ -196,6 +206,8 @@ export default function SetupForm(): JSX.Element {
           </button>
         )}
       </div>
+
+      <RulesModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
     </div>
   );
 }
