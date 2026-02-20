@@ -12,13 +12,13 @@ import EventLog from '@/components/molecules/EventLog';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addToFreeParking } from '@/features/session/sessionSlice';
-import { BOARD_TILES, getTileByIndex, passedGo, JAIL_INDEX, type ColorGroup } from '@/data/board';
+import { BOARD_TILES, BOARD_SIZE, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
 import { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
-import type { RootState } from '@/app/store';
+import { persistor, type RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
@@ -30,6 +30,7 @@ import TogglePillButton from '@/components/atoms/TogglePillButton';
 import StatPill from '@/components/atoms/StatPill';
 import HudBar from '@/components/molecules/HudBar';
 import BuyButton from '@/components/atoms/BuyButton';
+import IconLabelButton from '@/components/atoms/IconLabelButton';
 import { AnimatePresence, motion } from 'framer-motion';
 import { advanceTurn, setRacePotWinner } from '@/features/session/sessionSlice';
 import DiceSelector from '@/components/molecules/DiceSelector';
@@ -55,6 +56,39 @@ export default function PlayConsole(): JSX.Element {
   const turnIndex: number = typeof turnIndexRaw === 'number' && turnIndexRaw >= 0 ? turnIndexRaw : 0;
 
   // //#local-state
+  type MoveSource =
+    | 'dice'
+    | 'teleport_bus'
+    | 'teleport_triple'
+    | 'card_chance'
+    | 'card_community'
+    | 'jail_three_doubles'
+    | 'jail_go_to_jail_tile'
+    | 'jail_card';
+
+  type MoveDirection = 'forward' | 'backward';
+
+  type QueuedMovement =
+    | {
+        kind: 'move';
+        to: number;
+        source: Exclude<MoveSource, 'jail_three_doubles' | 'jail_go_to_jail_tile' | 'jail_card'>;
+        direction: MoveDirection;
+        card?: { deck: 'chance' | 'community'; cardId: string; effectType: 'moveTo' | 'moveSteps'; rawSteps?: number; awardGoIfPassed?: boolean };
+      }
+    | {
+        kind: 'goToJail';
+        source: 'jail_card';
+        card: { deck: 'chance' | 'community'; cardId: string; effectType: 'goToJail' };
+      };
+
+  type ApplyMoveMeta = {
+    source: MoveSource;
+    direction: MoveDirection;
+    rawSteps?: number;
+    card?: { deck: 'chance' | 'community'; cardId: string; effectType: string; rawSteps?: number; awardGoIfPassed?: boolean };
+  };
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [d6A, setD6A] = useState<number | null>(null);
   const [d6B, setD6B] = useState<number | null>(null);
@@ -94,11 +128,13 @@ export default function PlayConsole(): JSX.Element {
   const [stagedBigBus, setStagedBigBus] = useState<boolean>(false);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
   const [gmToolsOpen, setGmToolsOpen] = useState<boolean>(false);
+  const [newGameConfirmOpen, setNewGameConfirmOpen] = useState<boolean>(false);
   const [rollCount, setRollCount] = useState<number>(1);
   const [turnSegments, setTurnSegments] = useState<TurnSegment[]>([]);
   // Post-action queue for chained movements from Chance/Community cards
-  const [postActionQueue, setPostActionQueue] = useState<number[]>([]);
+  const [postActionQueue, setPostActionQueue] = useState<QueuedMovement[]>([]);
   const [queuedPostPending, setQueuedPostPending] = useState<boolean>(false);
+  const [queuedPostActive, setQueuedPostActive] = useState<QueuedMovement | null>(null);
   const events = useSelector((s: RootState) => s.events.events);
 
   // Backfill decks if persisted state is empty
@@ -162,6 +198,7 @@ export default function PlayConsole(): JSX.Element {
     setTurnSegments([]);
     setPostActionQueue([]);
     setQueuedPostPending(false);
+    setQueuedPostActive(null);
   }, [turnIndex]);
   React.useEffect(() => {
     setCurrentIndex(activePos);
@@ -223,7 +260,7 @@ export default function PlayConsole(): JSX.Element {
   const busLeft = cardsState.decks.bus.drawPile.length;
 
   // //#handlers
-  const onApplyMove = (playerId?: string, toIndexOverride?: number, advanceAfterMove: boolean = true): void => {
+  const onApplyMove = (playerId?: string, toIndexOverride?: number, advanceAfterMove: boolean = true, meta?: ApplyMoveMeta): void => {
     if (!hasRoll && toIndexOverride == null) return;
     const pid = playerId ?? (players[turnIndex]?.id || players[0]?.id);
     if (!pid) return;
@@ -231,9 +268,35 @@ export default function PlayConsole(): JSX.Element {
     const moveSteps = (d6A as number) + (d6B as number) + specialNumeric;
     const toIndex = toIndexOverride != null ? toIndexOverride : ((fromIndex + moveSteps) % BOARD_TILES.length);
     const tile = getTileByIndex(toIndex);
+
+    const resolvedMeta: ApplyMoveMeta = meta ?? { source: 'dice', direction: 'forward' };
+
+    const isTeleportMove = resolvedMeta.source === 'teleport_bus' || resolvedMeta.source === 'teleport_triple';
+
+    const computePassedGo = (): boolean => {
+      const fromWrapped = wrapIndex(fromIndex);
+      const toWrapped = wrapIndex(toIndex);
+      if (isTeleportMove && toWrapped === fromWrapped) return true; // house rule: teleport to same tile counts as a lap
+      return passedGo(fromWrapped, toWrapped);
+    };
+
+    const computeDistance = (): number => {
+      const fromWrapped = wrapIndex(fromIndex);
+      const toWrapped = wrapIndex(toIndex);
+      if (resolvedMeta.direction === 'backward') {
+        if (typeof resolvedMeta.rawSteps === 'number') return Math.abs(resolvedMeta.rawSteps);
+        // fallback: distance going backward from from→to
+        return wrapIndex(fromWrapped - toWrapped);
+      }
+      // forward
+      if (isTeleportMove && toWrapped === fromWrapped) return BOARD_SIZE;
+      return getForwardDistance(fromWrapped, toWrapped);
+    };
+
     // Handle Go To Jail tile immediately per classic rules
     if (tile.type === 'goToJail') {
       const pid2 = pid;
+      const dist = getForwardDistance(wrapIndex(fromIndex), wrapIndex(JAIL_INDEX));
       // Move to Jail, mark inJail, reset attempts, end turn
       dispatch(setPlayerPosition({ id: pid2, index: JAIL_INDEX }));
       (dispatch as any)({ type: 'players/setInJail', payload: { id: pid2, value: true } });
@@ -248,6 +311,17 @@ export default function PlayConsole(): JSX.Element {
           createdAt: new Date().toISOString(),
         })
       );
+      // Also record movement for stats (no passing GO payout from jail moves)
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'MOVE',
+          actorPlayerId: pid2,
+          payload: { playerId: pid2, from: fromIndex, to: JAIL_INDEX, steps: 0, distance: dist, direction: 'forward', source: 'jail_go_to_jail_tile', message: 'Moved to Jail' },
+          createdAt: new Date().toISOString(),
+        })
+      );
       dispatch(advanceTurn({ playerCount: players.length }));
       return;
     }
@@ -256,12 +330,23 @@ export default function PlayConsole(): JSX.Element {
       gameId: 'local',
       type: 'MOVE',
       actorPlayerId: pid,
-      payload: { playerId: pid, from: fromIndex, to: toIndex, steps: toIndexOverride != null ? 0 : moveSteps, message: `Moved to ${tile.name}` },
+      payload: {
+        playerId: pid,
+        from: fromIndex,
+        to: toIndex,
+        steps: toIndexOverride != null ? 0 : moveSteps,
+        distance: computeDistance(),
+        direction: resolvedMeta.direction,
+        source: resolvedMeta.source,
+        rawSteps: resolvedMeta.rawSteps,
+        card: resolvedMeta.card,
+        message: `Moved to ${tile.name}`,
+      },
       createdAt: new Date().toISOString(),
     };
     dispatch(appendEvent(ev));
 
-    const passed = passedGo(fromIndex, toIndex);
+    const passed = computePassedGo();
     if (passed) {
       dispatch(
         appendEvent({
@@ -435,14 +520,41 @@ export default function PlayConsole(): JSX.Element {
         } else if (effect.type === 'moveTo') {
           const dest = BOARD_TILES.find((t) => t.id === effect.tileId)?.index;
           if (typeof dest === 'number') {
-            setPostActionQueue((q) => [...q, dest]);
+            setPostActionQueue((q) => [
+              ...q,
+              {
+                kind: 'move',
+                to: dest,
+                source: deck === 'chance' ? 'card_chance' : 'card_community',
+                direction: 'forward',
+                card: { deck, cardId, effectType: 'moveTo', awardGoIfPassed: effect.awardGoIfPassed },
+              },
+            ]);
           }
         } else if (effect.type === 'moveSteps') {
           const from = players.find((x) => x.id === pid)?.positionIndex ?? 0;
           const steps = typeof effect.steps === 'number' ? effect.steps : 0;
           const len = BOARD_TILES.length;
           const dest = ((from + steps) % len + len) % len;
-          setPostActionQueue((q) => [...q, dest]);
+          setPostActionQueue((q) => [
+            ...q,
+            {
+              kind: 'move',
+              to: dest,
+              source: deck === 'chance' ? 'card_chance' : 'card_community',
+              direction: steps < 0 ? 'backward' : 'forward',
+              card: { deck, cardId, effectType: 'moveSteps', rawSteps: steps, awardGoIfPassed: effect.awardGoIfPassed },
+            },
+          ]);
+        } else if (effect.type === 'goToJail') {
+          setPostActionQueue((q) => [
+            ...q,
+            {
+              kind: 'goToJail',
+              source: 'jail_card',
+              card: { deck, cardId, effectType: 'goToJail' },
+            },
+          ]);
         }
       }
     };
@@ -460,9 +572,14 @@ export default function PlayConsole(): JSX.Element {
 
     // If a queued Post destination exists and we haven't opened it yet this cycle, open it now and stop.
     if (!queuedPostPending && postActionQueue.length > 0) {
-      const nextDest = postActionQueue[0];
+      const nextMove = postActionQueue[0];
       setPostActionQueue((q) => q.slice(1));
-      setPredictedTo(nextDest);
+      if (nextMove.kind === 'move') {
+        setPredictedTo(nextMove.to);
+      } else {
+        setPredictedTo(JAIL_INDEX);
+      }
+      setQueuedPostActive(nextMove);
       setActiveStep(2);
       setHighestStep(2);
       setQueuedPostPending(true);
@@ -511,17 +628,70 @@ export default function PlayConsole(): JSX.Element {
       }
     }
 
-    // If we are resolving a queued Post (predictedTo set from queue), move now but do not advance turn.
-    if (queuedPostPending && predictedTo != null) {
-      onApplyMove(pid, predictedTo, false);
+    // If we are resolving a queued Post (predictedTo set from queue), apply now but do not advance turn.
+    if (queuedPostPending && queuedPostActive && predictedTo != null) {
+      const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? 0;
+      if (queuedPostActive.kind === 'goToJail') {
+        // Card jail: move to Jail, mark inJail, reset attempts, end turn
+        dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+        (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });
+        (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'JAIL',
+            actorPlayerId: pid,
+            payload: { playerId: pid, reason: 'CARD', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail' },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        // Record movement for stats
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'MOVE',
+            actorPlayerId: pid,
+            payload: {
+              playerId: pid,
+              from: fromIdx,
+              to: JAIL_INDEX,
+              steps: 0,
+              distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),
+              direction: 'forward',
+              source: 'jail_card',
+              card: queuedPostActive.card,
+              message: 'Moved to Jail',
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(advanceTurn({ playerCount: players.length }));
+        setPredictedTo(null);
+        setQueuedPostPending(false);
+        setQueuedPostActive(null);
+        setPostActionQueue([]);
+        return;
+      }
+
+      onApplyMove(pid, predictedTo, false, {
+        source: queuedPostActive.source,
+        direction: queuedPostActive.direction,
+        rawSteps: queuedPostActive.card?.rawSteps,
+        card: queuedPostActive.card,
+      });
       setPredictedTo(null);
       setQueuedPostPending(false);
+      setQueuedPostActive(null);
       resolvedQueuedThisCall = true;
       // If more queued items remain, immediately open the next and stop here
       if (postActionQueue.length > 0) {
-        const nextDest2 = postActionQueue[0];
+        const nextMove2 = postActionQueue[0];
         setPostActionQueue((q) => q.slice(1));
-        setPredictedTo(nextDest2);
+        if (nextMove2.kind === 'move') setPredictedTo(nextMove2.to);
+        else setPredictedTo(JAIL_INDEX);
+        setQueuedPostActive(nextMove2);
         setActiveStep(2);
         setHighestStep(2);
         setQueuedPostPending(true);
@@ -542,14 +712,43 @@ export default function PlayConsole(): JSX.Element {
 
     if (thirdDoubles) {
       // Go directly to Jail on third doubles
+      const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
       dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+      (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });
+      (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
       dispatch(
-        appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MOVE', actorPlayerId: pid, payload: { playerId: pid, from: currentIndex, to: JAIL_INDEX, steps: 0, message: 'Go to Jail (3rd doubles)' }, createdAt: new Date().toISOString() })
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'JAIL',
+          actorPlayerId: pid,
+          payload: { playerId: pid, reason: 'THREE_DOUBLES', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail (3rd doubles)' },
+          createdAt: new Date().toISOString(),
+        })
+      );
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'MOVE',
+          actorPlayerId: pid,
+          payload: {
+            playerId: pid,
+            from: fromIdx,
+            to: JAIL_INDEX,
+            steps: 0,
+            distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),
+            direction: 'forward',
+            source: 'jail_three_doubles',
+            message: 'Moved to Jail (3rd doubles)',
+          },
+          createdAt: new Date().toISOString(),
+        })
       );
       dispatch(advanceTurn({ playerCount: players.length }));
     } else if (busTeleportTo != null) {
       // Teleport move ignores doubles chaining; advance immediately
-      onApplyMove(pid, busTeleportTo, true);
+      onApplyMove(pid, busTeleportTo, true, { source: 'teleport_bus', direction: 'forward' });
     } else if (tripleTeleportTo != null) {
       // Triple teleport ignores doubles chaining; advance immediately
       dispatch(
@@ -576,10 +775,10 @@ export default function PlayConsole(): JSX.Element {
           })
         );
       }
-      onApplyMove(pid, tripleTeleportTo, true);
+      onApplyMove(pid, tripleTeleportTo, true, { source: 'teleport_triple', direction: 'forward' });
     } else if (isDoubles) {
       // Apply move but do NOT advance; prepare for next roll in the same turn
-      onApplyMove(pid, undefined, false);
+      onApplyMove(pid, undefined, false, { source: 'dice', direction: 'forward', rawSteps: (d6A as number) + (d6B as number) + specialNumeric });
       setRollCount((n) => n + 1);
       // Reset flow for next roll
       setActiveStep(1);
@@ -597,7 +796,7 @@ export default function PlayConsole(): JSX.Element {
       setSummaryOpen(false);
     } else {
       // Apply movement normally and advance turn (only if no queued post is pending)
-      onApplyMove(pid, undefined, true);
+      onApplyMove(pid, undefined, true, { source: 'dice', direction: 'forward', rawSteps: (d6A as number) + (d6B as number) + specialNumeric });
     }
   };
 
@@ -696,6 +895,16 @@ export default function PlayConsole(): JSX.Element {
       })
     );
     dispatch(addToFreeParking(tile.taxAmount));
+  };
+
+  const onConfirmNewGame = async (): Promise<void> => {
+    setNewGameConfirmOpen(false);
+    try {
+      await persistor.purge();
+    } finally {
+      // `purge()` clears persisted storage but does not reset in-memory Redux state.
+      window.location.assign('/setup');
+    }
   };
 
   const onMortgageToggle = (mortgaged: boolean): void => {
@@ -876,7 +1085,14 @@ export default function PlayConsole(): JSX.Element {
     const unowned = !owner;
     if (!unowned) return false;
     const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
-    const willPassGoThisMove = predictedTo != null ? passedGo(fromPos, predictedTo) : false;
+    const willPassGoThisMove = (() => {
+      if (predictedTo == null) return false;
+      const fromW = wrapIndex(fromPos);
+      const toW = wrapIndex(predictedTo);
+      const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
+      if (isTeleportPreview && toW === fromW) return true; // teleport-to-same counts as lap
+      return passedGo(fromW, toW);
+    })();
     const pl = players.find((x) => x.id === pid);
     const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
     if (firstRoundLocked) return false;
@@ -1221,6 +1437,27 @@ export default function PlayConsole(): JSX.Element {
                   {/* Stepper navigation */}
                   <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
 
+                  {/* Property management quick access (visible on any step) */}
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    if (!pid) return null;
+                    const ownsAnyMortgageable = BOARD_TILES.some((t) => {
+                      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
+                      return propsState.byTileId[t.id]?.ownerId === pid;
+                    });
+                    if (!ownsAnyMortgageable) return null;
+                    return (
+                      <div className="flex justify-left">
+                        <IconLabelButton
+                          iconSrc="/icons/house.webp"
+                          label="Manage"
+                          className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                          onClick={() => setBuildOverlayOpen(true)}
+                        />
+                      </div>
+                    );
+                  })()}
+
                   <AnimatePresence mode="wait">
                     {activeStep === 0 && (
                       <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
@@ -1242,33 +1479,6 @@ export default function PlayConsole(): JSX.Element {
                           );
                         })()}
 
-                        {/* Build & Sell quick access when eligible per ownership thresholds */}
-                        {(() => {
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          if (!pid) return null;
-                          // Check any color group eligibility: partial sets allow to hotel; full set allows skyscraper
-                          const groups = ['brown','lightBlue','pink','orange','red','yellow','green','darkBlue'] as ColorGroup[];
-                          const eligibleForAny = groups.some((g) => {
-                            const tiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g);
-                            const owned = tiles.filter((t) => propsState.byTileId[t.id]?.ownerId === pid);
-                            const ownedCount = owned.length;
-                            const size = tiles.length;
-                            const hotelThreshold = size === 4 ? 3 : size === 3 ? 2 : size === 2 ? 2 : Number.POSITIVE_INFINITY;
-                            // Eligible if can at least build to hotel by threshold, or if already have improvements to sell
-                            const hasAnyImprovements = owned.some((t) => (propsState.byTileId[t.id]?.improvements ?? 0) > 0);
-                            return ownedCount >= hotelThreshold || hasAnyImprovements;
-                          });
-                          if (!eligibleForAny) return null;
-                          return (
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
-                              onClick={() => setBuildOverlayOpen(true)}
-                            >
-                              Build & Sell
-                            </button>
-                          );
-                        })()}
                         {/* Contextual depot install/remove if active player owns current railroad */}
                         {(() => {
                           const tile = getTileByIndex(currentIndex);
@@ -1451,7 +1661,14 @@ export default function PlayConsole(): JSX.Element {
                           const canBuy = isBuyable && (!owner || (mortgaged && !!owner && owner !== pid2));
                           const pl = players.find((x) => x.id === pid2);
                           const fromPos = players.find((x) => x.id === pid2)?.positionIndex ?? 0;
-                          const willPassGoThisMove = predictedTo != null ? passedGo(fromPos, predictedTo) : false;
+                          const willPassGoThisMove = (() => {
+                            if (predictedTo == null) return false;
+                            const fromW = wrapIndex(fromPos);
+                            const toW = wrapIndex(predictedTo);
+                            const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
+                            if (isTeleportPreview && toW === fromW) return true; // teleport-to-same counts as lap
+                            return passedGo(fromW, toW);
+                          })();
                           const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
                           const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
                           const playerMoney = p.money;
@@ -1782,6 +1999,22 @@ export default function PlayConsole(): JSX.Element {
                 )}
               </div>
             </div>
+
+            {/* Game */}
+            <div data-qa="gm-game" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Game</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">Start over from Setup and clear the saved game state on this device.</p>
+              <div className="flex items-center justify-end">
+                <button
+                  data-qa="btn-new-game"
+                  type="button"
+                  onClick={() => setNewGameConfirmOpen(true)}
+                  className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                >
+                  New Game
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -2019,6 +2252,46 @@ export default function PlayConsole(): JSX.Element {
                     </button>
                   );
                 })()}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* New Game confirmation */}
+      <AnimatePresence>
+        {newGameConfirmOpen && (
+          <motion.div
+            key="new-game"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setNewGameConfirmOpen(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-sm font-semibold">Start a new game?</div>
+              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                This will clear players, properties, decks, and the event log saved on this device and return you to Setup.
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewGameConfirmOpen(false)}
+                  className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirmNewGame}
+                  className="rounded-md bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-rose-400"
+                >
+                  New Game
+                </button>
               </div>
             </div>
           </motion.div>

@@ -247,7 +247,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
         <motion.div key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-semibold">Build & Sell</div>
+              <div className="text-sm font-semibold">Property Management</div>
               <button onClick={onClose} className="text-sm opacity-70 hover:opacity-100">Close</button>
             </div>
             <div className="text-xs opacity-70 mb-2">Even-building enforced. Refunds are 50% of purchase price.</div>

@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
-import { BOARD_TILES } from '@/data/board';
+import { BOARD_SIZE, BOARD_TILES, getForwardDistance, wrapIndex } from '@/data/board';
 
 export const selectPlayers = (state: RootState) => state.players.players;
 export const selectProperties = (state: RootState) => state.properties;
@@ -80,4 +80,66 @@ export const selectMostLandedTile = createSelector(selectEvents, (events) => {
   if (!topId) return null;
   const t = BOARD_TILES.find((x) => x.id === topId);
   return t ? { id: topId, name: t.name, count: topCount } : null;
+});
+
+export type MovementBreakdown = Record<
+  string,
+  {
+    dice: number;
+    teleportBus: number;
+    teleportTriple: number;
+    cardsChance: number;
+    cardsCommunity: number;
+    jail: number;
+    other: number;
+    total: number;
+  }
+>;
+
+export const selectMovementBreakdownByPlayer = createSelector(selectPlayers, selectEvents, (players, events): MovementBreakdown => {
+  const out: MovementBreakdown = {};
+  for (const p of players) {
+    out[p.id] = { dice: 0, teleportBus: 0, teleportTriple: 0, cardsChance: 0, cardsCommunity: 0, jail: 0, other: 0, total: 0 };
+  }
+
+  const ensure = (playerId: string) => {
+    if (!out[playerId]) out[playerId] = { dice: 0, teleportBus: 0, teleportTriple: 0, cardsChance: 0, cardsCommunity: 0, jail: 0, other: 0, total: 0 };
+    return out[playerId]!;
+  };
+
+  const inferDistance = (payload: any): number => {
+    if (typeof payload?.distance === 'number') return payload.distance;
+    const from = typeof payload?.from === 'number' ? payload.from : null;
+    const to = typeof payload?.to === 'number' ? payload.to : null;
+    if (from == null || to == null) return 0;
+    const fromW = wrapIndex(from);
+    const toW = wrapIndex(to);
+    const src = typeof payload?.source === 'string' ? payload.source : '';
+    if ((src === 'teleport_bus' || src === 'teleport_triple') && fromW === toW) return BOARD_SIZE;
+    const dir = payload?.direction === 'backward' ? 'backward' : 'forward';
+    if (dir === 'backward') return wrapIndex(fromW - toW);
+    return getForwardDistance(fromW, toW);
+  };
+
+  for (const ev of events) {
+    if (ev.type !== 'MOVE') continue;
+    const pid = (ev.payload as any)?.playerId ?? ev.actorPlayerId;
+    if (!pid) continue;
+    const b = ensure(pid);
+    const payload: any = ev.payload ?? {};
+    const dist = inferDistance(payload);
+    const src = typeof payload.source === 'string' ? payload.source : 'other';
+
+    if (src === 'dice') b.dice += dist;
+    else if (src === 'teleport_bus') b.teleportBus += dist;
+    else if (src === 'teleport_triple') b.teleportTriple += dist;
+    else if (src === 'card_chance') b.cardsChance += dist;
+    else if (src === 'card_community') b.cardsCommunity += dist;
+    else if (src.startsWith('jail_')) b.jail += dist;
+    else b.other += dist;
+
+    b.total += dist;
+  }
+
+  return out;
 });
