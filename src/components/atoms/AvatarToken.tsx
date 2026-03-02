@@ -28,6 +28,7 @@ export default function AvatarToken({
   return (
     <div
       data-qa={qa}
+      data-cmp="a/AvatarToken"
       className={`rounded-full ${borderWidthClass} ${borderColorClass} flex items-center justify-center text-3xl bg-white dark:bg-neutral-800 ${ring ? `ring-4 ${ringColorClass}` : ''}`}
       style={style}
     >

@@ -9,7 +9,7 @@ export interface RailroadDepotControlProps {
 
 export default function RailroadDepotControl({ installed, canAfford, onInstall, onRemove }: RailroadDepotControlProps): JSX.Element {
   return (
-    <div className="flex items-center gap-2">
+    <div data-cmp="m/RailroadDepotControl" className="flex items-center gap-2">
       {installed ? (
         <button
           type="button"

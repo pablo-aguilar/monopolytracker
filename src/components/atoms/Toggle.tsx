@@ -16,6 +16,7 @@ export default function Toggle({ checked, onChange, qa }: ToggleProps): JSX.Elem
       role="switch"
       aria-checked={checked}
       data-qa={qa}
+      data-cmp="a/Toggle"
       onClick={() => onChange(!checked)}
       className={`${checked ? 'bg-teal-500 justify-end' : 'bg-neutral-400 justify-start'} relative inline-flex h-6 w-10 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-teal-300`}
       title={checked ? 'On' : 'Off'}

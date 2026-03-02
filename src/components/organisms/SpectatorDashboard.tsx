@@ -18,7 +18,7 @@ export default function SpectatorDashboard(): JSX.Element {
 
   // //#render
   return (
-    <div className="w-full max-w-6xl space-y-6">
+    <div data-cmp="o/SpectatorDashboard" className="w-full max-w-6xl space-y-6">
       {/* //#spectate-players: money and owned properties preview per player */}
       <section data-qa="spectate-players" className="space-y-3">
         <h2 className="text-lg font-medium">Players</h2>

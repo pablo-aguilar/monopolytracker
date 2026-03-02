@@ -43,6 +43,7 @@ import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
 import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
+import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
 
 export default function PlayConsole(): JSX.Element {
   const dispatch = useDispatch();
@@ -431,6 +432,13 @@ export default function PlayConsole(): JSX.Element {
   };
 
   // Finalize turn now (used by hold expiry and Summary overlay)
+  const appendUniqueTurnSegment = (seg: TurnSegment): void => {
+    setTurnSegments((arr) => {
+      if (arr.some((s) => s.roll === seg.roll)) return arr;
+      return [...arr, seg];
+    });
+  };
+
   const finalizeTurn = (pid: string): void => {
     const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
     const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
@@ -460,11 +468,7 @@ export default function PlayConsole(): JSX.Element {
         tileName: getTileByIndex(toIndexSeg).name,
         at: new Date().toISOString(),
       };
-      setTurnSegments((arr) => {
-        // avoid duplicate append if somehow called twice for same roll
-        if (arr.some((s) => s.roll === seg.roll)) return arr;
-        return [...arr, seg];
-      });
+      appendUniqueTurnSegment(seg);
     } catch {}
     // Commit staged Bus effects now (skip if third doubles sends to jail)
     if (!thirdDoubles) {
@@ -849,6 +853,23 @@ export default function PlayConsole(): JSX.Element {
       }
       onApplyMove(pid, tripleTeleportTo, true, { source: 'teleport_triple', direction: 'forward' });
     } else if (isDoubles) {
+      // Record this roll segment now (doubles can create multiple rolls per turn)
+      try {
+        const fromIndexSeg = players.find((p) => p.id === pid)?.positionIndex ?? 0;
+        const moveStepsSeg = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+        const toIndexSeg = (fromIndexSeg + moveStepsSeg) % BOARD_TILES.length;
+        appendUniqueTurnSegment({
+          roll: rollCount,
+          d6A: d6A as number | null,
+          d6B: d6B as number | null,
+          special: special as any,
+          busUsed: false,
+          from: fromIndexSeg,
+          to: toIndexSeg,
+          tileName: getTileByIndex(toIndexSeg).name,
+          at: new Date().toISOString(),
+        });
+      } catch {}
       // Apply move but do NOT advance; prepare for next roll in the same turn
       onApplyMove(pid, undefined, false, { source: 'dice', direction: 'forward', rawSteps: (d6A as number) + (d6B as number) + specialNumeric });
       setRollCount((n) => n + 1);
@@ -882,6 +903,8 @@ export default function PlayConsole(): JSX.Element {
     if (rentRequiredButNotSelected()) return;
     // Block hold if tax is required but not selected
     if (taxRequiredButNotSelected()) return;
+    // Block hold if a mandatory draw hasn't been selected yet
+    if (cardDrawRequiredButNotSelected()) return;
     setHoldProgress(0);
     const start = Date.now();
     const duration = 3000;
@@ -1261,13 +1284,16 @@ export default function PlayConsole(): JSX.Element {
   function groupTooltipForPlayer(playerId: string, group: ColorGroup): string {
     const tiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === group);
     const lines: string[] = [];
+    const state = store.getState();
     for (const t of tiles) {
       const ps = propsState.byTileId[t.id];
       const owned = ps?.ownerId === playerId;
       if (!owned) continue;
       const imp = ps?.improvements ?? 0;
       const impText = improvementLabel(imp);
-      lines.push(`${t.name}${imp > 0 ? ` — ${impText}` : ''}`);
+      const rent = computeRent(state, t.id, 0);
+      const rentText = rent > 0 ? ` — Rent $${rent}` : '';
+      lines.push(`${t.name}${imp > 0 ? ` — ${impText}` : ''}${rentText}`);
     }
     if (lines.length === 0) return '';
     return lines.join('\n');
@@ -1276,12 +1302,15 @@ export default function PlayConsole(): JSX.Element {
   function railroadTooltipForPlayer(playerId: string): string {
     const tiles = BOARD_TILES.filter((t) => t.type === 'railroad');
     const lines: string[] = [];
+    const state = store.getState();
     for (const t of tiles) {
       const ps = propsState.byTileId[t.id];
       const owned = ps?.ownerId === playerId;
       if (!owned) continue;
       const depot = ps?.depotInstalled === true;
-      lines.push(`${t.name}${depot ? ' — Depot' : ''}`);
+      const rent = computeRent(state, t.id, 0);
+      const rentText = rent > 0 ? ` — Rent $${rent}` : '';
+      lines.push(`${t.name}${depot ? ' — Depot' : ''}${rentText}`);
     }
     if (lines.length === 0) return '';
     return lines.join('\n');
@@ -1290,11 +1319,20 @@ export default function PlayConsole(): JSX.Element {
   function utilitiesTooltipForPlayer(playerId: string): string {
     const tiles = BOARD_TILES.filter((t) => t.type === 'utility');
     const lines: string[] = [];
+    const state = store.getState();
+    const diceTotalForExample = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
     for (const t of tiles) {
       const ps = propsState.byTileId[t.id];
       const owned = ps?.ownerId === playerId;
       if (!owned) continue;
-      lines.push(`${t.name}`);
+      const u = t.utility;
+      const mult1 = u?.rentMultiplier1 ?? 0;
+      const mult2 = u?.rentMultiplier2 ?? 0;
+      const mult3 = (u as any)?.rentMultiplier3 ?? 0;
+      const formula = mult3 ? ` — Rent = roll × ${mult1}/${mult2}/${mult3}` : ` — Rent = roll × ${mult1}/${mult2}`;
+      const exampleRent = diceTotalForExample > 0 ? computeRent(state, t.id, diceTotalForExample) : 0;
+      const example = exampleRent > 0 ? ` (e.g. ${diceTotalForExample} → $${exampleRent})` : '';
+      lines.push(`${t.name}${formula}${example}`);
     }
     if (lines.length === 0) return '';
     return lines.join('\n');
@@ -1345,6 +1383,18 @@ export default function PlayConsole(): JSX.Element {
     const t = getTileByIndex(idx);
     if (t.type !== 'tax') return false;
     return !taxSelected;
+  };
+
+  const cardDrawRequiredButNotSelected = (): boolean => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    const chanceRequired = t.type === 'chance';
+    const communityRequired = t.type === 'community';
+    const busRequired = t.type === 'busStop' || requiresBusCard;
+    if (chanceRequired && !stagedChanceCardId) return true;
+    if (communityRequired && !stagedCommunityCardId) return true;
+    if (busRequired && !busSelectedCardId) return true;
+    return false;
   };
 
   const doQuickBuy = (pid: string): void => {
@@ -1398,7 +1448,7 @@ export default function PlayConsole(): JSX.Element {
 
   // //#render
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div data-cmp="o/PlayConsole" className="w-full max-w-5xl space-y-6">
       <div className="flex items-center flex-col sm:flex-row sm:items-start justify-between">
         <h1 className="text-2xl font-semibold flex items-center gap-3">
           <button type="button" onClick={() => setBoardOverlayOpen(true)} className="hover:underline">
@@ -1427,346 +1477,318 @@ export default function PlayConsole(): JSX.Element {
       </div>
 
       {/* Player turn cards */}
-      <div data-qa="turn-cards" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {players.map((p, idx) => {
-          const isActive = idx === turnIndex;
-          const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
-          const loc = getTileByIndex(p.positionIndex);
-          return (
-            <div key={p.id} className={`rounded-2xl overflow-hidden border ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'}  bg-white dark:bg-neutral-900`}> 
-              <div className=" pl-8 py-2 pr-5 gap-2 relative bg-white dark:bg-neutral-800 rounded-tl-2xl flex flex-col">
-                {/* player number */}
-                <div className={`font-semibold text-sm rounded-br-3xl ${isActive ? 'bg-emerald-400 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-800'}  w-[30px] h-[30px] pr-1 absolute top-0 left-0 flex items-center justify-center`}>{idx + 1}</div>
-                {/* player avatar & name */}
-                <div className="flex items-center gap-3 relative">
-                  <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
-                    <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={36} />
-                  </div>
-                  <div className="font-semibold flex flex-col">
-                    <span>{p.nickname}</span>
-                    <span className="text-sm font-normal opacity-70"> {loc.name} <span className="opacity-60">{p.positionIndex}</span></span>
-                  </div>
-                  <div className="ml-auto text-[18px] font-bold opacity-90">
-                    <AnimatedNumber value={p.money} prefix="$" />
-                  </div>
+      <PlayerTurnCards
+        players={players}
+        activePlayerIndex={turnIndex}
+        getTileByIndex={getTileByIndex}
+        propsByTileId={propsState.byTileId}
+        railroadTooltipForPlayer={railroadTooltipForPlayer}
+        utilitiesTooltipForPlayer={utilitiesTooltipForPlayer}
+        groupTooltipForPlayer={groupTooltipForPlayer}
+        getGroupBorderClass={getGroupBorderClass}
+        renderActivePanel={(p) => (
+          <>
+            {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
+            {((rollCount > 1) || (turnSegments.length > 1)) && (
+              <TurnRibbon
+                segments={turnSegments}
+                currentDraft={{ roll: rollCount, d6A, d6B, special, busUsed: busTeleportTo != null, from: players[turnIndex]?.positionIndex ?? 0, to: predictedTo ?? (players[turnIndex]?.positionIndex ?? 0), tileName: (predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(players[turnIndex]?.positionIndex ?? 0).name) }}
+              />
+            )}
+            {/* Jail attempts ribbon (only when in jail) */}
+            {(() => {
+              const pid = players[turnIndex]?.id || players[0]?.id;
+              const pl = players.find((x) => x.id === pid);
+              if (!pl?.inJail) return null;
+              return <JailAttemptRibbon attemptsCompleted={pl.jailAttempts ?? 0} />;
+            })()}
+
+            {/* Stepper navigation */}
+            <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
+
+            {/* Property management quick access (pre-roll only) */}
+            {(() => {
+              if (activeStep !== 0) return null;
+              const pid = players[turnIndex]?.id || players[0]?.id;
+              if (!pid) return null;
+              const ownsAnyMortgageable = BOARD_TILES.some((t) => {
+                if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
+                return propsState.byTileId[t.id]?.ownerId === pid;
+              });
+              if (!ownsAnyMortgageable) return null;
+              return (
+                <div className="flex justify-left">
+                  <IconLabelButton
+                    iconSrc="/icons/house.webp"
+                    label="Manage"
+                    className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                    onClick={() => setBuildOverlayOpen(true)}
+                  />
                 </div>
-                {/* inventory HUD */}
-                <div className="flex items-center gap-3 text-[11px] opacity-80">
-                  {(p.busTickets ?? 0) > 0 && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={p.busTickets ?? 0} />)}
-                  {((p.gojfChance ?? 0) + (p.gojfCommunity ?? 0)) > 0 && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={(p.gojfChance ?? 0) + (p.gojfCommunity ?? 0)} />)}
+              );
+            })()}
+
+            <AnimatePresence mode="wait">
+              {activeStep === 0 && (
+                <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
+                  <div className="text-xs font-medium">Pre-actions</div>
                   {(() => {
-                    const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsState.byTileId[t.id]?.ownerId === p.id)).length;
-                    if (rrCount <= 0) return null;
-                    const tip = railroadTooltipForPlayer(p.id);
-                    return (
-                      <Tooltip content={tip || `Railroads x${rrCount}`}>
-                        <HudBadge title="Railroads owned" icon={<span>🚂</span>} count={rrCount} variant="pill" borderClassName="border-white" />
-                      </Tooltip>
-                    );
-                  })()}
-                  {(() => {
-                    const utilCount = BOARD_TILES.filter((t) => t.type === 'utility' && (propsState.byTileId[t.id]?.ownerId === p.id)).length;
-                    if (utilCount <= 0) return null;
-                    const tip = utilitiesTooltipForPlayer(p.id);
-                    return (
-                      <Tooltip content={tip || `Utilities x${utilCount}`}>
-                        <HudBadge title="Utilities owned" icon={<span>🛠️</span>} count={utilCount} variant="pill" borderClassName="border-white" />
-                      </Tooltip>
-                    );
-                  })()}
-                  {/* per-group property indicators */}
-                  <div className="inline-flex items-center gap-1 flex-wrap">
-                    {(['brown','lightBlue','pink','orange','red','yellow','green','darkBlue'] as ColorGroup[]).map((g) => {
-                      const ownedIds = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g && (propsState.byTileId[t.id]?.ownerId === p.id));
-                      if (ownedIds.length === 0) return null;
-                      const tip = groupTooltipForPlayer(p.id, g);
-                      return (
-                        <Tooltip key={g} content={tip || `${g} x${ownedIds.length}`}>
-                          <HudBadge icon={<span>🏠</span>} count={ownedIds.length} variant="pill" borderClassName={getGroupBorderClass(g)} />
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              {isActive && (
-                <div className="p-4 space-y-4">
-                  {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
-                  {((rollCount > 1) || (turnSegments.length > 1)) && (
-                    <TurnRibbon
-                      segments={turnSegments}
-                      currentDraft={{ roll: rollCount, d6A, d6B, special, busUsed: busTeleportTo != null, from: players[turnIndex]?.positionIndex ?? 0, to: predictedTo ?? (players[turnIndex]?.positionIndex ?? 0), tileName: (predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(players[turnIndex]?.positionIndex ?? 0).name) }}
-                    />
-                  )}
-                  {/* Jail attempts ribbon (only when in jail) */}
-                  {(() => {
+                    // Jail choices when in jail
                     const pid = players[turnIndex]?.id || players[0]?.id;
                     const pl = players.find((x) => x.id === pid);
                     if (!pl?.inJail) return null;
-                    return <JailAttemptRibbon attemptsCompleted={pl.jailAttempts ?? 0} />;
-                  })()}
-
-                  {/* Stepper navigation */}
-                  <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
-
-                  {/* Property management quick access (visible on any step) */}
-                  {(() => {
-                    const pid = players[turnIndex]?.id || players[0]?.id;
-                    if (!pid) return null;
-                    const ownsAnyMortgageable = BOARD_TILES.some((t) => {
-                      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
-                      return propsState.byTileId[t.id]?.ownerId === pid;
-                    });
-                    if (!ownsAnyMortgageable) return null;
+                    const gojfTotal = (pl.gojfChance ?? 0) + (pl.gojfCommunity ?? 0);
                     return (
-                      <div className="flex justify-left">
-                        <IconLabelButton
-                          iconSrc="/icons/house.webp"
-                          label="Manage"
-                          className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
-                          onClick={() => setBuildOverlayOpen(true)}
-                        />
+                      <div className="flex flex-wrap gap-2">
+                        <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
+                        {gojfTotal > 0 && (
+                          <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
+                        )}
+                        <TogglePillButton label={<span>Try Doubles</span>} active={jailChoice === 'roll'} onToggle={() => setJailChoice(jailChoice === 'roll' ? null : 'roll')} variant="emerald" />
                       </div>
                     );
                   })()}
 
-                  <AnimatePresence mode="wait">
-                    {activeStep === 0 && (
-                      <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                        <div className="text-xs font-medium">Pre-actions</div>
-                        {(() => {
-                          // Jail choices when in jail
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          const pl = players.find((x) => x.id === pid);
-                          if (!pl?.inJail) return null;
-                          const gojfTotal = (pl.gojfChance ?? 0) + (pl.gojfCommunity ?? 0);
-                          return (
-                            <div className="flex flex-wrap gap-2">
-                              <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
-                              {gojfTotal > 0 && (
-                                <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
-                              )}
-                              <TogglePillButton label={<span>Try Doubles</span>} active={jailChoice === 'roll'} onToggle={() => setJailChoice(jailChoice === 'roll' ? null : 'roll')} variant="emerald" />
-                            </div>
+                  {/* Contextual depot install/remove if active player owns current railroad */}
+                  {(() => {
+                    const tile = getTileByIndex(currentIndex);
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    if (tile.type !== 'railroad' || !pid) return null;
+                    const ps = propsState.byTileId[tile.id];
+                    if (!ps || ps.ownerId !== pid) return null;
+                    const installed = ps.depotInstalled === true;
+                    const cost = 100;
+                    const canAfford = (players.find((x) => x.id === pid)?.money ?? 0) >= cost;
+                    return (
+                      <RailroadDepotControl
+                        installed={installed}
+                        canAfford={canAfford}
+                        onInstall={() => {
+                          dispatch(setDepotInstalled({ tileId: tile.id, installed: true }));
+                          dispatch(adjustPlayerMoney({ id: pid, delta: -cost }));
+                          dispatch(
+                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, amount: -cost, message: 'Depot installed' }, moneyDelta: -cost, createdAt: new Date().toISOString() })
                           );
-                        })()}
+                        }}
+                        onRemove={() => {
+                          dispatch(setDepotInstalled({ tileId: tile.id, installed: false }));
+                          dispatch(
+                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, message: 'Depot removed' }, createdAt: new Date().toISOString() })
+                          );
+                        }}
+                      />
+                    );
+                  })()}
+                </motion.div>
+              )}
 
-                        {/* Contextual depot install/remove if active player owns current railroad */}
-                        {(() => {
-                          const tile = getTileByIndex(currentIndex);
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          if (tile.type !== 'railroad' || !pid) return null;
-                          const ps = propsState.byTileId[tile.id];
-                          if (!ps || ps.ownerId !== pid) return null;
-                          const installed = ps.depotInstalled === true;
-                          const cost = 100;
-                          const canAfford = (players.find((x) => x.id === pid)?.money ?? 0) >= cost;
-                          return (
-                            <RailroadDepotControl
-                              installed={installed}
-                              canAfford={canAfford}
-                              onInstall={() => {
-                                dispatch(setDepotInstalled({ tileId: tile.id, installed: true }));
-                                dispatch(adjustPlayerMoney({ id: pid, delta: -cost }));
-                                dispatch(
-                                  appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, amount: -cost, message: 'Depot installed' }, moneyDelta: -cost, createdAt: new Date().toISOString() })
-                                );
-                              }}
-                              onRemove={() => {
-                                dispatch(setDepotInstalled({ tileId: tile.id, installed: false }));
-                                dispatch(
-                                  appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, message: 'Depot removed' }, createdAt: new Date().toISOString() })
-                                );
-                              }}
-                            />
-                          );
-                        })()}
-                      </motion.div>
+              {activeStep === 1 && (
+                <motion.div key="roll" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
+                  <div className="text-xs font-medium flex items-center gap-2">
+                    <span>Roll {rollCount}</span>
+                    {hasRoll && <span className="inline-flex items-center rounded bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px]">Total: {rollTotal}</span>}
+                    {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
+                      <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>
                     )}
-
-                    {activeStep === 1 && (
-                      <motion.div key="roll" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                        <div className="text-xs font-medium flex items-center gap-2">
-                          <span>Roll {rollCount}</span>
-                          {hasRoll && <span className="inline-flex items-center rounded bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px]">Total: {rollTotal}</span>}
-                          {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
-                            <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>
-                          )}
-                          {isTriple && (
-                            <span
-                              className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
-                                isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
-                              }`}
-                            >
-                              {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
-                            </span>
-                          )}
+                    {isTriple && (
+                      <span
+                        className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
+                          isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
+                        }`}
+                      >
+                        {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    const pl = players.find((x) => x.id === pid);
+                    const inJailRolling = pl?.inJail && jailChoice === 'roll';
+                    return (
+                      <div className={busTeleportTo != null ? 'opacity-50 pointer-events-none' : ''}>
+                        <div className={inJailRolling ? '' : ''}>
+                          {/* Render D6 selector; hide Special row if in-jail trying doubles */}
+                          <DiceSelector d6A={d6A} d6B={d6B} special={inJailRolling ? null : (special as any)} onSelectA={setD6A} onSelectB={setD6B} onSelectSpecial={(v) => setSpecial(v as SpecialDieFace)} showSpecial={!inJailRolling} />
                         </div>
-                        {(() => {
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          const pl = players.find((x) => x.id === pid);
-                          const inJailRolling = pl?.inJail && jailChoice === 'roll';
-                          return (
-                            <div className={busTeleportTo != null ? 'opacity-50 pointer-events-none' : ''}>
-                              <div className={inJailRolling ? '' : ''}>
-                                {/* Render D6 selector; hide Special row if in-jail trying doubles */}
-                                <DiceSelector d6A={d6A} d6B={d6B} special={inJailRolling ? null : (special as any)} onSelectA={setD6A} onSelectB={setD6B} onSelectSpecial={(v) => setSpecial(v as SpecialDieFace)} showSpecial={!inJailRolling} />
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        {/* Draw Bus moved to Post-actions */}
+                      </div>
+                    );
+                  })()}
+                  {/* Draw Bus moved to Post-actions */}
 
-                        {/* Use Bus Ticket (teleport) if player holds at least one */}
-                        {(() => {
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          const available = busTicketsAvailableThisTurn + stagedBusTickets;
-                          if (available <= 0) return null;
-                          return (
-                            <div className="pt-1">
-                              {busTeleportTo != null ? (
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                                  onClick={() => {
-                                    // cancel selection; restore ticket availability and inventory
-                                    const pid = players[turnIndex]?.id || players[0]?.id;
-                                    if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
-                                    setBusTicketsAvailableThisTurn((n) => n + 1);
-                                    setBusTeleportTo(null);
-                                  }}
-                                >
-                                  <span>✓</span>
-                                  🚐 to {getTileByIndex(busTeleportTo).name}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                                  onClick={() => setCenterOverlay({ type: 'busTeleport' })}
-                                >
-                                  Use Bus Ticket
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })()}
+                  {/* Use Bus Ticket (teleport) if player holds at least one */}
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    const available = busTicketsAvailableThisTurn + stagedBusTickets;
+                    if (available <= 0) return null;
+                    return (
+                      <div className="pt-1">
+                        {busTeleportTo != null ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                            onClick={() => {
+                              // cancel selection; restore ticket availability and inventory
+                              const pid = players[turnIndex]?.id || players[0]?.id;
+                              if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
+                              setBusTicketsAvailableThisTurn((n) => n + 1);
+                              setBusTeleportTo(null);
+                            }}
+                          >
+                            <span>✓</span>
+                            🚐 to {getTileByIndex(busTeleportTo).name}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                            onClick={() => setCenterOverlay({ type: 'busTeleport' })}
+                          >
+                            Use Bus Ticket
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
-                        {/* Triple teleport (1-1-1 / 2-2-2 / 3-3-3) */}
-                        {(() => {
-                          if (!isTriple) return null;
-                          const cl =
-                            isTripleOnes
-                              ? {
-                                  ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
-                                  selected:
-                                    'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
-                                }
-                              : {
-                                  ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
-                                  selected:
-                                    'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
-                                };
-                          return (
-                            <div className="pt-1">
-                              {tripleTeleportTo != null ? (
-                                <button
-                                  type="button"
-                                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
-                                  onClick={() => {
-                                    setTripleTeleportTo(null);
-                                    setPredictedTo(null);
-                                  }}
-                                >
-                                  <span>✓</span>
-                                  🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={busTeleportTo != null}
-                                  className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
-                                  onClick={() => {
-                                    setBusTeleportTo(null);
-                                    setCenterOverlay({ type: 'tripleTeleport' });
-                                  }}
-                                >
-                                  Teleport (3-of-a-kind)
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </motion.div>
-                    )}
+                  {/* Triple teleport (1-1-1 / 2-2-2 / 3-3-3) */}
+                  {(() => {
+                    if (!isTriple) return null;
+                    const cl =
+                      isTripleOnes
+                        ? {
+                            ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
+                            selected:
+                              'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
+                          }
+                        : {
+                            ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
+                            selected:
+                              'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
+                          };
+                    return (
+                      <div className="pt-1">
+                        {tripleTeleportTo != null ? (
+                          <button
+                            type="button"
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
+                            onClick={() => {
+                              setTripleTeleportTo(null);
+                              setPredictedTo(null);
+                            }}
+                          >
+                            <span>✓</span>
+                            🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busTeleportTo != null}
+                            className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
+                            onClick={() => {
+                              setBusTeleportTo(null);
+                              setCenterOverlay({ type: 'tripleTeleport' });
+                            }}
+                          >
+                            Teleport (3-of-a-kind)
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              )}
 
-                    {activeStep === 2 && (
-                      <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                        <div className="text-xs font-medium">Post-actions</div>
-                        {/* From → To preview for GM */}
-                        {(() => {
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
-                          const fromTileName = getTileByIndex(fromIdx).name;
-                          const isDblNow = (d6A !== null && d6B !== null && d6A === d6B);
-                          const thirdDbl = (rollCount >= 3) && isDblNow && (busTeleportTo == null);
-                          let toIdx: number | null = null;
-                          if (thirdDbl) toIdx = JAIL_INDEX;
-                          else if (predictedTo != null) toIdx = predictedTo;
-                          const toTileName = toIdx != null ? getTileByIndex(toIdx).name : '—';
-                          return <FromToIndicator from={fromTileName} to={toTileName} subtleTo alert={thirdDbl} />;
-                        })()}
-                        {/* Recap moved into Summary overlay */}
-          
-                        {/* Draw Bus control now consolidated via PostActionsBar (avoid duplicates) */}
-                        {/* Quick action: Buy or Auction resolution */}
-                        {(() => {
-                          if (predictedTo == null) return null;
-                          const t = getTileByIndex(predictedTo);
-                          const isBuyable = (t.type === 'property' || t.type === 'railroad' || t.type === 'utility');
-                          const isAuctionSpace = t.type === 'auction';
-                          if (!isBuyable && !isAuctionSpace) return null;
-                          const stateTile = propsState.byTileId[t.id];
-                          const owner = stateTile?.ownerId as string | null;
-                          const pid2 = players[turnIndex]?.id || players[0]?.id;
-                          const mortgaged = stateTile?.mortgaged === true;
-                          const canBuy = isBuyable && (!owner || (mortgaged && !!owner && owner !== pid2));
-                          const pl = players.find((x) => x.id === pid2);
-                          const fromPos = players.find((x) => x.id === pid2)?.positionIndex ?? 0;
-                          const willPassGoThisMove = (() => {
-                            if (predictedTo == null) return false;
-                            const fromW = wrapIndex(fromPos);
-                            const toW = wrapIndex(predictedTo);
-                            const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
-                            if (isTeleportPreview && toW === fromW) return true; // teleport-to-same counts as lap
-                            return passedGo(fromW, toW);
-                          })();
-                          const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
-                          const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
-                          const playerMoney = p.money;
-                          const isUnownedBuyable = isBuyable && !owner;
-                          const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
-                          return (
-                            <>
-                              {owner && (
-                                <div className="text-[11px]">
-                                  <span className="inline-flex items-center rounded-full border border-neutral-300 dark:border-neutral-700 px-2 py-0.5">
-                                    Owned {mortgaged ? '(Mortgaged) ' : ''}by {players.find(pl => pl.id === owner)?.nickname ?? 'owner'}
-                                  </span>
-                                </div>
-                              )}
+              {activeStep === 2 && (
+                <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
+                  <div className="text-xs font-medium">Post-actions</div>
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+                    const isDblNow = (d6A !== null && d6B !== null && d6A === d6B);
+                    const thirdDbl = (rollCount >= 3) && isDblNow && (busTeleportTo == null);
+                    const toIdx: number | null = thirdDbl ? JAIL_INDEX : (predictedTo ?? null);
+                    const t = getTileByIndex(predictedTo ?? currentIndex);
+                    const ps = propsState.byTileId[t.id];
+                    const owner = ps?.ownerId as string | null;
+                    const mortgaged = ps?.mortgaged === true;
+
+                    const isBuyable = (t.type === 'property' || t.type === 'railroad' || t.type === 'utility');
+                    const isUnownedBuyable = isBuyable && !owner;
+                    const isAuctionTile = t.type === 'auction';
+                    const chanceVisible = t.type === 'chance';
+                    const communityVisible = t.type === 'community';
+
+                    const maybeRentLabel = (): string | null => {
+                      if (!pid || !isBuyable || !owner || owner === pid || mortgaged) return null;
+                      const ownerPlayer = players.find((pl) => pl.id === owner);
+                      const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+                      const state = (window as any).__store__?.getState?.() as RootState | undefined;
+                      const rentAmount = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+                      const imp = propsState.byTileId[t.id]?.improvements ?? 0;
+                      const impSuffix = imp > 0 ? ` (${improvementLabel(imp)})` : '';
+                      return `Pay ${ownerPlayer?.nickname ?? 'owner'} $${rentAmount} for ${t.name}${impSuffix}`;
+                    };
+                    const maybeTaxLabel = (): string | null => (t.type === 'tax' ? `Pay Tax $${t.taxAmount}` : null);
+                    const rentLabel = maybeRentLabel();
+                    const taxLabel = maybeTaxLabel();
+
+                    const busVisible = (() => {
+                      const bySpecial = special === 'Bus' ? 1 : 0;
+                      const byTile = t.type === 'busStop' ? 1 : 0;
+                      return bySpecial + byTile > 0;
+                    })();
+
+                    const pl = players.find((x) => x.id === pid);
+                    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
+                    const willPassGoThisMove = (() => {
+                      if (predictedTo == null) return false;
+                      const fromW = wrapIndex(fromPos);
+                      const toW = wrapIndex(predictedTo);
+                      const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
+                      if (isTeleportPreview && toW === fromW) return true;
+                      return passedGo(fromW, toW);
+                    })();
+                    const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+                    const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
+                    const playerMoney = p.money;
+                    const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
+
+                    return (
+                      <div className="space-y-3">
+                        {/* Roll */}
+                        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roll</div>
+                          <div className="mt-2">
+                            <FromToIndicator
+                              from={getTileByIndex(fromIdx).name}
+                              to={toIdx != null ? getTileByIndex(toIdx).name : '—'}
+                              subtleTo
+                              alert={thirdDbl}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Property (buy/auction it) */}
+                        {isUnownedBuyable && (
+                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Property</div>
+                            <div className="mt-2">
                               <PurchaseActionsRow
                                 tileName={t.name}
                                 price={price}
                                 firstRoundLocked={firstRoundLocked}
-                                isUnownedBuyable={!!isUnownedBuyable}
-                                isAuctionTile={isAuctionSpace}
+                                isUnownedBuyable={true}
+                                isAuctionTile={false}
                                 groupVariant={groupVariant}
                                 buySelected={buySelected}
                                 onToggleBuy={() => {
                                   const next = !buySelected;
                                   setBuySelected(next);
-                                  if (next) setAuctionItSelected(false);
+                                  if (next) {
+                                    setAuctionItSelected(false);
+                                    setAuctionOpen(false);
+                                    setStagedAuction(null);
+                                  }
                                   setPostAction(next ? 'Buy Property' : postAction === 'Buy Property' ? 'None' : postAction);
                                 }}
                                 canAffordBuy={playerMoney >= price}
@@ -1776,206 +1798,219 @@ export default function PlayConsole(): JSX.Element {
                                   if (next) setBuySelected(false);
                                   setAuctionItSelected(next);
                                   if (next) setAuctionOpen(true);
-                                  if (!next) setStagedAuction(null);
+                                  if (!next) {
+                                    setAuctionOpen(false);
+                                    setStagedAuction(null);
+                                  }
                                 }}
                               />
-                            </>
-                          );
-                        })()}
-                        {/* Quick-actions based on predicted tile */}
-                        {(() => {
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          const idx = predictedTo ?? currentIndex;
-                          const t = getTileByIndex(idx);
-                          const ps = propsState.byTileId[t.id];
-                          const owner = ps?.ownerId as string | null;
-                          const mortgaged = ps?.mortgaged === true;
-                          const maybeRentLabel = () => {
-                            if (!pid || !(t.type === 'property' || t.type === 'railroad' || t.type === 'utility') || !owner || owner === pid || mortgaged) return null;
-                            const ownerPlayer = players.find((pl) => pl.id === owner);
-                            const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
-                            const state = (window as any).__store__?.getState?.() as RootState | undefined;
-                            const rentAmount = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
-                            const imp = propsState.byTileId[t.id]?.improvements ?? 0;
-                            const impSuffix = imp > 0 ? ` (${improvementLabel(imp)})` : '';
-                            return `Pay ${ownerPlayer?.nickname ?? 'owner'} $${rentAmount} for ${t.name}${impSuffix}`;
-                          };
-                          const maybeTaxLabel = () => (t.type === 'tax' ? `Pay Tax $${t.taxAmount}` : null);
-                          const isAuctionTile = t.type === 'auction';
-                          const chanceVisible = t.type === 'chance';
-                          const communityVisible = t.type === 'community';
-                          return (
-                            <PostActionsBar
-                              rentLabel={maybeRentLabel()}
-                              rentSelected={rentSelected}
-                              onToggleRent={() => setRentSelected((v) => !v)}
-                              rentShake={shakeRent}
-                              taxLabel={maybeTaxLabel()}
-                              taxSelected={taxSelected}
-                              onToggleTax={() => setTaxSelected((v) => !v)}
-                              taxShake={shakeTax}
-                              busVisible={(() => {
-                                const bySpecial = special === 'Bus' ? 1 : 0;
-                                const byTile = t.type === 'busStop' ? 1 : 0;
-                                // Render one control; if both sources present, PostActionsBar renders a single control used once
-                                return bySpecial + byTile > 0;
-                              })()}
-                              busActive={!!busSelectedCardId}
-                              onDrawBus={() => {
-                                if (busSelectedCardId) {
-                                  dispatch(putCardOnBottom({ deck: 'bus', cardId: busSelectedCardId }));
-                                  setBusSelectedCardId(null);
-                                } else {
-                                  setOverlay({ deck: 'bus' });
-                                }
-                              }}
-                              busShake={shakeBus}
-                              chanceVisible={chanceVisible}
-                              chanceActive={!!stagedChanceCardId}
-                              onToggleChance={() => {
-                                if (!chanceVisible) return;
-                                setOverlay({ deck: 'chance' });
-                              }}
-                              communityVisible={communityVisible}
-                              communityActive={!!stagedCommunityCardId}
-                              onToggleCommunity={() => {
-                                if (!communityVisible) return;
-                                setOverlay({ deck: 'community' });
-                              }}
-                              auctionVisible={isAuctionTile}
-                              auctionActive={auctionCompleted}
-                              onAuction={() => {
-                                if (auctionCompleted) {
-                                  // undo staged auction
-                                  setAuctionCompleted(false);
-                                  setStagedAuction(null);
-                                } else {
-                                  setAuctionOpen(true);
-                                }
-                              }}
-                            />
-                          );
-                        })()}
-                        {/* Auction tile action handled via PostActionsBar toggle above */}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                            </div>
+                          </div>
+                        )}
 
-                  {/* Navigation */}
-                  <div className="flex items-center justify-between pt-1">
-                    {activeStep < 2 ? (
-                      activeStep === 1 && isTriple && tripleTeleportTo == null ? (
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                          Choose a teleport destination to continue.
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
-                            nextBtnDisabled()
-                              ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
-                              : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                          }`}
-                          disabled={nextBtnDisabled()}
-                          onClick={goNext}
-                        >
-                          Next
-                        </button>
-                      )
-                    ) : (
-                      (() => {
-                        const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
-                        const isDoublesNow = d6A !== null && d6B !== null && d6A === d6B;
-                        const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
-                        // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
-                        const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
-                        const blocked = isQueuedFlowActive
-                          ? (rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
-                          : (!(((hasRollWithSpecialSelected && rollConfirmed) || (busTeleportTo != null && rollConfirmed))) || (requiresBusCard && !busSelectedCardId) || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
-                        if (isQueuedFlowActive) {
-                          return (
-                            <button
-                              type="button"
-                              className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                              disabled={blocked}
-                              onClick={() => {
-                                if (blocked) return;
-                                const pid = players[turnIndex]?.id || players[0]?.id;
-                                if (!pid) return;
-                                finalizeTurn(pid);
-                              }}
-                            >
-                              Next
-                            </button>
-                          );
-                        }
-                        if (continueRoll) {
-                          return (
-                            <button
-                              type="button"
-                              className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                              disabled={blocked}
-                              onClick={() => {
-                                if (blocked) return;
-                                const pid = players[turnIndex]?.id || players[0]?.id;
-                                if (!pid) return;
-                                finalizeTurn(pid);
-                              }}
-                            >
-                              Next Roll
-                            </button>
-                          );
-                        }
-                        // End-of-turn: show Summary button with hold-to-end
-                        return (
-                          <motion.button
-                            type="button"
-                            className={`relative inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
-                              blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white'
-                            }`}
-                            disabled={blocked}
-                            onMouseDown={() => {
-                              if (blocked) {
-                                if (rentRequiredButNotSelected()) {
-                                  setShakeRent(true);
-                                  window.setTimeout(() => setShakeRent(false), 400);
-                                }
-                                if (taxRequiredButNotSelected()) {
-                                  setShakeTax(true);
-                                  window.setTimeout(() => setShakeTax(false), 400);
-                                }
-                                if (requiresBusCard && !busSelectedCardId) {
-                                  setShakeBus(true);
-                                  window.setTimeout(() => setShakeBus(false), 400);
-                                }
-                                return;
-                              }
-                              onEndTurnHoldStart(p.id);
-                            }}
-                            onClick={() => {
-                              if (blocked) return;
-                              setSummaryOpen(true);
-                            }}
-                            onMouseUp={onEndTurnHoldCancel}
-                            onMouseLeave={onEndTurnHoldCancel}
-                            onTouchStart={() => onEndTurnHoldStart(p.id)}
-                            onTouchEnd={onEndTurnHoldCancel}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            Summary
-                            <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
-                          </motion.button>
-                        );
-                      })()
-                    )}
-                    <div className="text-xs opacity-70">Step {activeStep + 1} of 3</div>
-                  </div>
-                </div>
+                        {/* Payments */}
+                        {(rentLabel || taxLabel) && (
+                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Payments</div>
+                            <div className="mt-2">
+                              <PostActionsBar
+                                rentLabel={rentLabel}
+                                rentSelected={rentSelected}
+                                onToggleRent={() => setRentSelected((v) => !v)}
+                                rentShake={shakeRent}
+                                taxLabel={taxLabel}
+                                taxSelected={taxSelected}
+                                onToggleTax={() => setTaxSelected((v) => !v)}
+                                taxShake={shakeTax}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Draw Bus */}
+                        {busVisible && (
+                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Draw a Bus</div>
+                            <div className="mt-2">
+                              <PostActionsBar
+                                busVisible={true}
+                                busActive={!!busSelectedCardId}
+                                onDrawBus={() => {
+                                  if (busSelectedCardId) {
+                                    dispatch(putCardOnBottom({ deck: 'bus', cardId: busSelectedCardId }));
+                                    setBusSelectedCardId(null);
+                                  } else {
+                                    setOverlay({ deck: 'bus' });
+                                  }
+                                }}
+                                busShake={shakeBus}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Draw cards */}
+                        {(chanceVisible || communityVisible) && (
+                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Draw cards</div>
+                            <div className="mt-2">
+                              <PostActionsBar
+                                chanceVisible={chanceVisible}
+                                chanceActive={!!stagedChanceCardId}
+                                onToggleChance={() => {
+                                  if (!chanceVisible) return;
+                                  setOverlay({ deck: 'chance' });
+                                }}
+                                communityVisible={communityVisible}
+                                communityActive={!!stagedCommunityCardId}
+                                onToggleCommunity={() => {
+                                  if (!communityVisible) return;
+                                  setOverlay({ deck: 'community' });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Auction tile */}
+                        {isAuctionTile && (
+                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Auction</div>
+                            <div className="mt-2">
+                              <PostActionsBar
+                                auctionVisible={true}
+                                auctionActive={auctionCompleted}
+                                onAuction={() => {
+                                  if (auctionCompleted) {
+                                    setAuctionCompleted(false);
+                                    setStagedAuction(null);
+                                  } else {
+                                    setAuctionOpen(true);
+                                  }
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </motion.div>
               )}
+            </AnimatePresence>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between pt-1">
+              {activeStep < 2 ? (
+                activeStep === 1 && isTriple && tripleTeleportTo == null ? (
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Choose a teleport destination to continue.
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
+                      nextBtnDisabled()
+                        ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
+                        : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                    }`}
+                    disabled={nextBtnDisabled()}
+                    onClick={goNext}
+                  >
+                    Next
+                  </button>
+                )
+              ) : (
+                (() => {
+                  const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
+                  const isDoublesNow = d6A !== null && d6B !== null && d6A === d6B;
+                  const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                  // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
+                  const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                  const blocked = isQueuedFlowActive
+                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
+                    : (!(((hasRollWithSpecialSelected && rollConfirmed) || (busTeleportTo != null && rollConfirmed))) || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
+                  if (isQueuedFlowActive) {
+                    return (
+                      <button
+                        type="button"
+                        className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (!pid) return;
+                          finalizeTurn(pid);
+                        }}
+                      >
+                        Next
+                      </button>
+                    );
+                  }
+                  if (continueRoll) {
+                    return (
+                      <button
+                        type="button"
+                        className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (!pid) return;
+                          finalizeTurn(pid);
+                        }}
+                      >
+                        Next Roll
+                      </button>
+                    );
+                  }
+                  // End-of-turn: show Summary button with hold-to-end
+                  return (
+                    <motion.button
+                      type="button"
+                      className={`relative inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
+                        blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white'
+                      }`}
+                      disabled={blocked}
+                      onMouseDown={() => {
+                        if (blocked) {
+                          if (rentRequiredButNotSelected()) {
+                            setShakeRent(true);
+                            window.setTimeout(() => setShakeRent(false), 400);
+                          }
+                          if (taxRequiredButNotSelected()) {
+                            setShakeTax(true);
+                            window.setTimeout(() => setShakeTax(false), 400);
+                          }
+                          if (requiresBusCard && !busSelectedCardId) {
+                            setShakeBus(true);
+                            window.setTimeout(() => setShakeBus(false), 400);
+                          }
+                          return;
+                        }
+                        onEndTurnHoldStart(p.id);
+                      }}
+                      onClick={() => {
+                        if (blocked) return;
+                        setSummaryOpen(true);
+                      }}
+                      onMouseUp={onEndTurnHoldCancel}
+                      onMouseLeave={onEndTurnHoldCancel}
+                      onTouchStart={() => onEndTurnHoldStart(p.id)}
+                      onTouchEnd={onEndTurnHoldCancel}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Summary
+                      <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
+                    </motion.button>
+                  );
+                })()
+              )}
+              <div className="text-xs opacity-70">Step {activeStep + 1} of 3</div>
             </div>
-          );
-        })}
-      </div>
+          </>
+        )}
+      />
 
       {/* GM Tools — manual actions and corrections */}
       <div className="w-full max-w-3xl">
@@ -2305,8 +2340,8 @@ export default function PlayConsole(): JSX.Element {
                 {(() => {
                   const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
                   const blocked = isQueuedFlowActive
-                    ? (rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
-                    : ((requiresBusCard && !busSelectedCardId) || rentRequiredButNotSelected() || taxRequiredButNotSelected());
+                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
+                    : (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected());
                   const label = isQueuedFlowActive ? 'Next' : 'End Turn';
                   return (
                     <button

@@ -77,7 +77,7 @@ export default function TurnRibbon({ segments, currentDraft, maxRolls = 3 }: Tur
   };
 
   return (
-    <div className="w-full flex  gap-2">
+    <div data-cmp="m/TurnRibbon" className="w-full flex  gap-2">
       <div className='text-sm text-neutral-400 max-w-[50px] leading-tight'>Rolled Doubles</div>
       <div className="flex items-center justify-center flex-1">
         {items.map(chip)}

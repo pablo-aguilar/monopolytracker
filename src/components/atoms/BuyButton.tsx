@@ -19,7 +19,7 @@ export default function BuyButton({ name, price, canAfford, selected, onToggle, 
 	const filledClasses = `${bgClass} ${textClass} ${!isDisabled ? 'hover:brightness-110' : 'opacity-60 cursor-not-allowed'}`;
 	const ghostClasses = `bg-transparent border ${borderClass} ${textStrongClass} dark:text-white ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/5 dark:hover:bg-white/10'}`;
 	return (
-		<div className="pt-1 space-y-1">
+		<div data-cmp="a/BuyButton" className="pt-1 space-y-1">
 			<div className="text-xs opacity-80">{name}</div>
 			<button
 				type="button"

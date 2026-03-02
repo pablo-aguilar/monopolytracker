@@ -35,7 +35,7 @@ export default function TurnOrderList({ players, onReorder, onRemove, onOptInCha
   };
 
   return (
-    <div data-qa="turn-order" className="space-y-2">
+    <div data-qa="turn-order" data-cmp="m/TurnOrderList" className="space-y-2">
       <Reorder.Group axis="y" values={order} onReorder={handleReorder} className="space-y-2">
         {order.map((p, idx) => (
           <Reorder.Item

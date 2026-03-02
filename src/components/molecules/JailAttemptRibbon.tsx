@@ -29,7 +29,7 @@ export default function JailAttemptRibbon({ attemptsCompleted, maxAttempts = 3 }
     );
   };
   return (
-    <div className="w-full">
+    <div data-cmp="m/JailAttemptRibbon" className="w-full">
       <div className="flex items-center gap-2">
         {items.map(chip)}
       </div>

@@ -91,7 +91,7 @@ export default function AvatarPicker({
   }, [isPopoverOpen, value]);
 
   return (
-    <div className="grid grid-cols-6 gap-2">
+    <div data-cmp="m/AvatarPicker" className="grid grid-cols-6 gap-2">
       {options.map((a) => {
         const taken = used.has(a.key);
         const selected = value === a.key;

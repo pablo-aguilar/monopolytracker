@@ -1,0 +1,21 @@
+import React from 'react';
+import { FaCog } from 'react-icons/fa';
+import SettingsModal from '@/components/molecules/SettingsModal';
+
+export default function SettingsGear({ className = '' }: { className?: string }): JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div data-cmp="m/SettingsGear" className="contents">
+      <button
+        type="button"
+        aria-label="Settings"
+        className={`inline-flex items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 p-2 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 ${className}`}
+        onClick={() => setOpen(true)}
+      >
+        <FaCog className="h-5 w-5 text-neutral-700 dark:text-neutral-200" />
+      </button>
+      <SettingsModal open={open} onClose={() => setOpen(false)} />
+    </div>
+  );
+}
+

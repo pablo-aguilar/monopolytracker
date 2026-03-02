@@ -28,7 +28,7 @@ export interface PostActionsBarProps {
 
 export default function PostActionsBar({ children, rentLabel, rentSelected, onToggleRent, rentShake, taxLabel, taxSelected, onToggleTax, taxShake, busVisible, busActive, onDrawBus, busShake, chanceVisible, chanceActive, onToggleChance, communityVisible, communityActive, onToggleCommunity, auctionVisible, auctionActive, onAuction }: PostActionsBarProps): JSX.Element {
   return (
-    <div className="flex flex-wrap gap-2 pt-1">
+    <div data-cmp="m/PostActionsBar" className="flex flex-wrap gap-2 pt-1">
       {children}
       {rentLabel && onToggleRent && (
         <TogglePillButton label={rentLabel} active={!!rentSelected} onToggle={onToggleRent} variant="rose" shake={!!rentShake} />

@@ -18,6 +18,7 @@ export default function ColorSwatch({ color, selected = false, taken = false, qa
     <button
       type="button"
       data-qa={qa}
+      data-cmp="a/ColorSwatch"
       disabled={taken && !selected}
       onClick={onClick}
       className={`h-10 w-full rounded-md border ${selected ? 'ring-2 ring-teal-300 border-teal-500' : 'border-neutral-300 dark:border-neutral-700'} ${taken && !selected ? 'opacity-40 cursor-not-allowed' : 'hover:opacity-90'}`}

@@ -18,7 +18,7 @@ function btnClass(active: boolean): string {
 
 export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, onSelectSpecial, showSpecial = true }: DiceSelectorProps): JSX.Element {
   return (
-    <div className="space-y-2">
+    <div data-cmp="m/DiceSelector" className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs opacity-80 w-12">D6 A:</span>
         {[1, 2, 3, 4, 5, 6].map((n) => (

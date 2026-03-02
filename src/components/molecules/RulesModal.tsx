@@ -95,6 +95,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          data-cmp="m/RulesModal"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             // close when clicking the backdrop (not the panel)

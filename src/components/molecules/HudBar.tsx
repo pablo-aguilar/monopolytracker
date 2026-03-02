@@ -27,7 +27,7 @@ export default function HudBar({
   className,
 }: HudBarProps): JSX.Element {
   return (
-    <div data-qa="hud-bank" className={`flex flex-wrap items-center gap-3 text-sm ${className ?? ''}`}>
+    <div data-qa="hud-bank" data-cmp="m/HudBar" className={`flex flex-wrap items-center gap-3 text-sm ${className ?? ''}`}>
       
       <StatPill label={
          <img

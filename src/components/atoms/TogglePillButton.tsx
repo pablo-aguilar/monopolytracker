@@ -46,6 +46,7 @@ export default function TogglePillButton({ label, active, onToggle, disabled, va
   return (
     <motion.button
       type="button"
+      data-cmp="a/TogglePillButton"
       disabled={disabled}
       onClick={onToggle}
       className={classesFor(variant, active)}

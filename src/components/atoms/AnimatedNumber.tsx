@@ -27,7 +27,7 @@ export default function AnimatedNumber({ value, prefix = '', className, duration
     return () => controls.stop();
   }, [value, durationMs, motionValue]);
 
-  return <span className={className}>{prefix}{display}</span>;
+  return <span data-cmp="a/AnimatedNumber" className={className}>{prefix}{display}</span>;
 }
 
 

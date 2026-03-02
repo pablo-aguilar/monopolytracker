@@ -41,7 +41,7 @@ export default function AuctionOverlay({ open, onClose, bankOwnedByTileId, playe
   return (
     <AnimatePresence>
       {open && (
-        <motion.div key="auction-ov" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 260, damping: 24 }} className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 p-4 shadow-2xl">
+        <motion.div data-cmp="m/AuctionOverlay" key="auction-ov" initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 260, damping: 24 }} className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 p-4 shadow-2xl">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-semibold">Auction</div>
             <button onClick={onClose} className="text-sm opacity-70 hover:opacity-100">Close</button>

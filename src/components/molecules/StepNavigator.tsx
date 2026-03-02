@@ -15,7 +15,7 @@ export interface StepNavigatorProps {
 
 export default function StepNavigator({ items, activeStep, highestStep, onSelect }: StepNavigatorProps): JSX.Element {
   return (
-    <div className="pb-2">
+    <div data-cmp="m/StepNavigator" className="pb-2">
       <div className="flex items-baseline">
         {items.map((s, i) => {
           const status = s.id < activeStep ? 'done' : s.id === activeStep ? 'current' : 'upcoming';

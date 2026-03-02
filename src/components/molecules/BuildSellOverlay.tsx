@@ -2,6 +2,9 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BOARD_TILES, type BoardTileData, type ColorGroup } from '@/data/board';
 import MortgageButton from '@/components/atoms/MortgageButton';
+import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
+import { computeRent } from '@/features/selectors/rent';
+import type { RootState } from '@/app/store';
 
 export interface BuildSellOverlayProps {
   open: boolean;
@@ -23,6 +26,62 @@ type GroupPlan = {
   group: ColorGroup | undefined;
   tiles: BoardTileData[];
 };
+
+function getLevelForTile(tileId: string, targets: Record<string, number>, tileLevels: Record<string, number>): number {
+  const v = targets[tileId];
+  if (typeof v === 'number') return v;
+  const cur = tileLevels[tileId];
+  return typeof cur === 'number' ? cur : 0;
+}
+
+function HouseToken({ id }: { id: string }): JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style: React.CSSProperties | undefined = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.85 : 1 }
+    : undefined;
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      style={style}
+      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
+      {...listeners}
+      {...attributes}
+      title="Drag to rearrange"
+    >
+      <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+    </button>
+  );
+}
+
+function HotelToken({ id }: { id: string }): JSX.Element {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style: React.CSSProperties | undefined = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.85 : 1 }
+    : undefined;
+  return (
+    <button
+      type="button"
+      ref={setNodeRef}
+      style={style}
+      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
+      {...listeners}
+      {...attributes}
+      title="Drag to swap with 4 houses"
+    >
+      <img src="/icons/hotel.webp" alt="Hotel" className="h-6 w-6" loading="lazy" decoding="async" />
+    </button>
+  );
+}
+
+function HouseDropZone({ id, children }: { id: string; children: React.ReactNode }): JSX.Element {
+  const { isOver, setNodeRef } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`rounded-md ${isOver ? 'ring-2 ring-emerald-400' : ''}`}>
+      {children}
+    </div>
+  );
+}
 
 export default function BuildSellOverlay({ open, onClose, playerId, playerMoney, tileLevels, tileMortgaged, ownedTileIds = [], railroadDepotInstalled = {}, housesRemaining, hotelsRemaining, skyscrapersRemaining = 12, onConfirm }: BuildSellOverlayProps): JSX.Element | null {
   const ownedPropertyTiles: BoardTileData[] = React.useMemo(() => {
@@ -87,18 +146,29 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
     setDesiredDepotInstalled(init);
   }, [ownedAllTiles, railroadDepotInstalled]);
 
-  // helpers for economics
-  function getCostsForStep(tile: BoardTileData, from: number, to: number): number {
-    if (tile.type !== 'property' || !tile.property) return 0;
-    const { houseCost } = tile.property;
-    return Math.max(0, to - from) * houseCost;
-  }
+  const [detailsTileId, setDetailsTileId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!detailsTileId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDetailsTileId(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [detailsTileId]);
 
-  function getRefundsForStep(tile: BoardTileData, from: number, to: number): number {
-    if (tile.type !== 'property' || !tile.property) return 0;
-    const { houseCost } = tile.property;
-    return Math.max(0, from - to) * (houseCost / 2);
-  }
+  const rentState = React.useMemo(() => {
+    const byTileId: Record<string, any> = {};
+    for (const t of ownedAllTiles) {
+      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+      byTileId[t.id] = {
+        ownerId: playerId,
+        mortgaged: !!(desiredMortgaged[t.id] ?? tileMortgaged[t.id]),
+        improvements: t.type === 'property' ? getLevelForTile(t.id, targets, tileLevels) : 0,
+        depotInstalled: t.type === 'railroad' ? !!(desiredDepotInstalled[t.id] ?? railroadDepotInstalled[t.id]) : false,
+      };
+    }
+    return { properties: { byTileId } } as unknown as RootState;
+  }, [ownedAllTiles, playerId, desiredMortgaged, tileMortgaged, desiredDepotInstalled, railroadDepotInstalled, targets, tileLevels]);
 
   // bank inventory deltas implied by targets
   function computeBankDeltas(): { housesNeeded: number; hotelsNeeded: number; skyscrapersNeeded: number } {
@@ -140,7 +210,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
 
   // even rule checks per group
   function canIncrement(tile: BoardTileData): boolean {
-    const cur = targets[tile.id];
+    const cur = getLevelForTile(tile.id, targets, tileLevels);
     // Use desired state: cannot build if (desired) mortgaged
     if (desiredMortgaged[tile.id]) return false;
     if (cur >= 6) return false;
@@ -154,9 +224,9 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
     const groupTiles = (groups.find((g) => g.group === tile.group)?.tiles ?? []).filter((t) => fullGroupIds.includes(t.id));
     // ok to build in group as long as we consider desired mortgaged state
     if (groupTiles.length > 1) {
-      const levels = groupTiles.map((t) => targets[t.id]);
+      const levels = groupTiles.map((t) => getLevelForTile(t.id, targets, tileLevels));
       const minLevel = Math.min(...levels);
-      if (targets[tile.id] !== minLevel) return false;
+      if (getLevelForTile(tile.id, targets, tileLevels) !== minLevel) return false;
     }
     // Threshold rules
     if (cur >= 5) {
@@ -170,13 +240,13 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   }
 
   function canDecrement(tile: BoardTileData): boolean {
-    const cur = targets[tile.id];
+    const cur = getLevelForTile(tile.id, targets, tileLevels);
     if (cur <= 0) return false;
     const groupTiles = groups.find((g) => g.group === tile.group)?.tiles ?? [tile];
     if (groupTiles.length > 1) {
-      const levels = groupTiles.map((t) => targets[t.id]);
+      const levels = groupTiles.map((t) => getLevelForTile(t.id, targets, tileLevels));
       const maxLevel = Math.max(...levels);
-      if (targets[tile.id] !== maxLevel) return false;
+      if (getLevelForTile(tile.id, targets, tileLevels) !== maxLevel) return false;
     }
     return true;
   }
@@ -184,20 +254,91 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   function adjust(tile: BoardTileData, delta: 1 | -1): void {
     if (delta > 0 && !canIncrement(tile)) return;
     if (delta < 0 && !canDecrement(tile)) return;
-    setTargets((m) => ({ ...m, [tile.id]: Math.max(0, Math.min(6, (m[tile.id] ?? 0) + delta)) }));
+    setTargets((m) => {
+      const cur = getLevelForTile(tile.id, m, tileLevels);
+      return { ...m, [tile.id]: Math.max(0, Math.min(6, cur + delta)) };
+    });
   }
+
+  const makeHouseId = (group: ColorGroup | undefined, tileId: string, idx: number): string => `house:${String(group ?? 'none')}:${tileId}:${idx}`;
+  const makeHotelId = (group: ColorGroup | undefined, tileId: string): string => `hotel:${String(group ?? 'none')}:${tileId}`;
+  const makeDropId = (group: ColorGroup | undefined, tileId: string): string => `drop:${String(group ?? 'none')}:${tileId}`;
+
+  const onDragEnd = (ev: DragEndEvent): void => {
+    const activeId = String(ev.active.id);
+    const overId = ev.over?.id != null ? String(ev.over.id) : null;
+    if (!overId) return;
+    if (!overId.startsWith('drop:')) return;
+    const [, groupB, toTileId] = overId.split(':');
+    if (!groupB || !toTileId) return;
+
+    const isHouseDrag = activeId.startsWith('house:');
+    const isHotelDrag = activeId.startsWith('hotel:');
+    if (!isHouseDrag && !isHotelDrag) return;
+
+    const parts = activeId.split(':');
+    const groupA = parts[1];
+    const fromTileId = parts[2];
+    if (!fromTileId || !toTileId) return;
+    if (groupA !== groupB) return; // within-group only
+    if (fromTileId === toTileId) return;
+
+    setTargets((prev) => {
+      const fromCount = getLevelForTile(fromTileId, prev, tileLevels);
+      const toCount = getLevelForTile(toTileId, prev, tileLevels);
+
+      const groupKey = (BOARD_TILES.find((t) => t.id === fromTileId)?.group) as ColorGroup | undefined;
+      const groupTiles = groups.find((g) => g.group === groupKey)?.tiles ?? [];
+      if (groupTiles.length <= 1) return prev;
+      const levels = groupTiles.map((t) => getLevelForTile(t.id, prev, tileLevels));
+
+      // House drag: only within house-level groups
+      if (isHouseDrag) {
+        if (fromCount <= 0 || fromCount > 4) return prev;
+        if (toCount < 0 || toCount >= 4) return prev;
+        if (desiredMortgaged[toTileId]) return prev;
+        if (levels.some((l) => l >= 5)) return prev; // dragging only for houses
+
+        const next = { ...prev, [fromTileId]: fromCount - 1, [toTileId]: toCount + 1 };
+        const nextLevels = groupTiles.map((t) => getLevelForTile(t.id, next, tileLevels));
+        const min = Math.min(...nextLevels);
+        const max = Math.max(...nextLevels);
+        if (max - min > 1) return prev; // keep even-building invariant
+        return next;
+      }
+
+      // Hotel swap drag: swap hotel (5) with 4 houses only
+      if (isHotelDrag) {
+        if (fromCount !== 5) return prev;
+        if (toCount !== 4) return prev;
+        if (desiredMortgaged[fromTileId] || desiredMortgaged[toTileId]) return prev;
+        if (levels.some((l) => l >= 6)) return prev; // don't support swaps with skyscrapers
+
+        const next = { ...prev, [fromTileId]: 4, [toTileId]: 5 };
+        const nextLevels = groupTiles.map((t) => getLevelForTile(t.id, next, tileLevels));
+        const min = Math.min(...nextLevels);
+        const max = Math.max(...nextLevels);
+        if (max - min > 1) return prev;
+        return next;
+      }
+
+      return prev;
+    });
+  };
 
   // compute costs/refunds
   const { totalCost, totalRefund, netCost } = React.useMemo(() => {
     let cost = 0;
     let refund = 0;
     for (const g of groups) {
-      for (const t of g.tiles) {
-        const cur = tileLevels[t.id] ?? 0;
-        const tar = targets[t.id] ?? cur;
-        if (tar > cur) cost += getCostsForStep(t, cur, tar);
-        else if (tar < cur) refund += getRefundsForStep(t, cur, tar);
-      }
+      const tiles = g.tiles;
+      if (tiles.length === 0) continue;
+      const houseCost = tiles[0]?.type === 'property' && tiles[0].property ? tiles[0].property.houseCost : 0;
+      const curSum = tiles.reduce((acc, t) => acc + (tileLevels[t.id] ?? 0), 0);
+      const tarSum = tiles.reduce((acc, t) => acc + getLevelForTile(t.id, targets, tileLevels), 0);
+      const delta = tarSum - curSum;
+      if (delta > 0) cost += delta * houseCost;
+      else if (delta < 0) refund += (-delta) * (houseCost / 2);
     }
     // mortgage/unmortgage deltas
     for (const t of ownedAllTiles) {
@@ -244,73 +385,201 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   return (
     <AnimatePresence>
       {open && (
-        <motion.div key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-semibold">Property Management</div>
-              <button onClick={onClose} className="text-sm opacity-70 hover:opacity-100">Close</button>
+        <motion.div data-cmp="m/BuildSellOverlay" key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+            <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-t-xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold">Property Management</div>
+                <button onClick={onClose} className="text-sm opacity-70 hover:opacity-100">Close</button>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="inline-flex items-center gap-1">
+                    <img src="/icons/house.webp" alt="House" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <strong className={bank.housesNeeded > housesRemaining ? 'text-rose-600' : ''}>{bank.housesNeeded}</strong>
+                    <span className="opacity-70">/ {housesRemaining}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <img src="/icons/hotel.webp" alt="Hotel" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <strong className={bank.hotelsNeeded > hotelsRemaining ? 'text-rose-600' : ''}>{bank.hotelsNeeded}</strong>
+                    <span className="opacity-70">/ {hotelsRemaining}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <strong className={bank.skyscrapersNeeded > skyscrapersRemaining ? 'text-rose-600' : ''}>{bank.skyscrapersNeeded}</strong>
+                    <span className="opacity-70">/ {skyscrapersRemaining}</span>
+                  </span>
+                </div>
+                <div className="space-x-3">
+                  <span>Refund: <strong className="text-emerald-700">${totalRefund}</strong></span>
+                  <span>Total: <strong>${totalCost}</strong></span>
+                  <span>Net: <strong className={netCost > playerMoney ? 'text-rose-600' : 'text-emerald-700'}>${netCost}</strong></span>
+                </div>
+              </div>
             </div>
-            <div className="text-xs opacity-70 mb-2">Even-building enforced. Refunds are 50% of purchase price.</div>
+            <DndContext onDragEnd={onDragEnd}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-auto p-4">
+                {/* Properties by color group (one +/- per group) */}
+                {groups.map((g) => {
+                  const tiles = g.tiles;
+                  const levels = tiles.map((t) => getLevelForTile(t.id, targets, tileLevels));
+                  const minLevel = levels.length ? Math.min(...levels) : 0;
+                  const maxLevel = levels.length ? Math.max(...levels) : 0;
+                  const groupHasHotelOrSky = levels.some((l) => l >= 5);
+                  const groupHasSkyscraper = levels.some((l) => l >= 6);
+                  const hotelSwapEnabled = !groupHasSkyscraper && levels.some((l) => l === 5) && levels.some((l) => l === 4);
+                  const groupCanPlus = tiles.some((t) => getLevelForTile(t.id, targets, tileLevels) === minLevel && canIncrement(t));
+                  const groupCanMinus = tiles.some((t) => getLevelForTile(t.id, targets, tileLevels) === maxLevel && canDecrement(t));
+                  const houseDragEnabled = !groupHasHotelOrSky;
+                  const showPlusMinusRow = groupCanPlus || groupCanMinus;
+                  const showHouseBuildControls = groupCanPlus;
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-auto pr-1">
-              {/* Properties by color group (no wrapper) */}
-              {groups.map((g) => {
-                const tiles = g.tiles;
-                const size = tiles.length;
-                const ownedCount = tiles.filter((t) => tileLevels[t.id] != null).length;
-                const hotelThreshold = size === 4 ? 3 : size === 3 ? 2 : size === 2 ? 2 : Number.POSITIVE_INFINITY;
-                return (
-                  <div key={g.group ?? 'none'} className={`rounded-md border border-neutral-200 dark:border-neutral-700 p-2 mb-2 last:mb-0 ${getGroupContainerClasses(g.group)}`}>
-                    {tiles.map((t) => {
+                  return (
+                    <div key={g.group ?? 'none'} className={`rounded-md border border-neutral-200 dark:border-neutral-700 p-2 ${getGroupContainerClasses(g.group)}`}>
+                      <div className="space-y-2">
+                        {tiles.map((t) => {
                           const cur = tileLevels[t.id] ?? 0;
-                          const tar = targets[t.id] ?? cur;
+                          const tar = getLevelForTile(t.id, targets, tileLevels);
                           const mort = !!desiredMortgaged[t.id];
                           const mv = (t.property?.mortgageValue ?? 0);
-                          // Only allow mortgage/unmortgage when desired improvements are zero
                           const canToggleMortgage = tar === 0;
-                          return (
-                            <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 bg-white/90 dark:bg-neutral-900/90">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="text-xs font-medium truncate">{t.name}</div>
-                                <div className="flex items-center gap-1">
-                                  {!mort ? (
-                                    <>
-                                      <button type="button" className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-50" disabled={!canDecrement(t)} onClick={() => adjust(t, -1)}>-</button>
-                                      <div className="min-w-8 text-center text-xs font-semibold">{tar - cur >= 0 ? `+${tar - cur}` : `${tar - cur}`}</div>
-                                      <button type="button" className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-50" disabled={!canIncrement(t)} onClick={() => adjust(t, +1)}>+</button>
-                                    </>
-                                  ) : null}
+                          const rent = computeRent(rentState, t.id, 0);
+
+                          const renderMarkers = () => {
+                            if (mort) {
+                              return <div className="text-xs opacity-80">Mortgaged</div>;
+                            }
+                            if (tar >= 6) {
+                              const body = (
+                                <div className="flex items-center gap-2">
+                                  <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-6 w-6" loading="lazy" decoding="async" />
+                                  <span className="text-xs opacity-80">Skyscraper</span>
                                 </div>
+                              );
+                              return showHouseBuildControls ? (
+                                <HouseDropZone id={makeDropId(g.group, t.id)}>{body}</HouseDropZone>
+                              ) : (
+                                body
+                              );
+                            }
+                            if (tar >= 5) {
+                              const body = (
+                                <div className="flex items-center gap-2">
+                                  {showHouseBuildControls && hotelSwapEnabled ? (
+                                    <HotelToken id={makeHotelId(g.group, t.id)} />
+                                  ) : (
+                                    <img src="/icons/hotel.webp" alt="Hotel" className="h-6 w-6" loading="lazy" decoding="async" />
+                                  )}
+                                  <span className="text-sm opacity-80">Hotel</span>
+                                </div>
+                              );
+                              return showHouseBuildControls ? (
+                                <HouseDropZone id={makeDropId(g.group, t.id)}>{body}</HouseDropZone>
+                              ) : (
+                                body
+                              );
+                            }
+                            const count = Math.max(0, Math.min(4, tar));
+                            const draggable = showHouseBuildControls && houseDragEnabled && count > 0;
+                            const markers = (
+                              <div className="flex items-center gap-1">
+                                {showHouseBuildControls ? (
+                                  Array.from({ length: 4 }).map((_, i) => {
+                                    const filled = i < count;
+                                    if (!filled) {
+                                      return <div key={i} className="h-6 w-6 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 bg-white/60 dark:bg-neutral-900/30" />;
+                                    }
+                                    return draggable ? (
+                                      <HouseToken key={i} id={makeHouseId(g.group, t.id, i)} />
+                                    ) : (
+                                      <div key={i} className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
+                                        <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  Array.from({ length: count }).map((_, i) => (
+                                    <div key={i} className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
+                                      <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+                                    </div>
+                                  ))
+                                )}
                               </div>
-                              {!mort && (
-                                <div className="mt-1 flex items-center justify-between text-[11px] opacity-80">
-                                  <div className="flex items-center gap-1">
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                      <span key={i} className={`inline-block h-2 w-2 rounded-sm ${i < tar ? (i < 4 ? 'bg-green-500' : i === 4 ? 'bg-red-500' : 'bg-blue-700') : 'bg-neutral-300 dark:bg-neutral-700'}`} />
-                                    ))}
-                                  </div>
-                                  <div>
-                                    <span className="mr-2">Cost:</span>
-                                    <strong>${getCostsForStep(t, cur, tar) - getRefundsForStep(t, cur, tar)}</strong>
-                                  </div>
-                                </div>
-                              )}
-                              {/* Mortgage toggle (no tips/status) */}
-                              {canToggleMortgage && (
-                                <div className="mt-1 flex items-center justify-end">
-                                  <MortgageButton label={mort ? 'Unmortgage' : `Mortgage (+$${mv})`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
-                                </div>
-                              )}
+                            );
+                            return showHouseBuildControls ? (
+                              <HouseDropZone id={makeDropId(g.group, t.id)}>{markers}</HouseDropZone>
+                            ) : (
+                              markers
+                            );
+                          };
+
+                          return (
+                            <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/50 dark:bg-neutral-900/50 text-neutral-900 dark:text-neutral-100"> 
+                              <div className="flex items-center justify-between px-2 py-1 gap-2 bg-white/50 dark:bg-neutral-900/50 ">
+                                <div className="text-sm font-medium truncate">{t.name}</div>
+                                <div className="text-sm font-bold  tabular-nums"><span className="opacity-80 font-normal text-xs">Rent</span> ${rent}</div>
+                              </div>
+                              <div className="mt-2 flex items-center justify-between px-2 py-2.5 pt-0 gap-2">
+                                {renderMarkers()}
+                                {canToggleMortgage && (
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/60 px-2 py-1 text-sm font-semibold hover:bg-white dark:hover:bg-neutral-900"
+                                    onClick={() => setDetailsTileId(t.id)}
+                                    title="Details"
+                                    aria-label="Property details"
+                                  >
+                                    …
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Mortgage toggle: hide when any improvements are planned on this property */}
+
                             </div>
                           );
                         })}
-                  </div>
-                );
-              })}
+
+                        {/* Group-level +/- controls */}
+                        {showPlusMinusRow && (
+                          <div className="pt-1 flex items-center justify-between gap-2">
+                            <div className="flex grow-1 items-center gap-2">
+                              <div className="text-lg opacity-80 font-bold">
+                                Build & Sell
+                              </div>
+                              <button
+                                type="button"
+                                className="rounded-md grow-1 border px-3 py-1 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!groupCanMinus}
+                                onClick={() => {
+                                  const tile = tiles.find((t) => getLevelForTile(t.id, targets, tileLevels) === maxLevel && canDecrement(t));
+                                  if (tile) adjust(tile, -1);
+                                }}
+                              >
+                                −
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-md grow-1 border px-3 py-1 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!groupCanPlus}
+                                onClick={() => {
+                                  const tile = tiles.find((t) => getLevelForTile(t.id, targets, tileLevels) === minLevel && canIncrement(t));
+                                  if (tile) adjust(tile, +1);
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
 
               {/* Utilities group: white with diagonal bar pattern */}
               {ownedAllTiles.some((t) => t.type === 'utility') && (
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 text-white" style={{ backgroundColor: 'var(--color-zinc-600)', backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 6px, rgba(0,0,0,0) 6px, rgba(0,0,0,0) 12px)' }}>
+                <div className=" rounded-md border border-neutral-200 dark:border-neutral-700 p-2 text-white" style={{ backgroundColor: 'var(--color-zinc-600)', backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 6px, rgba(0,0,0,0) 6px, rgba(0,0,0,0) 12px)' }}>
                   <div className="space-y-2">
                     {ownedAllTiles.filter((t) => t.type === 'utility').map((t) => {
                       const mort = !!desiredMortgaged[t.id];
@@ -318,7 +587,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                       return (
                         <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 bg-white/90 dark:bg-neutral-900/90 text-white">
                           <div className="flex items-center justify-between gap-2">
-                            <div className="text-xs font-medium truncate">{t.name}</div>
+                            <div className="text-sm font-medium truncate">{t.name}</div>
                             <div className="flex items-center gap-2">
                               <MortgageButton label={mort ? 'Unmortgage' : `Mortgage (+$${mv})`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
                             </div>
@@ -364,20 +633,87 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            </DndContext>
 
-            <div className="mt-3 flex items-center justify-between text-sm">
-              <div className="space-x-3">
-                <span>Houses needed: <strong className={bank.housesNeeded > housesRemaining ? 'text-rose-600' : ''}>{bank.housesNeeded}</strong> / {housesRemaining}</span>
-                <span>Hotels needed: <strong className={bank.hotelsNeeded > hotelsRemaining ? 'text-rose-600' : ''}>{bank.hotelsNeeded}</strong> / {hotelsRemaining}</span>
-                <span>Skyscrapers needed: <strong className={bank.skyscrapersNeeded > skyscrapersRemaining ? 'text-rose-600' : ''}>{bank.skyscrapersNeeded}</strong> / {skyscrapersRemaining}</span>
-              </div>
-              <div className="space-x-3">
-                <span>Refund: <strong className="text-emerald-700">${totalRefund}</strong></span>
-                <span>Total: <strong>${totalCost}</strong></span>
-                <span>Net: <strong className={netCost > playerMoney ? 'text-rose-600' : 'text-emerald-700'}>${netCost}</strong></span>
-              </div>
-            </div>
+            <AnimatePresence>
+              {(() => {
+                if (!detailsTileId) return null;
+                const tile = BOARD_TILES.find((t) => t.id === detailsTileId);
+                if (!tile || tile.type !== 'property' || !tile.property) return null;
+                const tar = getLevelForTile(detailsTileId, targets, tileLevels);
+                const mort = !!desiredMortgaged[detailsTileId];
+                const mv = tile.property.mortgageValue ?? 0;
+
+                const rentRows: Array<{ label: string; value: number | null }> = (() => {
+                  const entry = (rentState as any)?.properties?.byTileId?.[detailsTileId];
+                  const base = entry ? { ...entry, mortgaged: false } : { ownerId: playerId, mortgaged: false, improvements: 0 };
+                  const byTileId = { ...(rentState as any).properties.byTileId, [detailsTileId]: base };
+                  const makeState = (imp: number) =>
+                    ({ properties: { byTileId: { ...byTileId, [detailsTileId]: { ...base, improvements: imp } } } } as unknown as RootState);
+                  const r = tile.property!.rent;
+                  const rows: Array<{ label: string; value: number | null }> = [];
+                  rows.push({ label: 'No houses', value: computeRent(makeState(0), detailsTileId, 0) });
+                  rows.push({ label: '1 house', value: r.house1 ?? null });
+                  rows.push({ label: '2 houses', value: r.house2 ?? null });
+                  rows.push({ label: '3 houses', value: r.house3 ?? null });
+                  rows.push({ label: '4 houses', value: r.house4 ?? null });
+                  rows.push({ label: 'Hotel', value: r.hotel ?? null });
+                  if (r.skyscraper != null) rows.push({ label: 'Skyscraper', value: r.skyscraper });
+                  return rows;
+                })();
+
+                return (
+                  <motion.div
+                    key="prop-details"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+                    onMouseDown={(e) => {
+                      if (e.target === e.currentTarget) setDetailsTileId(null);
+                    }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Property details"
+                  >
+                    <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="text-sm font-semibold">{tile.name}</div>
+                        <button type="button" onClick={() => setDetailsTileId(null)} className="text-sm opacity-70 hover:opacity-100">
+                          Close
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Rent ladder</div>
+                        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
+                          <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                            {rentRows.map((row) => (
+                              <div key={row.label} className="flex items-center justify-between px-3 py-2 text-sm">
+                                <div className="opacity-90">{row.label}</div>
+                                <div className="tabular-nums font-semibold">{row.value != null ? `$${row.value}` : '—'}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Mortgage button stays hidden when improvements exist (tar>0) */}
+                        {tar === 0 && (
+                          <div className="pt-2 flex items-center justify-end">
+                            <MortgageButton
+                              label={mort ? 'Unmortgage' : `Mortgage +$${mv}`}
+                              danger={mort}
+                              onClick={() => setDesiredMortgaged((m) => ({ ...m, [detailsTileId]: !mort }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
 
             <div className="mt-3 flex items-center justify-end gap-2">
               <button type="button" onClick={onClose} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Cancel</button>

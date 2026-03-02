@@ -108,7 +108,7 @@ export default function SetupForm(): JSX.Element {
 
   // //#render
   return (
-    <div className="w-full max-w-3xl space-y-6">
+    <div data-cmp="o/SetupForm" className="w-full max-w-3xl space-y-6">
       <h1 className="text-3xl font-bold">Monopoly Tracker — Setup</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div data-qa="avatar-section" className="space-y-2 md:col-span-3">
@@ -149,6 +149,9 @@ export default function SetupForm(): JSX.Element {
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
+                if (nickname.trim() && !selectionInvalid) {
+                  onAdd();
+                }
                 (e.currentTarget as HTMLInputElement).blur();
               }
             }}

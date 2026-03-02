@@ -6,20 +6,40 @@ export interface TooltipProps {
   children: React.ReactNode;
   className?: string;
   offsetPx?: number;
+  tapToShowMs?: number;
 }
 
-export default function Tooltip({ content, children, className, offsetPx = 8 }: TooltipProps): JSX.Element {
+export default function Tooltip({ content, children, className, offsetPx = 8, tapToShowMs = 2000 }: TooltipProps): JSX.Element {
   const [open, setOpen] = React.useState<boolean>(false);
   const show = (): void => setOpen(true);
   const hide = (): void => setOpen(false);
+  const tapTimerRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
+    };
+  }, []);
 
   return (
     <span
+      data-cmp="a/Tooltip"
       className={`relative inline-flex ${className ?? ''}`}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
+      onPointerDown={(e) => {
+        // On touch devices, allow tap-to-show (since hover doesn't exist).
+        if (e.pointerType === 'mouse') return;
+        show();
+        if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = window.setTimeout(() => {
+          hide();
+          tapTimerRef.current = null;
+        }, tapToShowMs) as unknown as number;
+      }}
     >
       {children}
       <AnimatePresence>

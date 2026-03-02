@@ -45,7 +45,7 @@ export default function EventLog(): JSX.Element {
   };
 
   return (
-    <div data-qa="event-log" className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
+    <div data-qa="event-log" data-cmp="m/EventLog" className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-4">
       <h3 className="text-base font-semibold mb-2">Event Log</h3>
       <ol className="space-y-2 text-sm max-h-60 overflow-auto">
         {events.length === 0 && <li className="opacity-70">No events yet.</li>}
