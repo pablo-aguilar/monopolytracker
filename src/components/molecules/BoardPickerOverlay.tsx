@@ -2,6 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BOARD_TILES, type BoardTileData } from '@/data/board';
 import { AVATARS } from '@/data/avatars';
+import CloseIconButton from '@/components/atoms/CloseIconButton';
 
 export type BoardPickerMode = 'select' | 'view';
 
@@ -28,7 +29,7 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
           <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">{title}</div>
-              <button onClick={onClose} className="text-sm opacity-70 hover:opacity-100">Close</button>
+              <CloseIconButton onClick={onClose} />
             </div>
             <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 max-h-[70vh] overflow-auto">
               {BOARD_TILES.map((t) => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RULES, type Rule, type RuleSource, type RuleSection } from '@/data/rules';
+import CloseIconButton from '@/components/atoms/CloseIconButton';
 
 export interface RulesModalProps {
   open: boolean;
@@ -108,9 +109,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
           <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between gap-3 mb-2">
               <div className="text-sm font-semibold">Rules</div>
-              <button type="button" onClick={onClose} className="text-sm opacity-70 hover:opacity-100">
-                Close
-              </button>
+              <CloseIconButton onClick={onClose} />
             </div>
 
             <div className="flex items-center justify-between gap-3 mb-3">

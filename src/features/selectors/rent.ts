@@ -45,7 +45,7 @@ export function computeRent(state: RootState, tileId: string, diceTotalForUtilit
       const base = tile.property.rent.base;
       const { owned, total } = countGroupOwned(state, tileId, ps.ownerId);
       if (owned >= total && total > 0) return base * 3; // complete set
-      if (owned >= Math.ceil(total / 2)) return base * 2; // partial/half set
+      if (total > 1 && owned === total - 1) return base * 2; // all minus 1
       return base;
     }
     if (imp === 1) return tile.property.rent.house1;

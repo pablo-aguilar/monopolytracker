@@ -25,6 +25,7 @@ import AnimatedNumber from '@/components/atoms/AnimatedNumber';
 import FromToIndicator from '@/components/atoms/FromToIndicator';
 import HudBadge from '@/components/atoms/HudBadge';
 import Tooltip from '@/components/atoms/Tooltip';
+import CloseIconButton from '@/components/atoms/CloseIconButton';
 import { AVATARS } from '@/data/avatars';
 import TogglePillButton from '@/components/atoms/TogglePillButton';
 import StatPill from '@/components/atoms/StatPill';
@@ -2160,7 +2161,7 @@ export default function PlayConsole(): JSX.Element {
               <div className="text-sm font-semibold">{
                 overlay.deck === 'community' ? 'Pick a Community Chest card' : overlay.deck === 'chance' ? 'Pick a Chance card' : 'Pick a Bus Ticket'
               }</div>
-              <button onClick={() => setOverlay({ deck: null })} className="text-sm opacity-70 hover:opacity-100">Close</button>
+              <CloseIconButton onClick={() => setOverlay({ deck: null })} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
               {overlay.deck === 'bus' ? (
@@ -2259,7 +2260,7 @@ export default function PlayConsole(): JSX.Element {
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold">Turn Summary</div>
-                <button onClick={() => setSummaryOpen(false)} className="text-sm opacity-70 hover:opacity-100">Close</button>
+                <CloseIconButton onClick={() => setSummaryOpen(false)} />
               </div>
               <div className="space-y-2 text-sm">
                 {/* Completed segments recap */}
@@ -2412,7 +2413,7 @@ export default function PlayConsole(): JSX.Element {
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold">{centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}</div>
-                <button onClick={() => setCenterOverlay({ type: null })} className="text-sm opacity-70 hover:opacity-100">Close</button>
+                <CloseIconButton onClick={() => setCenterOverlay({ type: null })} />
               </div>
               <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto">
                 {BOARD_TILES.map((t) => {

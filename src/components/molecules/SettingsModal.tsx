@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getThemeMode, setThemeMode, subscribeThemeMode, type ThemeMode } from '@/lib/theme';
+import CloseIconButton from '@/components/atoms/CloseIconButton';
 
 export interface SettingsModalProps {
   open: boolean;
@@ -72,9 +73,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
           <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="text-sm font-semibold">Settings</div>
-              <button type="button" onClick={onClose} className="text-sm opacity-70 hover:opacity-100">
-                Close
-              </button>
+              <CloseIconButton onClick={onClose} />
             </div>
 
             <div className="space-y-2">
