@@ -1,5 +1,5 @@
 import React from 'react';
-import { BOARD_TILES, type ColorGroup } from '@/data/board';
+import { BOARD_TILES, JAIL_INDEX, type ColorGroup } from '@/data/board';
 import { AVATARS } from '@/data/avatars';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
@@ -49,26 +49,37 @@ export default function PlayerTurnCards({
         const isActive = idx === activePlayerIndex;
         const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
         const loc = getTileByIndex(p.positionIndex);
+        const locLabel = (() => {
+          if (p.positionIndex !== JAIL_INDEX) return loc.name;
+          const inJail = Boolean((p as any).inJail);
+          if (!inJail) return 'Jail: Just Visiting';
+          const attempts = Number((p as any).jailAttempts ?? 0);
+          if (attempts <= 0) return 'Jail: First Roll';
+          if (attempts === 1) return 'Jail: Second Roll';
+          return 'Jail: Last Roll';
+        })();
         return (
-          <div key={p.id} className={`rounded-2xl border ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'} bg-white dark:bg-neutral-900`}>
-            <div className=" pl-8 py-2 pr-5 gap-2 relative bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex flex-col">
+          <div key={p.id} className={`rounded-2xl border-2 ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2`}>
+            <div className=" pl-8 py-2 pr-5 gap-2 relative bg-surface-1 rounded-t-2xl flex flex-col">
               {/* player number */}
-              <div className={`font-semibold text-sm rounded-tl-2xl rounded-br-3xl ${isActive ? 'bg-emerald-400 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-800'}  w-[30px] h-[30px] pr-1 absolute top-0 left-0 flex items-center justify-center`}>{idx + 1}</div>
+              <div className={`font-semibold text-sm rounded-tl-xl rounded-br-3xl ${isActive ? 'bg-emerald-400 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-800'}  w-[30px] h-[30px] pr-1 absolute top-0 left-0 flex items-center justify-center`}>{idx + 1}</div>
               {/* player avatar & name */}
               <div className="flex items-center gap-3 relative">
                 <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
                   <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={36} />
                 </div>
-                <div className="font-semibold flex flex-col">
+                <div className="font-semibold flex flex-col text-fg">
                   <span>{p.nickname}</span>
-                  <span className="text-sm font-normal opacity-70"> {loc.name} <span className="opacity-60">{p.positionIndex}</span></span>
+                  <span className="text-sm font-normal text-muted">
+                    {locLabel} <span className=" text-subtle">{p.positionIndex}</span>
+                  </span>
                 </div>
-                <div className="ml-auto text-[18px] font-bold opacity-90">
+                <div className="ml-auto text-lg font-bold text-fg">
                   <AnimatedNumber value={p.money} prefix="$" />
                 </div>
               </div>
               {/* inventory HUD */}
-              <div className="flex items-center gap-3 text-[11px] opacity-80 ">
+              <div className="flex items-center gap-3 text-sm text-muted">
                 {(Number(p.busTickets ?? 0) > 0) && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={Number(p.busTickets ?? 0)} />)}
                 {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
                 {(() => {
@@ -107,7 +118,7 @@ export default function PlayerTurnCards({
               </div>
             </div>
             {isActive && renderActivePanel && (
-              <div className="p-4 space-y-4">
+              <div className="">
                 {renderActivePanel(p, idx)}
               </div>
             )}

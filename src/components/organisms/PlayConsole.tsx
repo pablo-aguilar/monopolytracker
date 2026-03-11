@@ -100,7 +100,7 @@ export default function PlayConsole(): JSX.Element {
   const [activeStep, setActiveStep] = useState<0 | 1 | 2>(0); // 0=pre,1=roll,2=post
   const [moneyDelta, setMoneyDelta] = useState<number>(0);
   const [moneyPlayerId, setMoneyPlayerId] = useState<string>('');
-  const [preAction, setPreAction] = useState<string>('None');
+  const [preActions, setPreActions] = useState<string[]>([]);
   const [postAction, setPostAction] = useState<string>('None');
   const [highestStep, setHighestStep] = useState<0 | 1 | 2>(0);
   const [predictedTo, setPredictedTo] = useState<number | null>(null);
@@ -140,6 +140,10 @@ export default function PlayConsole(): JSX.Element {
   const [queuedPostActive, setQueuedPostActive] = useState<QueuedMovement | null>(null);
   const events = useSelector((s: RootState) => s.events.events);
 
+  const addPreAction = React.useCallback((label: string) => {
+    setPreActions((prev) => (prev.includes(label) ? prev : [...prev, label]));
+  }, []);
+
   // Backfill decks if persisted state is empty
   const didInitDecksRef = useRef(false);
   React.useEffect(() => {
@@ -173,7 +177,7 @@ export default function PlayConsole(): JSX.Element {
     setHoldProgress(0);
     if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
     if (holdIntervalRef.current) window.clearInterval(holdIntervalRef.current);
-    setPreAction('None');
+    setPreActions([]);
     setPostAction('None');
     setHighestStep(0);
     setPredictedTo(null);
@@ -1213,7 +1217,7 @@ export default function PlayConsole(): JSX.Element {
         case 'red':
           return { bgClass: 'bg-red-600', textClass: 'text-white', borderClass: 'border-red-600', textStrongClass: 'text-red-600' };
         case 'yellow':
-          return { bgClass: 'bg-yellow-300', textClass: 'text-neutral-900', borderClass: 'border-yellow-300', textStrongClass: 'text-yellow-400' };
+          return { bgClass: 'bg-yellow-400', textClass: 'text-neutral-900', borderClass: 'border-yellow-400', textStrongClass: 'text-yellow-400' };
         case 'green':
           return { bgClass: 'bg-green-600', textClass: 'text-white', borderClass: 'border-green-600', textStrongClass: 'text-green-600' };
         case 'darkBlue':
@@ -1240,7 +1244,7 @@ export default function PlayConsole(): JSX.Element {
         case 'red':
           return 'bg-red-600';
         case 'yellow':
-          return 'bg-yellow-300';
+          return 'bg-yellow-400';
         case 'green':
           return 'bg-green-600';
         case 'darkBlue':
@@ -1265,7 +1269,7 @@ export default function PlayConsole(): JSX.Element {
       case 'red':
         return 'border-red-600';
       case 'yellow':
-        return 'border-yellow-300';
+        return 'border-yellow-400';
       case 'green':
         return 'border-green-600';
       case 'darkBlue':
@@ -1360,10 +1364,11 @@ export default function PlayConsole(): JSX.Element {
     return null;
   };
 
+  const preDesc = preActions.length > 0 ? preActions.join(', ') : (highestStep === 0 ? '—' : 'None');
   const stepItems = [
-    { id: 0 as const, title: `Pre ${rollCount}` , desc: preAction || 'None' },
-    { id: 1 as const, title: `Roll ${rollCount}`, desc: rollSummary },
-    { id: 2 as const, title: `Post ${rollCount}`, desc: postAction || 'None' },
+    { id: 0 as const, title: 'Pre', desc: preDesc },
+    { id: 1 as const, title: 'Roll', desc: rollSummary },
+    { id: 2 as const, title: 'Post', desc: postAction || 'None' },
   ];
 
   const rentRequiredButNotSelected = (): boolean => {
@@ -1512,13 +1517,15 @@ export default function PlayConsole(): JSX.Element {
               if (activeStep !== 0) return null;
               const pid = players[turnIndex]?.id || players[0]?.id;
               if (!pid) return null;
+              const pl = players.find((x) => x.id === pid);
+              if (pl?.inJail) return null;
               const ownsAnyMortgageable = BOARD_TILES.some((t) => {
                 if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
                 return propsState.byTileId[t.id]?.ownerId === pid;
               });
               if (!ownsAnyMortgageable) return null;
               return (
-                <div className="flex justify-left">
+                <div className="flex justify-left p-4 pt-1">
                   <IconLabelButton
                     iconSrc="/icons/house.webp"
                     label="Manage"
@@ -1532,7 +1539,6 @@ export default function PlayConsole(): JSX.Element {
             <AnimatePresence mode="wait">
               {activeStep === 0 && (
                 <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                  <div className="text-xs font-medium">Pre-actions</div>
                   {(() => {
                     // Jail choices when in jail
                     const pid = players[turnIndex]?.id || players[0]?.id;
@@ -1540,7 +1546,7 @@ export default function PlayConsole(): JSX.Element {
                     if (!pl?.inJail) return null;
                     const gojfTotal = (pl.gojfChance ?? 0) + (pl.gojfCommunity ?? 0);
                     return (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 p-4 pt-1">
                         <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
                         {gojfTotal > 0 && (
                           <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
@@ -1585,123 +1591,171 @@ export default function PlayConsole(): JSX.Element {
 
               {activeStep === 1 && (
                 <motion.div key="roll" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                  <div className="text-xs font-medium flex items-center gap-2">
-                    <span>Roll {rollCount}</span>
-                    {hasRoll && <span className="inline-flex items-center rounded bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 text-[11px]">Total: {rollTotal}</span>}
-                    {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
-                      <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-[11px]">Doubles ✓</span>
-                    )}
-                    {isTriple && (
-                      <span
-                        className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
-                          isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
-                        }`}
-                      >
-                        {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
-                      </span>
-                    )}
-                  </div>
+
                   {(() => {
                     const pid = players[turnIndex]?.id || players[0]?.id;
                     const pl = players.find((x) => x.id === pid);
                     const inJailRolling = pl?.inJail && jailChoice === 'roll';
+                    const busChosen = busTeleportTo != null;
+                    const diceChosen = inJailRolling ? (d6A !== null && d6B !== null) : (d6A !== null && d6B !== null && special !== null);
+
+                    const availableTickets = busTicketsAvailableThisTurn; // inventory only (no staged tickets)
+                    const prevSeg = rollCount > 1 ? turnSegments.find((s) => s.roll === rollCount - 1) : null;
+                    const prevIsDoubles = !!prevSeg && prevSeg.d6A != null && prevSeg.d6B != null && prevSeg.d6A === prevSeg.d6B;
+                    const prevIsTriple = prevIsDoubles && typeof (prevSeg as any).special === 'number' && (prevSeg as any).special === prevSeg.d6A;
+                    const canUseBusInsteadOfRoll = availableTickets > 0 && rollCount > 1 && prevIsDoubles && !prevIsTriple;
+
+                    const cancelBusSelection = () => {
+                      if (busTeleportTo == null) return;
+                      if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
+                      setBusTicketsAvailableThisTurn((n) => n + 1);
+                      setBusTeleportTo(null);
+                      setPredictedTo(null);
+                    };
+
+                    const onSelectD6A = (v: number) => {
+                      if (busTeleportTo != null) cancelBusSelection();
+                      setD6A(v);
+                    };
+                    const onSelectD6B = (v: number) => {
+                      if (busTeleportTo != null) cancelBusSelection();
+                      setD6B(v);
+                    };
+                    const onSelectSpecial = (v: unknown) => {
+                      if (busTeleportTo != null) cancelBusSelection();
+                      setSpecial(v as SpecialDieFace);
+                    };
+
                     return (
-                      <div className={busTeleportTo != null ? 'opacity-50 pointer-events-none' : ''}>
-                        <div className={inJailRolling ? '' : ''}>
-                          {/* Render D6 selector; hide Special row if in-jail trying doubles */}
-                          <DiceSelector d6A={d6A} d6B={d6B} special={inJailRolling ? null : (special as any)} onSelectA={setD6A} onSelectB={setD6B} onSelectSpecial={(v) => setSpecial(v as SpecialDieFace)} showSpecial={!inJailRolling} />
+                      <div data-ql="roll-container" className="px-4 pt-1 ">
+                        <div className={`rounded-lg border border-surface bg-surface-2 ${busChosen ? 'opacity-50 pointer-events-none' : ''}`}>
+                          <div className="text-sm bg-surface-1 font-semibold uppercase tracking-wide text-subtle flex items-center gap-2 px-2 py-1">
+                            <div>Roll</div>
+                            <div className="text-xs font-medium flex items-center gap-2">
+                              {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
+                                <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-xs">Doubles ✓</span>
+                              )}
+                              {isTriple && (
+                                <span
+                                  className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
+                                    isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
+                                  }`}
+                                >
+                                  {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
+                                </span>
+                              )}
+                            </div>
+                            </div>
+                          <div className="mt-2 p-3">
+                            {/* Render D6 selector; hide Special row if in-jail trying doubles */}
+                            <DiceSelector
+                              d6A={d6A}
+                              d6B={d6B}
+                              special={inJailRolling ? null : (special as any)}
+                              onSelectA={onSelectD6A}
+                              onSelectB={onSelectD6B}
+                              onSelectSpecial={onSelectSpecial as any}
+                              showSpecial={!inJailRolling}
+                            />
+
+                          </div>
+
+                          {/* Triples: teleport footer (tied to roll) */}
+                          {(() => {
+                            if (!isTriple) return null;
+                            const cl =
+                              isTripleOnes
+                                ? {
+                                    ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
+                                    selected:
+                                      'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
+                                  }
+                                : {
+                                    ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
+                                    selected:
+                                      'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
+                                  };
+                            return (
+                              <div className="border-t border-surface bg-surface-0 px-3 py-2 rounded-b-lg">
+                                {tripleTeleportTo != null ? (
+                                  <button
+                                    type="button"
+                                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
+                                    onClick={() => {
+                                      setTripleTeleportTo(null);
+                                      setPredictedTo(null);
+                                    }}
+                                  >
+                                    <span>✓</span>
+                                    🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={busTeleportTo != null}
+                                    className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
+                                    onClick={() => {
+                                      setBusTeleportTo(null);
+                                      setCenterOverlay({ type: 'tripleTeleport' });
+                                    }}
+                                  >
+                                    Teleport (3-of-a-kind)
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
+
+                        {canUseBusInsteadOfRoll && (
+                          <>
+                            <div className="flex items-center gap-3">
+                              <div className="h-px flex-1 bg-surface-1" />
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-subtle">OR</div>
+                              <div className="h-px flex-1 bg-surface-1" />
+                            </div>
+
+                            <div className={`rounded-lg border border-surface bg-surface-2 p-3 ${diceChosen ? 'opacity-50 pointer-events-none' : ''}`}>
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-subtle">Use Bus</div>
+                              <div className="mt-2">
+                                {busTeleportTo != null ? (
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                                    onClick={cancelBusSelection}
+                                  >
+                                    <span>✓</span>
+                                    🚐 to {getTileByIndex(busTeleportTo).name}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
+                                    onClick={() => {
+                                      // Choose Bus destination instead of rolling (allowed only on subsequent roll after doubles)
+                                      setD6A(null);
+                                      setD6B(null);
+                                      setSpecial(null);
+                                      setCenterOverlay({ type: 'busTeleport' });
+                                    }}
+                                  >
+                                    Use Bus Ticket
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                     );
                   })()}
                   {/* Draw Bus moved to Post-actions */}
 
-                  {/* Use Bus Ticket (teleport) if player holds at least one */}
-                  {(() => {
-                    const pid = players[turnIndex]?.id || players[0]?.id;
-                    const available = busTicketsAvailableThisTurn + stagedBusTickets;
-                    if (available <= 0) return null;
-                    return (
-                      <div className="pt-1">
-                        {busTeleportTo != null ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                            onClick={() => {
-                              // cancel selection; restore ticket availability and inventory
-                              const pid = players[turnIndex]?.id || players[0]?.id;
-                              if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
-                              setBusTicketsAvailableThisTurn((n) => n + 1);
-                              setBusTeleportTo(null);
-                            }}
-                          >
-                            <span>✓</span>
-                            🚐 to {getTileByIndex(busTeleportTo).name}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                            onClick={() => setCenterOverlay({ type: 'busTeleport' })}
-                          >
-                            Use Bus Ticket
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Triple teleport (1-1-1 / 2-2-2 / 3-3-3) */}
-                  {(() => {
-                    if (!isTriple) return null;
-                    const cl =
-                      isTripleOnes
-                        ? {
-                            ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
-                            selected:
-                              'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
-                          }
-                        : {
-                            ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
-                            selected:
-                              'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
-                          };
-                    return (
-                      <div className="pt-1">
-                        {tripleTeleportTo != null ? (
-                          <button
-                            type="button"
-                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
-                            onClick={() => {
-                              setTripleTeleportTo(null);
-                              setPredictedTo(null);
-                            }}
-                          >
-                            <span>✓</span>
-                            🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={busTeleportTo != null}
-                            className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
-                            onClick={() => {
-                              setBusTeleportTo(null);
-                              setCenterOverlay({ type: 'tripleTeleport' });
-                            }}
-                          >
-                            Teleport (3-of-a-kind)
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
                 </motion.div>
               )}
 
               {activeStep === 2 && (
-                <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
-                  <div className="text-xs font-medium">Post-actions</div>
+                <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2 p-4 pt-1">
                   {(() => {
                     const pid = players[turnIndex]?.id || players[0]?.id;
                     const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
@@ -1901,26 +1955,20 @@ export default function PlayConsole(): JSX.Element {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between p-2 bg-surface-0 rounded-b-2xl">
               {activeStep < 2 ? (
-                activeStep === 1 && isTriple && tripleTeleportTo == null ? (
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Choose a teleport destination to continue.
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
-                      nextBtnDisabled()
-                        ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
-                        : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-                    }`}
-                    disabled={nextBtnDisabled()}
-                    onClick={goNext}
-                  >
-                    Next
-                  </button>
-                )
+                <button
+                  type="button"
+                  className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium border bg-transparent ${
+                    nextBtnDisabled()
+                      ? 'text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 opacity-50 cursor-not-allowed'
+                      : 'text-neutral-800 dark:text-neutral-100 border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                  }`}
+                  disabled={nextBtnDisabled()}
+                  onClick={goNext}
+                >
+                  Next
+                </button>
               ) : (
                 (() => {
                   const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
@@ -2256,7 +2304,7 @@ export default function PlayConsole(): JSX.Element {
       {/* Summary overlay */}
       <AnimatePresence>
         {summaryOpen && (
-          <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold">Turn Summary</div>
@@ -2374,7 +2422,7 @@ export default function PlayConsole(): JSX.Element {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
             onClick={() => setNewGameConfirmOpen(false)}
           >
             <div
@@ -2409,7 +2457,7 @@ export default function PlayConsole(): JSX.Element {
       {/* Centered board picker for teleports */}
       <AnimatePresence>
         {centerOverlay.type && (
-          <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold">{centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}</div>
@@ -2611,6 +2659,7 @@ export default function PlayConsole(): JSX.Element {
               }
             }
           }
+          addPreAction('Managed');
           setBuildOverlayOpen(false);
         }}
       />

@@ -59,6 +59,10 @@ export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, 
             />
           )
         )}
+        {showBuy && showAuction && (
+          <span className="font-bold text-sm text-subtle">OR</span>
+        ) }
+
         {showAuction && (
           firstRoundLocked ? (
             <Tooltip content={lockedTip}>

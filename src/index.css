@@ -4,3 +4,77 @@
 :root {
   color-scheme: light dark;
 } 
+
+/* Semantic surface + text tokens (Option A) */
+:root {
+  /* Surfaces */
+  --surface-0: theme(colors.neutral.50);
+  --surface-1: theme(colors.neutral.100);
+  --surface-2: theme(colors.white);
+  --surface-tint-1: theme(colors.white / 25%);
+  --surface-tint-2: theme(colors.white / 50%);
+  --surface-tint-3: theme(colors.white / 80%);
+
+  /* Borders */
+  --border: theme(colors.neutral.200);
+  --border-strong: theme(colors.neutral.300);
+  --divider: theme(colors.neutral.200);
+  --divider-strong: theme(colors.neutral.300);
+  --border-tint: theme(colors.neutral.300 / 30%);
+
+  /* Foregrounds */
+  --fg: theme(colors.neutral.900);
+  --fg-muted: theme(colors.neutral.700);
+  --fg-subtle: theme(colors.neutral.500);
+}
+
+.dark {
+  /* Surfaces */
+  --surface-0: theme(colors.neutral.950);
+  --surface-1: theme(colors.neutral.800);
+  --surface-2: theme(colors.neutral.900);
+  --surface-tint-1: theme(colors.neutral.900 / 25%);
+  --surface-tint-2: theme(colors.neutral.900 / 50%);
+  --surface-tint-3: theme(colors.neutral.900 / 60%);
+
+  /* Borders */
+  --border: theme(colors.neutral.700);
+  --border-strong: theme(colors.neutral.700);
+  --divider: theme(colors.neutral.800);
+  --divider-strong: theme(colors.neutral.700);
+  --border-tint: theme(colors.white / 30%);
+
+  /* Foregrounds */
+  --fg: theme(colors.neutral.50);
+  --fg-muted: theme(colors.neutral.300);
+  --fg-subtle: theme(colors.neutral.400);
+}
+
+@layer utilities {
+  .bg-surface-0 { background-color: var(--surface-0); }
+  .bg-surface-1 { background-color: var(--surface-1); }
+  .bg-surface-2 { background-color: var(--surface-2); }
+  .bg-surface-tint-1 { background-color: var(--surface-tint-1); }
+  .bg-surface-tint-2 { background-color: var(--surface-tint-2); }
+  .bg-surface-tint-3 { background-color: var(--surface-tint-3); }
+
+  .text-fg { color: var(--fg); }
+  .text-muted { color: var(--fg-muted); }
+  .text-subtle { color: var(--fg-subtle); }
+
+  .border-surface { border-color: var(--border); }
+  .border-surface-strong { border-color: var(--border-strong); }
+  .border-tint { border-color: var(--border-tint); }
+
+  /* Divider helpers (use with divide-y / divide-x) */
+  .divide-y.divide-surface > :not([hidden]) { border-color: var(--divider); }
+  .divide-y.divide-surface-strong > :not([hidden]) { border-color: var(--divider-strong); }
+  .divide-x.divide-surface > :not([hidden]) { border-color: var(--divider); }
+  .divide-x.divide-surface-strong > :not([hidden]) { border-color: var(--divider-strong); }
+
+  .modal-backdrop {
+    background-color: rgb(0 0 0 / 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}

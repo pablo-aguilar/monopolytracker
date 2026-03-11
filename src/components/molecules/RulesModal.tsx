@@ -97,7 +97,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           data-cmp="m/RulesModal"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
           onMouseDown={(e) => {
             // close when clicking the backdrop (not the panel)
             if (e.target === e.currentTarget) onClose();
@@ -106,7 +106,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
           aria-modal="true"
           aria-label="Rules"
         >
-          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+          <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between gap-3 mb-2">
               <div className="text-sm font-semibold">Rules</div>
               <CloseIconButton onClick={onClose} />
@@ -121,7 +121,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
                   Home rules
                 </TabButton>
               </div>
-              <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+              <div className="text-[11px] text-subtle">
                 Tip: press <span className="font-semibold">Esc</span> to close
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
                 if (rules.length === 0) return null;
                 return (
                   <div key={section} className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{section}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-subtle">{section}</div>
                     <div className="space-y-2">
                       {rules.map((r) => (
                         <RuleRow key={r.id} rule={r} />

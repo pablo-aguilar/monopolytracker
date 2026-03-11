@@ -49,12 +49,12 @@ function HouseToken({ id }: { id: string }): JSX.Element {
       type="button"
       ref={setNodeRef}
       style={style}
-      className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
       {...listeners}
       {...attributes}
       title="Drag to rearrange"
     >
-      <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+      <img src="/icons/house.webp" alt="House" className="h-8 w-8" loading="lazy" decoding="async" />
     </button>
   );
 }
@@ -69,12 +69,12 @@ function HotelToken({ id }: { id: string }): JSX.Element {
       type="button"
       ref={setNodeRef}
       style={style}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 shadow-sm touch-none"
       {...listeners}
       {...attributes}
       title="Drag to swap with 4 houses"
     >
-      <img src="/icons/hotel.webp" alt="Hotel" className="h-6 w-6" loading="lazy" decoding="async" />
+      <img src="/icons/hotel.webp" alt="Hotel" className="h-8 w-8" loading="lazy" decoding="async" />
     </button>
   );
 }
@@ -121,7 +121,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
       case 'red':
         return 'bg-red-600 text-white';
       case 'yellow':
-        return 'bg-yellow-300 text-white';
+        return 'bg-yellow-400 text-white';
       case 'green':
         return 'bg-green-600 text-white';
       case 'darkBlue':
@@ -390,27 +390,27 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   return (
     <AnimatePresence>
       {open && (
-        <motion.div data-cmp="m/BuildSellOverlay" key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-t-xl">
-              <div className="flex items-center justify-between mb-2">
+        <motion.div data-cmp="m/BuildSellOverlay" key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+          <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
+            <div className="p-1 bg-surface-1 rounded-t-xl">
+              <div className="flex pl-2 items-center justify-between">
                 <div className="text-sm font-semibold">Property Management</div>
                 <CloseIconButton onClick={onClose} />
               </div>
-              <div className="mt-3 flex items-center justify-between text-sm">
+              <div className=" p-2 flex items-center justify-between text-sm">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <span className="inline-flex items-center gap-1">
-                    <img src="/icons/house.webp" alt="House" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <img src="/icons/house.webp" alt="House" className="h-8 w-8" loading="lazy" decoding="async" />
                     <strong className={bank.housesNeeded > housesRemaining ? 'text-rose-600' : ''}>{bank.housesNeeded}</strong>
                     <span className="opacity-70">/ {housesRemaining}</span>
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <img src="/icons/hotel.webp" alt="Hotel" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <img src="/icons/hotel.webp" alt="Hotel" className="h-8 w-8" loading="lazy" decoding="async" />
                     <strong className={bank.hotelsNeeded > hotelsRemaining ? 'text-rose-600' : ''}>{bank.hotelsNeeded}</strong>
                     <span className="opacity-70">/ {hotelsRemaining}</span>
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-7 w-7" loading="lazy" decoding="async" />
+                    <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-8 w-8" loading="lazy" decoding="async" />
                     <strong className={bank.skyscrapersNeeded > skyscrapersRemaining ? 'text-rose-600' : ''}>{bank.skyscrapersNeeded}</strong>
                     <span className="opacity-70">/ {skyscrapersRemaining}</span>
                   </span>
@@ -423,7 +423,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
               </div>
             </div>
             <DndContext onDragEnd={onDragEnd}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-auto p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 place-content-center mx-auto gap-3 max-h-[60vh] overflow-auto p-4">
                 {/* Properties by color group (one +/- per group) */}
                 {groups.map((g) => {
                   const tiles = g.tiles;
@@ -440,7 +440,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                   const showHouseBuildControls = groupCanPlus;
 
                   return (
-                    <div key={g.group ?? 'none'} className={`rounded-md border border-neutral-200 dark:border-neutral-700 p-2 ${getGroupContainerClasses(g.group)}`}>
+                    <div key={g.group ?? 'none'} className={`rounded-b-[34px] rounded-t-2xl shadow-lg dark:shadow/70 ${getGroupContainerClasses(g.group)}`}>
                       <div className="space-y-2">
                         {tiles.map((t) => {
                           const cur = tileLevels[t.id] ?? 0;
@@ -457,7 +457,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                             if (tar >= 6) {
                               const body = (
                                 <div className="flex items-center gap-2">
-                                  <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-6 w-6" loading="lazy" decoding="async" />
+                                  <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-8 w-8" loading="lazy" decoding="async" />
                                   <span className="text-xs opacity-80">Skyscraper</span>
                                 </div>
                               );
@@ -473,9 +473,9 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                                   {showHouseBuildControls && hotelSwapEnabled ? (
                                     <HotelToken id={makeHotelId(g.group, t.id)} />
                                   ) : (
-                                    <img src="/icons/hotel.webp" alt="Hotel" className="h-6 w-6" loading="lazy" decoding="async" />
+                                    <img src="/icons/hotel.webp" alt="Hotel" className="h-10 w-10" loading="lazy" decoding="async" />
                                   )}
-                                  <span className="text-sm opacity-80">Hotel</span>
+                                  <span className="text-base text-fg font-bold">Hotel</span>
                                 </div>
                               );
                               return showHouseBuildControls ? (
@@ -492,20 +492,20 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                                   Array.from({ length: 4 }).map((_, i) => {
                                     const filled = i < count;
                                     if (!filled) {
-                                      return <div key={i} className="h-6 w-6 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 bg-white/60 dark:bg-neutral-900/30" />;
+                                      return <div key={i} className="h-8 w-8 rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 bg-white/60 dark:bg-neutral-900/30" />;
                                     }
                                     return draggable ? (
                                       <HouseToken key={i} id={makeHouseId(g.group, t.id, i)} />
                                     ) : (
-                                      <div key={i} className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
-                                        <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+                                      <div key={i} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
+                                        <img src="/icons/house.webp" alt="House" className="h-8 w-8" loading="lazy" decoding="async" />
                                       </div>
                                     );
                                   })
                                 ) : (
                                   Array.from({ length: count }).map((_, i) => (
-                                    <div key={i} className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
-                                      <img src="/icons/house.webp" alt="House" className="h-5 w-5" loading="lazy" decoding="async" />
+                                    <div key={i} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90">
+                                      <img src="/icons/house.webp" alt="House" className="h-8 w-8" loading="lazy" decoding="async" />
                                     </div>
                                   ))
                                 )}
@@ -519,8 +519,8 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           };
 
                           return (
-                            <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-white/50 dark:bg-neutral-900/50 text-neutral-900 dark:text-neutral-100"> 
-                              <div className="flex items-center justify-between px-2 py-1 gap-2 bg-white/50 dark:bg-neutral-900/50 ">
+                            <div key={t.id} className="rounded-xl bg-surface-tint-1 text-fg m-2 shadow-lg"> 
+                              <div className="flex rounded-t-xl items-center justify-between px-2 py-1 gap-2 bg-surface-tint-2">
                                 <div className="text-sm font-medium truncate">{t.name}</div>
                                 <div className="text-sm font-bold  tabular-nums"><span className="opacity-80 font-normal text-xs">Rent</span> ${rent}</div>
                               </div>
@@ -528,7 +528,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                                 {renderMarkers()}
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white/80 dark:bg-neutral-900/60 px-2 py-1 text-sm font-semibold hover:bg-white dark:hover:bg-neutral-900"
+                                  className="inline-flex items-center justify-center rounded-md border border-surface-strong bg-surface-tint-3 px-2 py-1 text-sm font-semibold hover:brightness-[1.03] active:brightness-[0.98]"
                                   onClick={() => setDetailsTileId(t.id)}
                                   title="Details"
                                   aria-label="Property details"
@@ -545,14 +545,11 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
 
                         {/* Group-level +/- controls */}
                         {showPlusMinusRow && (
-                          <div className="pt-1 flex items-center justify-between gap-2">
-                            <div className="flex grow-1 items-center gap-2">
-                              <div className="text-lg opacity-80 font-bold">
-                                Build & Sell
-                              </div>
+                          <div className="rounded-b-md flex items-center justify-between p-2">
+                            <div className=" flex grow-1 items-center border-4 border-tint bg-surface-tint-1 rounded-full p-2">
                               <button
                                 type="button"
-                                className="flex items-center justify-center rounded-md grow-1 border px-3 py-1 text-sm font-semibold transition-colors hover:bg-neutral-50 active:scale-[0.98] dark:hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:active:scale-100"
+                                className="flex items-center justify-center rounded-full grow-1 border border-surface-strong bg-white dark:bg-neutral-900 text-fg py-2 shadow-sm transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/40 disabled:bg-white/60 dark:disabled:bg-neutral-900/40 disabled:text-muted disabled:border-surface disabled:shadow-none disabled:cursor-not-allowed disabled:hover:bg-white/60 dark:disabled:hover:bg-neutral-900/40 disabled:active:scale-100"
                                 disabled={!groupCanMinus}
                                 onClick={() => {
                                   const tile = tiles.find((t) => getLevelForTile(t.id, targets, tileLevels) === maxLevel && canDecrement(t));
@@ -560,11 +557,16 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                                 }}
                                 aria-label="Remove house"
                               >
-                                <FaMinus className="h-3.5 w-3.5" />
+                                <FaMinus className="h-4 w-4" />
                               </button>
+                              <div className="flex items-center max-h-8 justify-center gap-2 rounded-md grow-1 ">
+                                <img src="/icons/house.webp" alt="House" className="h-8 w-7" loading="lazy" decoding="async" />
+                                <img src="/icons/hotel.webp" alt="Hotel" className="h-8 w-7 -ml-4" loading="lazy" decoding="async" />
+                                <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-8 w-7 -ml-4" loading="lazy" decoding="async" />
+                              </div>
                               <button
                                 type="button"
-                                className="flex items-center justify-center rounded-md grow-1 border px-3 py-1 text-sm font-semibold transition-colors hover:bg-neutral-50 active:scale-[0.98] dark:hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:active:scale-100"
+                                className="flex items-center justify-center rounded-full grow-1 border border-surface-strong bg-white dark:bg-neutral-900 text-fg py-2 shadow-sm transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-400/40 disabled:bg-white/60 dark:disabled:bg-neutral-900/40 disabled:text-muted disabled:border-surface disabled:shadow-none disabled:cursor-not-allowed disabled:hover:bg-white/60 dark:disabled:hover:bg-neutral-900/40 disabled:active:scale-100"
                                 disabled={!groupCanPlus}
                                 onClick={() => {
                                   const tile = tiles.find((t) => getLevelForTile(t.id, targets, tileLevels) === minLevel && canIncrement(t));
@@ -723,7 +725,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+                    className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4"
                     onMouseDown={(e) => {
                       if (e.target === e.currentTarget) setDetailsTileId(null);
                     }}
@@ -731,25 +733,20 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                     aria-modal="true"
                     aria-label="Property details"
                   >
-                    <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <div className="text-sm font-semibold">{tile.name}</div>
+                    <div className="w-full max-w-md rounded-xl bg-surface-2 shadow-2xl border border-surface ">
+                      <div className="flex bg-surface-1 pl-3 pr-1 py-2 rounded-t-md items-center justify-between gap-3 ">
+                        <div className="text-sm font-semibold">{tile.name}
+                        </div>
                         <CloseIconButton onClick={() => setDetailsTileId(null)} />
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-end">
-                          <div className="text-sm">
-                            <span className="opacity-70">Current</span>{' '}
-                            <span className="tabular-nums font-semibold">${current.effectiveRent}</span>
-                          </div>
-                        </div>
-                        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-                          <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                      <div className="space-y-1">
+                        <div className="rounded-lg ">
+                          <div className="divide-y divide-surface">
                             {rentRows.map((row) => {
                               if (row.key === 'rent') {
                                 return (
-                                  <div key={row.key} className="flex items-center justify-between px-3 py-2 text-sm">
+                                  <div key={row.key} className="flex bg-surface-0 items-center justify-between px-3 py-2 text-sm">
                                     <div className="font-semibold text-base">RENT</div>
                                     <div className="flex items-center gap-3 flex-wrap justify-end">
                                       {rentLine.parts.map((p, idx) => {
@@ -789,7 +786,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           </div>
                         </div>
 
-                        <div className="pt-2 flex items-center justify-end">
+                        <div className="bg-surface-0 rounded-b-xl py-3 px-2 pb-3 flex items-center justify-end">
                           <Tooltip content={tar > 0 ? 'Sell all improvements before mortgaging.' : 'Mortgage / Unmortgage'}>
                             <span>
                               <MortgageButton
@@ -808,7 +805,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
               })()}
             </AnimatePresence>
 
-            <div className="mt-3 flex items-center justify-end gap-2">
+            <div className=" bg-surface-0 p-3 mt-1 flex items-center justify-end gap-2 rounded-b-xl">
               <button type="button" onClick={onClose} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Cancel</button>
               <button
                 type="button"

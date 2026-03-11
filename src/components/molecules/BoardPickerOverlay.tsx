@@ -25,7 +25,7 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
   return (
     <AnimatePresence>
       {open && (
-        <motion.div data-cmp="m/BoardPickerOverlay" key="board-picker-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <motion.div data-cmp="m/BoardPickerOverlay" key="board-picker-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
           <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between mb-2">
               <div className="text-sm font-semibold">{title}</div>
@@ -94,7 +94,7 @@ function getTileHeaderBg(tile: BoardTileData): string {
       case 'red':
         return 'bg-red-600';
       case 'yellow':
-        return 'bg-yellow-300';
+        return 'bg-yellow-400';
       case 'green':
         return 'bg-green-600';
       case 'darkBlue':

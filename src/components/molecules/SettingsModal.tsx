@@ -62,7 +62,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           data-cmp="m/SettingsModal"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -70,15 +70,15 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
           aria-modal="true"
           aria-label="Settings"
         >
-          <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+          <div className="w-full max-w-md rounded-xl bg-surface-2 text-fg p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="text-sm font-semibold">Settings</div>
               <CloseIconButton onClick={onClose} />
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Theme</div>
-              <div className="inline-flex items-center rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-subtle">Theme</div>
+              <div className="inline-flex items-center rounded-full border border-neutral-200 dark:border-neutral-700 bg-surface-2 p-1">
                 <SegmentButton active={mode === 'system'} onClick={() => setAndClose('system')}>
                   System
                 </SegmentButton>
@@ -89,7 +89,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
                   Dark
                 </SegmentButton>
               </div>
-              <div className="text-xs text-neutral-500 dark:text-neutral-400">System follows your device appearance.</div>
+              <div className="text-xs text-subtle">System follows your device appearance.</div>
             </div>
           </div>
         </motion.div>
