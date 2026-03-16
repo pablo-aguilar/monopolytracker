@@ -171,6 +171,49 @@ export function getTileById(id: string): BoardTileData {
   return tile;
 }
 
+export function getTileHeaderBgClass(tile: BoardTileData): string {
+  if (tile.type === 'property') {
+    switch (tile.group) {
+      case 'brown':
+        return 'bg-amber-800';
+      case 'lightBlue':
+        return 'bg-sky-300';
+      case 'pink':
+        return 'bg-pink-400';
+      case 'orange':
+        return 'bg-orange-400';
+      case 'red':
+        return 'bg-red-600';
+      case 'yellow':
+        return 'bg-yellow-400';
+      case 'green':
+        return 'bg-green-600';
+      case 'darkBlue':
+        return 'bg-blue-900';
+      default:
+        return 'bg-neutral-200';
+    }
+  }
+  if (tile.type === 'railroad') return 'bg-stone-300';
+  if (tile.type === 'utility') return 'bg-zinc-200';
+  return 'bg-neutral-200';
+}
+
+export function getTileHeaderTextClass(tile: BoardTileData): string {
+  if (tile.type === 'property') {
+    switch (tile.group) {
+      case 'brown':
+      case 'red':
+      case 'green':
+      case 'darkBlue':
+        return 'text-white';
+      default:
+        return 'text-neutral-900';
+    }
+  }
+  return 'text-neutral-900';
+}
+
 export function getForwardDistance(fromIndex: number, toIndex: number): number {
   return wrapIndex(toIndex - fromIndex);
 }

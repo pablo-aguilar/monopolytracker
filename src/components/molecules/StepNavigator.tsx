@@ -52,7 +52,7 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
                     status === 'done'
                       ? 'bg-emerald-600! border-emerald-600! text-white'
                       : status === 'current'
-                      ? 'border-emerald-500! text-emerald-600!'
+                      ? 'border-emerald-500! text-emerald-600! ring-1 ring-emerald-500 ring-offset-3 ring-offset-white dark:ring-offset-neutral-900'
                       : 'text-subtle'
                   } ${!clickable ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >

@@ -20,9 +20,9 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
   return (
     <div data-cmp="m/DiceSelector" className="space-y-2">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="space-y-2">
-          <div className="text-xs font-bold text-subtle px-1 border-b-4 pb-1 mb-1 border-tint ">D6 A</div>
-          <div className="grid grid-cols-3 gap-0.5">
+        <div className="flex items-start gap-2 sm:flex-col sm:gap-2 min-w-0">
+          <div className="text-xs font-bold text-subtle p-1 inline-flex shrink-0 w-[50px] sm:w-full sm:border-b-4 pb-1 mb-1 border-tint">D6 A</div>
+          <div className="grid grid-cols-3 gap-0.5 flex-1 w-full">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <button key={`a-${n}`} type="button" className={btnClass(d6A === n)} onClick={() => onSelectA(n)}>
                 {n}
@@ -31,9 +31,9 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="text-xs font-bold text-subtle px-1  border-b-4 pb-1 mb-1 border-tint">D6 B</div>
-          <div className="grid grid-cols-3 gap-0.5">
+        <div className="flex items-start gap-2 sm:flex-col sm:gap-2 min-w-0">
+          <div className="text-xs font-bold text-subtle p-1 inline-flex shrink-0 w-[50px] sm:w-full sm:border-b-4 pb-1 mb-1 border-tint">D6 B</div>
+          <div className="grid grid-cols-3 gap-0.5 flex-1 w-full">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <button key={`b-${n}`} type="button" className={btnClass(d6B === n)} onClick={() => onSelectB(n)}>
                 {n}
@@ -43,9 +43,9 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
         </div>
 
         {showSpecial ? (
-          <div className="space-y-2">
-            <div className="text-xs font-bold text-subtle px-1  border-b-4 pb-1 mb-1 border-tint">Special</div>
-            <div className="grid grid-cols-3 gap-0.5">
+          <div className="flex items-start gap-2 sm:flex-col sm:gap-2 min-w-0">
+            <div className="text-xs font-bold text-subtle p-1 inline-flex shrink-0 w-[50px] sm:w-full sm:border-b-4 pb-1 mb-1 border-tint">Special</div>
+            <div className="grid grid-cols-3 gap-0.5 flex-1 w-full">
               {[1, 2, 3].map((n) => (
                 <button key={`s-${n}`} type="button" className={btnClass(special === n)} onClick={() => onSelectSpecial(n)}>
                   {n}

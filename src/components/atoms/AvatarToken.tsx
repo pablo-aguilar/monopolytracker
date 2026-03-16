@@ -24,7 +24,7 @@ export default function AvatarToken({
     width: size,
     height: size,
   };
-  const borderWidthClass = ring ? 'border-4' : 'border-0';
+  const borderWidthClass = ring ? 'border-18' : 'border-0';
   return (
     <div
       data-qa={qa}

@@ -16,7 +16,7 @@ import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileB
 import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
 import { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
-import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail } from '@/features/players/playersSlice';
+import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
 import { persistor, type RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
@@ -44,7 +44,10 @@ import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
 import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
+import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
+import { FaHandshake } from 'react-icons/fa';
+import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 
 export default function PlayConsole(): JSX.Element {
   const dispatch = useDispatch();
@@ -52,6 +55,7 @@ export default function PlayConsole(): JSX.Element {
   const players = useSelector((s: RootState) => s.players.players);
   const cardsState = useSelector((s: RootState) => s.cards);
   const propsState = useSelector((s: RootState) => s.properties);
+  const tradePassEntries = useSelector((s: RootState) => ((s as any).tradePasses?.entries ?? []) as TradePassEntry[]);
   const racePot = useSelector((s: RootState) => s.session.racePot);
   const freeParkingPot = useSelector((s: RootState) => (s as any).session?.freeParkingPot ?? 0);
   const turnIndexRaw = useSelector((s: RootState) => (s as any).session?.turnIndex);
@@ -119,6 +123,7 @@ export default function PlayConsole(): JSX.Element {
   const [buildOverlayOpen, setBuildOverlayOpen] = useState<boolean>(false);
   const [boardOverlayOpen, setBoardOverlayOpen] = useState<boolean>(false);
   const [auctionOpen, setAuctionOpen] = useState<boolean>(false);
+  const [tradeModalOpen, setTradeModalOpen] = useState<boolean>(false);
   const [auctionCompleted, setAuctionCompleted] = useState<boolean>(false);
   const [auctionItSelected, setAuctionItSelected] = useState<boolean>(false);
   const [stagedAuction, setStagedAuction] = useState<{ tileId: string; winnerId: string; amount: number } | null>(null);
@@ -143,6 +148,89 @@ export default function PlayConsole(): JSX.Element {
   const addPreAction = React.useCallback((label: string) => {
     setPreActions((prev) => (prev.includes(label) ? prev : [...prev, label]));
   }, []);
+
+  const BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN: Record<ColorGroup, number> = {
+    brown: 2,
+    lightBlue: 3,
+    pink: 3,
+    orange: 4,
+    red: 4,
+    yellow: 4,
+    green: 4,
+    darkBlue: 2,
+  };
+
+  const passScopeForTile = React.useCallback((tileId: string): { scopeType: TradePassScopeType; scopeKey: string } | null => {
+    const tile = BOARD_TILES.find((t) => t.id === tileId);
+    if (!tile) return null;
+    if (tile.type === 'railroad') return { scopeType: 'railroad', scopeKey: 'railroad' };
+    if (tile.type === 'utility') return { scopeType: 'utility', scopeKey: 'utility' };
+    if (tile.type === 'property' && tile.group) return { scopeType: 'color', scopeKey: tile.group };
+    return null;
+  }, []);
+
+  const isIssuerEligibleForScope = React.useCallback(
+    (issuerPlayerId: string, scopeType: TradePassScopeType, scopeKey: string, ownerByTileId = propsState.byTileId): boolean => {
+      if (scopeType === 'railroad') {
+        let count = 0;
+        for (const t of BOARD_TILES) {
+          if (t.type !== 'railroad') continue;
+          if (ownerByTileId[t.id]?.ownerId === issuerPlayerId) count += 1;
+        }
+        return count >= 2;
+      }
+      if (scopeType === 'utility') {
+        let count = 0;
+        for (const t of BOARD_TILES) {
+          if (t.type !== 'utility') continue;
+          if (ownerByTileId[t.id]?.ownerId === issuerPlayerId) count += 1;
+        }
+        return count >= 2;
+      }
+      const groupTiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === (scopeKey as ColorGroup));
+      if (groupTiles.length <= 0) return false;
+      const ownedEligibleCount = groupTiles.filter((t) => {
+        const ps = ownerByTileId[t.id];
+        return ps?.ownerId === issuerPlayerId && ps?.mortgaged !== true;
+      }).length;
+      const needed = BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN[scopeKey as ColorGroup] ?? groupTiles.length;
+      return ownedEligibleCount >= needed;
+    },
+    [propsState.byTileId]
+  );
+
+  const findUsablePass = React.useCallback(
+    (holderPlayerId: string, issuerPlayerId: string, tileId: string): TradePassEntry | null => {
+      const scope = passScopeForTile(tileId);
+      if (!scope) return null;
+      return (
+        tradePassEntries.find(
+          (e) =>
+            e.holderPlayerId === holderPlayerId &&
+            e.issuerPlayerId === issuerPlayerId &&
+            e.scopeType === scope.scopeType &&
+            e.scopeKey === scope.scopeKey &&
+            e.remaining > 0 &&
+            isIssuerEligibleForScope(e.issuerPlayerId, e.scopeType, e.scopeKey)
+        ) ?? null
+      );
+    },
+    [passScopeForTile, tradePassEntries, isIssuerEligibleForScope]
+  );
+
+  React.useEffect(() => {
+    const valid = tradePassEntries.filter(
+      (e) => e.remaining > 0 && isIssuerEligibleForScope(e.issuerPlayerId, e.scopeType, e.scopeKey)
+    );
+    const key = (arr: TradePassEntry[]) =>
+      arr
+        .map((e) => `${e.holderPlayerId}:${e.issuerPlayerId}:${e.scopeType}:${e.scopeKey}:${e.remaining}`)
+        .sort()
+        .join('|');
+    if (key(valid) !== key(tradePassEntries)) {
+      dispatch(setTradePasses(valid));
+    }
+  }, [tradePassEntries, isIssuerEligibleForScope, dispatch]);
 
   // Backfill decks if persisted state is empty
   const didInitDecksRef = useRef(false);
@@ -646,6 +734,45 @@ export default function PlayConsole(): JSX.Element {
           const state2 = (window as any).__store__?.getState?.() as RootState | undefined;
           const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
           if (rent2 > 0) {
+            const usablePass = findUsablePass(pid, ownerIdForTile2, t2.id);
+            if (usablePass) {
+              const passLabel =
+                usablePass.scopeType === 'color'
+                  ? `${usablePass.scopeKey} pass`
+                  : usablePass.scopeType === 'railroad'
+                    ? 'Railroad pass'
+                    : 'Utility pass';
+              const usePass = window.confirm(`Use ${passLabel} to skip $${rent2} rent?`);
+              if (usePass) {
+                dispatch(
+                  consumeTradePass({
+                    holderPlayerId: usablePass.holderPlayerId,
+                    issuerPlayerId: usablePass.issuerPlayerId,
+                    scopeType: usablePass.scopeType,
+                    scopeKey: usablePass.scopeKey,
+                  })
+                );
+                dispatch(
+                  appendEvent({
+                    id: crypto.randomUUID(),
+                    gameId: 'local',
+                    type: 'RENT_PASS_USED',
+                    actorPlayerId: pid,
+                    payload: {
+                      holderPlayerId: pid,
+                      issuerPlayerId: ownerIdForTile2,
+                      tileId: t2.id,
+                      scopeType: usablePass.scopeType,
+                      scopeKey: usablePass.scopeKey,
+                      preventedRent: rent2,
+                      message: `${passLabel} used to skip rent`,
+                    },
+                    createdAt: new Date().toISOString(),
+                  })
+                );
+                return;
+              }
+            }
             dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
             dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
             dispatch(
@@ -964,6 +1091,45 @@ export default function PlayConsole(): JSX.Element {
     const ownerIdForTile = ps?.ownerId as string | null;
     const mortgaged = ps?.mortgaged === true;
     if (!moneyPlayerId || !ownerIdForTile || ownerIdForTile === moneyPlayerId || mortgaged || rent <= 0) return;
+    const usablePass = findUsablePass(moneyPlayerId, ownerIdForTile, tile.id);
+    if (usablePass) {
+      const passLabel =
+        usablePass.scopeType === 'color'
+          ? `${usablePass.scopeKey} pass`
+          : usablePass.scopeType === 'railroad'
+            ? 'Railroad pass'
+            : 'Utility pass';
+      const usePass = window.confirm(`Use ${passLabel} to skip $${rent} rent?`);
+      if (usePass) {
+        dispatch(
+          consumeTradePass({
+            holderPlayerId: usablePass.holderPlayerId,
+            issuerPlayerId: usablePass.issuerPlayerId,
+            scopeType: usablePass.scopeType,
+            scopeKey: usablePass.scopeKey,
+          })
+        );
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'RENT_PASS_USED',
+            actorPlayerId: moneyPlayerId,
+            payload: {
+              holderPlayerId: moneyPlayerId,
+              issuerPlayerId: ownerIdForTile,
+              tileId: tile.id,
+              scopeType: usablePass.scopeType,
+              scopeKey: usablePass.scopeKey,
+              preventedRent: rent,
+              message: `${passLabel} used to skip rent`,
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        return;
+      }
+    }
     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -rent }));
     dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
     dispatch(
@@ -1343,6 +1509,28 @@ export default function PlayConsole(): JSX.Element {
     return lines.join('\n');
   }
 
+  function tradePassCountForPlayer(playerId: string): number {
+    return tradePassEntries
+      .filter((e) => e.holderPlayerId === playerId && e.remaining > 0)
+      .reduce((sum, e) => sum + e.remaining, 0);
+  }
+
+  function tradePassTooltipForPlayer(playerId: string): string {
+    const lines = tradePassEntries
+      .filter((e) => e.holderPlayerId === playerId && e.remaining > 0)
+      .map((e) => {
+        const issuer = players.find((p) => p.id === e.issuerPlayerId)?.nickname ?? e.issuerPlayerId;
+        const scope =
+          e.scopeType === 'color'
+            ? `Color ${e.scopeKey}`
+            : e.scopeType === 'railroad'
+              ? 'Railroad'
+              : 'Utility';
+        return `${scope} from ${issuer} — ${e.remaining} left`;
+      });
+    return lines.length > 0 ? lines.join('\n') : '';
+  }
+
   const tileFooterIcon = (tileId: string): JSX.Element | null => {
     const t = BOARD_TILES.find((x) => x.id === tileId)!;
     if (t.type === 'property') {
@@ -1492,6 +1680,8 @@ export default function PlayConsole(): JSX.Element {
         utilitiesTooltipForPlayer={utilitiesTooltipForPlayer}
         groupTooltipForPlayer={groupTooltipForPlayer}
         getGroupBorderClass={getGroupBorderClass}
+        tradePassCountForPlayer={tradePassCountForPlayer}
+        tradePassTooltipForPlayer={tradePassTooltipForPlayer}
         renderActivePanel={(p) => (
           <>
             {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
@@ -1531,6 +1721,23 @@ export default function PlayConsole(): JSX.Element {
                     label="Manage"
                     className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
                     onClick={() => setBuildOverlayOpen(true)}
+                  />
+                </div>
+              );
+            })()}
+
+            {/* Trade quick access (pre-roll only) */}
+            {(() => {
+              if (activeStep !== 0) return null;
+              if ((players?.length ?? 0) < 2) return null;
+              return (
+                <div className="flex justify-left p-4 pt-1">
+                  <IconLabelButton
+                    icon={<FaHandshake />}
+                    iconClassName="text-xl"
+                    label="Trade"
+                    className="border border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                    onClick={() => setTradeModalOpen(true)}
                   />
                 </div>
               );
@@ -1955,7 +2162,7 @@ export default function PlayConsole(): JSX.Element {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div className="flex items-center justify-between p-2 bg-surface-0 rounded-b-2xl">
+            <div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0">
               {activeStep < 2 ? (
                 <button
                   type="button"
@@ -2055,7 +2262,6 @@ export default function PlayConsole(): JSX.Element {
                   );
                 })()
               )}
-              <div className="text-xs opacity-70">Step {activeStep + 1} of 3</div>
             </div>
           </>
         )}
@@ -2524,6 +2730,224 @@ export default function PlayConsole(): JSX.Element {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Trade modal */}
+      <TradeModal
+        open={tradeModalOpen}
+        onClose={() => setTradeModalOpen(false)}
+        onConfirm={(trade: TradeModalConfirmPayload) => {
+          const { fromPlayerId, toPlayerId, fromOffer, toOffer } = trade;
+          if (!fromPlayerId || !toPlayerId || fromPlayerId === toPlayerId) return;
+          const fromPlayer = players.find((p) => p.id === fromPlayerId);
+          const toPlayer = players.find((p) => p.id === toPlayerId);
+          if (!fromPlayer || !toPlayer) return;
+
+          const transferableFrom = fromOffer.propertyIds.filter((tileId) => propsState.byTileId[tileId]?.ownerId === fromPlayerId);
+          const transferableTo = toOffer.propertyIds.filter((tileId) => propsState.byTileId[tileId]?.ownerId === toPlayerId);
+
+          for (const tileId of transferableFrom) {
+            dispatch(assignOwner({ tileId, ownerId: toPlayerId }));
+            dispatch(unassignProperty({ id: fromPlayerId, tileId }));
+            dispatch(assignProperty({ id: toPlayerId, tileId }));
+          }
+          for (const tileId of transferableTo) {
+            dispatch(assignOwner({ tileId, ownerId: fromPlayerId }));
+            dispatch(unassignProperty({ id: toPlayerId, tileId }));
+            dispatch(assignProperty({ id: fromPlayerId, tileId }));
+          }
+
+          const fromCash = Math.max(0, Math.min(fromOffer.cash, fromPlayer.money));
+          const toCash = Math.max(0, Math.min(toOffer.cash, toPlayer.money));
+          if (fromCash > 0) {
+            dispatch(adjustPlayerMoney({ id: fromPlayerId, delta: -fromCash }));
+            dispatch(adjustPlayerMoney({ id: toPlayerId, delta: +fromCash }));
+          }
+          if (toCash > 0) {
+            dispatch(adjustPlayerMoney({ id: toPlayerId, delta: -toCash }));
+            dispatch(adjustPlayerMoney({ id: fromPlayerId, delta: +toCash }));
+          }
+
+          const transferCards = (
+            fromId: string,
+            toId: string,
+            busCount: number,
+            gojfChanceCount: number,
+            gojfCommunityCount: number
+          ) => {
+            for (let i = 0; i < Math.max(0, busCount); i += 1) {
+              dispatch(consumeBusTicket({ id: fromId, count: 1 }));
+              dispatch(grantBusTicket({ id: toId, count: 1 }));
+            }
+            for (let i = 0; i < Math.max(0, gojfChanceCount); i += 1) {
+              dispatch(consumeGetOutOfJail({ id: fromId, deck: 'chance', count: 1 }));
+              dispatch(grantGetOutOfJail({ id: toId, deck: 'chance', count: 1 }));
+            }
+            for (let i = 0; i < Math.max(0, gojfCommunityCount); i += 1) {
+              dispatch(consumeGetOutOfJail({ id: fromId, deck: 'community', count: 1 }));
+              dispatch(grantGetOutOfJail({ id: toId, deck: 'community', count: 1 }));
+            }
+          };
+
+          transferCards(fromPlayerId, toPlayerId, fromOffer.busTicketsCount, fromOffer.gojfChanceCount, fromOffer.gojfCommunityCount);
+          transferCards(toPlayerId, fromPlayerId, toOffer.busTicketsCount, toOffer.gojfChanceCount, toOffer.gojfCommunityCount);
+
+          const projectedOwners: Record<string, string | null> = {};
+          for (const t of BOARD_TILES) {
+            projectedOwners[t.id] = (propsState.byTileId[t.id]?.ownerId ?? null) as string | null;
+          }
+          for (const tileId of transferableFrom) projectedOwners[tileId] = toPlayerId;
+          for (const tileId of transferableTo) projectedOwners[tileId] = fromPlayerId;
+
+          const isEligibleScopeForIssuer = (issuerId: string, scopeType: TradePassScopeType, scopeKey: string): boolean => {
+            if (scopeType === 'railroad') {
+              let rr = 0;
+              for (const t of BOARD_TILES) {
+                if (t.type === 'railroad' && projectedOwners[t.id] === issuerId) rr += 1;
+              }
+              return rr >= 2;
+            }
+            if (scopeType === 'utility') {
+              let ut = 0;
+              for (const t of BOARD_TILES) {
+                if (t.type === 'utility' && projectedOwners[t.id] === issuerId) ut += 1;
+              }
+              return ut >= 2;
+            }
+            if (scopeType !== 'color') return false;
+            const group = scopeKey as ColorGroup;
+            const groupTiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === group);
+            const ownedEligibleCount = groupTiles.filter((t) => {
+              const ps = propsState.byTileId[t.id];
+              return projectedOwners[t.id] === issuerId && ps?.mortgaged !== true;
+            }).length;
+            const needed = BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN[group] ?? groupTiles.length;
+            return groupTiles.length > 0 && ownedEligibleCount >= needed;
+          };
+
+          const grantSelectedPasses = (
+            issuerId: string,
+            holderId: string,
+            selected: Array<{ scopeType: TradePassScopeType; scopeKey: string }>
+          ) => {
+            const dedup = new Set<string>();
+            for (const scope of selected) {
+              const key = `${scope.scopeType}:${scope.scopeKey}`;
+              if (dedup.has(key)) continue;
+              dedup.add(key);
+              if (!isEligibleScopeForIssuer(issuerId, scope.scopeType, scope.scopeKey)) continue;
+              const existing = tradePassEntries.some(
+                (e) =>
+                  e.holderPlayerId === holderId &&
+                  e.issuerPlayerId === issuerId &&
+                  e.scopeType === scope.scopeType &&
+                  e.scopeKey === scope.scopeKey &&
+                  e.remaining > 0
+              );
+              if (existing) continue;
+              dispatch(
+                grantTradePass({
+                  holderPlayerId: holderId,
+                  issuerPlayerId: issuerId,
+                  scopeType: scope.scopeType,
+                  scopeKey: scope.scopeKey,
+                  amount: 2,
+                })
+              );
+              dispatch(
+                appendEvent({
+                  id: crypto.randomUUID(),
+                  gameId: 'local',
+                  type: 'RENT_PASS_GRANTED',
+                  actorPlayerId: issuerId,
+                  payload: {
+                    holderPlayerId: holderId,
+                    issuerPlayerId: issuerId,
+                    scopeType: scope.scopeType,
+                    scopeKey: scope.scopeKey,
+                    amount: 2,
+                    message: `Granted 2 ${scope.scopeKey} passes`,
+                  },
+                  createdAt: new Date().toISOString(),
+                })
+              );
+            }
+          };
+
+          grantSelectedPasses(fromPlayerId, toPlayerId, fromOffer.passScopes);
+          grantSelectedPasses(toPlayerId, fromPlayerId, toOffer.passScopes);
+
+          dispatch(
+            appendEvent({
+              id: crypto.randomUUID(),
+              gameId: 'local',
+              type: 'TRADE',
+              actorPlayerId: fromPlayerId,
+              payload: {
+                fromPlayerId,
+                toPlayerId,
+                fromOffer,
+                toOffer,
+                message: `Trade between ${fromPlayer.nickname} and ${toPlayer.nickname}`,
+              },
+              createdAt: new Date().toISOString(),
+            })
+          );
+          addPreAction('Trade');
+          setTradeModalOpen(false);
+        }}
+        initiatorPlayerId={players[turnIndex]?.id || players[0]?.id || null}
+        players={players.map((pl) => ({ id: pl.id, nickname: pl.nickname, money: pl.money }))}
+        boardPlayers={players.map((pl) => ({ id: pl.id, avatarKey: pl.avatarKey, positionIndex: pl.positionIndex, color: pl.color }))}
+        tradeInventoryByPlayerId={useMemo(() => {
+          const byId: Record<string, {
+            properties: Array<{ id: string; name: string; type: 'property' | 'railroad' | 'utility' }>;
+            maxCash: number;
+            gojfChance: number;
+            gojfCommunity: number;
+            busTickets: number;
+          }> = {};
+
+          for (const pl of players) {
+            const properties = BOARD_TILES
+              .filter((tile) => tile.type === 'property' || tile.type === 'railroad' || tile.type === 'utility')
+              .map((t) => {
+                const ps = propsState.byTileId[t.id];
+                if (!t || !ps) return null;
+                if (ps.ownerId !== pl.id) return null;
+                if (ps.mortgaged) return null;
+                if (ps.improvements > 0) return null;
+                if (ps.depotInstalled === true) return null;
+                return { id: t.id, name: t.name, type: t.type };
+              })
+              .filter(Boolean) as Array<{ id: string; name: string; type: 'property' | 'railroad' | 'utility' }>;
+
+            byId[pl.id] = {
+              properties,
+              maxCash: Math.max(0, pl.money),
+              gojfChance: Math.max(0, pl.gojfChance ?? 0),
+              gojfCommunity: Math.max(0, pl.gojfCommunity ?? 0),
+              busTickets: Math.max(0, pl.busTickets ?? 0),
+            };
+          }
+
+          return byId;
+        }, [players, propsState.byTileId])}
+        ownershipByTileId={useMemo(() => {
+          const map: Record<string, string | null> = {};
+          for (const t of BOARD_TILES) {
+            map[t.id] = (propsState.byTileId[t.id]?.ownerId ?? null) as string | null;
+          }
+          return map;
+        }, [propsState.byTileId])}
+        mortgagedByTileId={useMemo(() => {
+          const map: Record<string, boolean> = {};
+          for (const t of BOARD_TILES) {
+            map[t.id] = propsState.byTileId[t.id]?.mortgaged === true;
+          }
+          return map;
+        }, [propsState.byTileId])}
+        existingPasses={tradePassEntries}
+      />
       
       {/* Build & Sell overlay */}
       <BuildSellOverlay

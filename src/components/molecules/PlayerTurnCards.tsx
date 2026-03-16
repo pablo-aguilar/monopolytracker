@@ -29,6 +29,8 @@ export interface PlayerTurnCardsProps {
   utilitiesTooltipForPlayer: (playerId: string) => React.ReactNode;
   groupTooltipForPlayer: (playerId: string, group: ColorGroup) => React.ReactNode;
   getGroupBorderClass: (group: ColorGroup) => string;
+  tradePassCountForPlayer: (playerId: string) => number;
+  tradePassTooltipForPlayer: (playerId: string) => React.ReactNode;
   renderActivePanel?: (player: PlayerTurnCardsPlayer, idx: number) => React.ReactNode;
 }
 
@@ -41,6 +43,8 @@ export default function PlayerTurnCards({
   utilitiesTooltipForPlayer,
   groupTooltipForPlayer,
   getGroupBorderClass,
+  tradePassCountForPlayer,
+  tradePassTooltipForPlayer,
   renderActivePanel,
 }: PlayerTurnCardsProps): JSX.Element {
   return (
@@ -59,10 +63,8 @@ export default function PlayerTurnCards({
           return 'Jail: Last Roll';
         })();
         return (
-          <div key={p.id} className={`rounded-2xl border-2 ${isActive ? 'border-emerald-400' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2`}>
-            <div className=" pl-8 py-2 pr-5 gap-2 relative bg-surface-1 rounded-t-2xl flex flex-col">
-              {/* player number */}
-              <div className={`font-semibold text-sm rounded-tl-xl rounded-br-3xl ${isActive ? 'bg-emerald-400 text-neutral-900' : 'bg-neutral-100 dark:bg-neutral-800'}  w-[30px] h-[30px] pr-1 absolute top-0 left-0 flex items-center justify-center`}>{idx + 1}</div>
+          <div data-qa="player-turn-card" key={p.id} className={`rounded-3xl overflow-hidden border-2 ${isActive ? 'border-emerald-400 border-3' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2`}>
+            <div className=" pl-2 py-1 pr-2 gap-2 relative bg-surface-1  flex flex-col">
               {/* player avatar & name */}
               <div className="flex items-center gap-3 relative">
                 <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
@@ -74,14 +76,24 @@ export default function PlayerTurnCards({
                     {locLabel} <span className=" text-subtle">{p.positionIndex}</span>
                   </span>
                 </div>
-                <div className="ml-auto text-lg font-bold text-fg">
+                <div className="ml-auto text-lg font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-1">
                   <AnimatedNumber value={p.money} prefix="$" />
                 </div>
               </div>
               {/* inventory HUD */}
-              <div className="flex items-center gap-3 text-sm text-muted">
+              <div className="flex items-center gap-3 px-1 pb-1 text-sm text-muted">
                 {(Number(p.busTickets ?? 0) > 0) && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={Number(p.busTickets ?? 0)} />)}
                 {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
+                {(() => {
+                  const passCount = tradePassCountForPlayer(p.id);
+                  if (passCount <= 0) return null;
+                  const tip = tradePassTooltipForPlayer(p.id);
+                  return (
+                    <Tooltip content={tip || `Passes x${passCount}`}>
+                      <HudBadge title="Trade passes" icon={<span>🎫</span>} count={passCount} variant="pill" borderClassName="border-violet-400" />
+                    </Tooltip>
+                  );
+                })()}
                 {(() => {
                   const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsByTileId[t.id]?.ownerId === p.id)).length;
                   if (rrCount <= 0) return null;

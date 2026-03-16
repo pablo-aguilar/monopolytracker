@@ -4,6 +4,7 @@ import playersReducer from '@/features/players/playersSlice';
 import eventsReducer from '@/features/events/eventsSlice';
 import cardsReducer from '@/features/cards/cardsSlice';
 import propertiesReducer from '@/features/properties/propertiesSlice';
+import tradePassesReducer from '@/features/tradePasses/tradePassesSlice';
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import localForage from 'localforage';
 
@@ -11,7 +12,7 @@ const persistConfig = {
   key: 'monopolytracker',
   storage: localForage,
   version: 1,
-  whitelist: ['players', 'events', 'cards', 'properties', 'session'],
+  whitelist: ['players', 'events', 'cards', 'properties', 'session', 'tradePasses'],
 };
 
 const rootReducer = combineReducers({
@@ -20,6 +21,7 @@ const rootReducer = combineReducers({
   events: eventsReducer,
   cards: cardsReducer,
   properties: propertiesReducer,
+  tradePasses: tradePassesReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
