@@ -33,16 +33,27 @@ function getGroupTileIds(tileId: string): string[] {
   return BOARD_TILES.filter((t) => t.type === 'property' && t.group === tile.group).map((t) => t.id);
 }
 
+function getBuildThresholdForGroupSize(groupSize: number): number {
+  if (groupSize === 4) return 3;
+  if (groupSize === 3) return 2;
+  if (groupSize === 2) return 2;
+  return Number.POSITIVE_INFINITY;
+}
+
 function canEvenBuild(state: PropertiesState, tileId: string, ownerId: string): boolean {
-  const group = getGroupTileIds(tileId);
+  const fullGroup = getGroupTileIds(tileId);
   // If not a color group (railroad/utility), allow without even rule
-  if (group.length <= 1) return true;
-  // Must own full set and none mortgaged
-  for (const id of group) {
-    const ps = state.byTileId[id]!;
-    if (ps.ownerId !== ownerId || ps.mortgaged) return false;
-  }
-  const levels = group.map((id) => state.byTileId[id]!.improvements);
+  if (fullGroup.length <= 1) return true;
+
+  const ownedGroup = fullGroup.filter((id) => state.byTileId[id]?.ownerId === ownerId);
+  if (ownedGroup.length <= 1) return true;
+
+  // Mega Monopoly variant: allow building with threshold ownership (not necessarily full set)
+  const unmortgagedOwnedCount = ownedGroup.filter((id) => state.byTileId[id]?.mortgaged !== true).length;
+  const threshold = getBuildThresholdForGroupSize(fullGroup.length);
+  if (unmortgagedOwnedCount < threshold) return false;
+
+  const levels = ownedGroup.map((id) => state.byTileId[id]!.improvements);
   const minLevel = Math.min(...levels);
   const targetLevel = state.byTileId[tileId]!.improvements;
   // Can only build on properties at current min level
@@ -50,9 +61,16 @@ function canEvenBuild(state: PropertiesState, tileId: string, ownerId: string): 
 }
 
 function canEvenSell(state: PropertiesState, tileId: string): boolean {
-  const group = getGroupTileIds(tileId);
-  if (group.length <= 1) return true;
-  const levels = group.map((id) => state.byTileId[id]!.improvements);
+  const ownerId = state.byTileId[tileId]?.ownerId;
+  if (!ownerId) return false;
+
+  const fullGroup = getGroupTileIds(tileId);
+  if (fullGroup.length <= 1) return true;
+
+  const ownedGroup = fullGroup.filter((id) => state.byTileId[id]?.ownerId === ownerId);
+  if (ownedGroup.length <= 1) return true;
+
+  const levels = ownedGroup.map((id) => state.byTileId[id]!.improvements);
   const maxLevel = Math.max(...levels);
   const targetLevel = state.byTileId[tileId]!.improvements;
   // Can only sell from properties at current max level

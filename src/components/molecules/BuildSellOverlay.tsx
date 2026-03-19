@@ -423,7 +423,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
               </div>
             </div>
             <DndContext onDragEnd={onDragEnd}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 place-content-center mx-auto gap-3 max-h-[60vh] overflow-auto p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 place-content-start mx-auto gap-3 max-h-[60vh] overflow-auto p-4">
                 {/* Properties by color group (one +/- per group) */}
                 {groups.map((g) => {
                   const tiles = g.tiles;

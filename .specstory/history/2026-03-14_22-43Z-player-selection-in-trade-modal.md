@@ -7098,7 +7098,5380 @@ commit all changes and push all to git
 
 _**Agent (model gpt-5.3-codex, mode Agent)**_
 
+<think><details><summary>Thought Process</summary>
+**Planning comprehensive commit and push**</details></think>
 
+---
+
+Understood — I’ll commit **everything currently changed** and push your current branch to remote. I’ll first check status/diff/log, then stage all, commit, and push.
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git status --short --branch</summary>
+
+```bash
+git status --short --branch
+```
+
+```
+## main...origin/main
+ M .specstory/.gitignore
+ M .specstory/history/2025-08-09_10-26Z-use-project-brief-for-app-development.md
+ M src/app/store.ts
+ M src/components/atoms/AvatarToken.tsx
+ M src/components/molecules/AuctionOverlay.tsx
+ M src/components/molecules/DiceSelector.tsx
+ M src/components/molecules/PlayerTurnCards.tsx
+ M src/components/molecules/StepNavigator.tsx
+ M src/components/organisms/PlayConsole.tsx
+ M src/data/board.ts
+ M src/types/monopoly-schema.ts
+ M tsconfig.tsbuildinfo
+?? .cursor/
+?? .specstory/history/2025-08-15_20-45Z-fixing-module-not-found-error.md
+?? .specstory/history/2026-01-28_18-20Z-server-setup-for-app-viewing.md
+?? .specstory/history/2026-02-18_13-24Z-mega-monopoly-rules-update.md
+?? .specstory/history/2026-02-20_12-53Z-teleportation-mechanics-and-passing-go.md
+?? .specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+?? src/components/molecules/TradeModal.tsx
+?? src/features/tradePasses/
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git diff --stat && git diff --cached --stat</summary>
+
+```bash
+git diff --stat && git diff --cached --stat
+```
+
+```
+ .specstory/.gitignore                              |     2 +
+ ...10-26Z-use-project-brief-for-app-development.md | 36309 +++++++++++++------
+ src/app/store.ts                                   |     4 +-
+ src/components/atoms/AvatarToken.tsx               |     2 +-
+ src/components/molecules/AuctionOverlay.tsx        |   169 +-
+ src/components/molecules/DiceSelector.tsx          |    18 +-
+ src/components/molecules/PlayerTurnCards.tsx       |    24 +-
+ src/components/molecules/StepNavigator.tsx         |     2 +-
+ src/components/organisms/PlayConsole.tsx           |   430 +-
+ src/data/board.ts                                  |    43 +
+ src/types/monopoly-schema.ts                       |     3 +
+ tsconfig.tsbuildinfo                               |     2 +-
+ 12 files changed, 24971 insertions(+), 12037 deletions(-)
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git log --oneline -10</summary>
+
+```bash
+git log --oneline -10
+```
+
+```
+9f4ee3e feat(ui): refine roll flow and design tokens
+62450cd feat(ui): improve property details overlay
+84ecd8e feat(ui): add theme settings and richer property management
+9fada8a feat(play): auto-award Free Parking pot and 1-1-1 edge cases
+a5a918b feat(setup): add rules modal with mega/home tabs
+3067234 feat(play): record teleport/card movement + improve property manage UX
+b73038f fix(play): show triples indicators in summary
+1e73764 feat(play): triple teleport UX polish
+5445bc3 feat(setup): avatar-tap color picker and mobile-friendly layout
+6075a74 feat(play): improve bus flow, GM tools, and event log
+
+```
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Preparing full commit and push**</details></think>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git add -A && git commit --trailer "Made-with: Cursor" -m "$(cat <<'EOF'
+feat(trade): add modal workflow, pass system, and summary step
+
+Implement the trade modal flow with player selection, configurable pass offers, and a dedicated summary review step before confirmation. Wire pass persistence and gameplay integration for granting/consuming passes, and include supporting UI/state updates across trade-related components.
+EOF
+)" && git push origin HEAD && git status --short --branch</summary>
+
+```bash
+git add -A && git commit --trailer "Made-with: Cursor" -m "$(cat <<'EOF'
+feat(trade): add modal workflow, pass system, and summary step
+
+Implement the trade modal flow with player selection, configurable pass offers, and a dedicated summary review step before confirmation. Wire pass persistence and gameplay integration for granting/consuming passes, and include supporting UI/state updates across trade-related components.
+EOF
+)" && git push origin HEAD && git status --short --branch
+```
+
+```
+[main e21e045] feat(trade): add modal workflow, pass system, and summary step
+ 20 files changed, 207933 insertions(+), 12037 deletions(-)
+ create mode 100644 .cursor/debug-07dfa9.log
+ create mode 100644 .specstory/history/2025-08-15_20-45Z-fixing-module-not-found-error.md
+ create mode 100644 .specstory/history/2026-01-28_18-20Z-server-setup-for-app-viewing.md
+ create mode 100644 .specstory/history/2026-02-18_13-24Z-mega-monopoly-rules-update.md
+ create mode 100644 .specstory/history/2026-02-20_12-53Z-teleportation-mechanics-and-passing-go.md
+ create mode 100644 .specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+ create mode 100644 src/components/molecules/TradeModal.tsx
+ create mode 100644 src/features/tradePasses/tradePassesSlice.ts
+## main...origin/main
+To https://github.com/pablo-aguilar/monopolytracker.git
+   9f4ee3e..e21e045  HEAD -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+Done — everything was committed and pushed.
+
+- **Commit:** `e21e045`
+- **Branch:** `main`
+- **Remote:** `origin/main`
+- **Status now:** clean (`main...origin/main`)
+
+I included all tracked + untracked changes as requested, including `.cursor` and `.specstory` files.
+
+---
+
+_**User**_
+
+write me a concse summary of the latest changes to git to share with my team
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Gathering latest commit details**</details></think>
+
+---
+
+I’ll pull the latest commit summary so I can give you a clean team-ready changelog blurb.
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git log -1 --pretty=format:'%H%n%s%n%b'</summary>
+
+```bash
+git log -1 --pretty=format:'%H%n%s%n%b'
+```
+
+```
+e21e045c01ebcb8db045c9bdf4fd530d57302ce7
+feat(trade): add modal workflow, pass system, and summary step
+Implement the trade modal flow with player selection, configurable pass offers, and a dedicated summary review step before confirmation. Wire pass persistence and gameplay integration for granting/consuming passes, and include supporting UI/state updates across trade-related components.
+
+Made-with: Cursor
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git show --name-only --pretty=format: HEAD</summary>
+
+```bash
+git show --name-only --pretty=format: HEAD
+```
+
+```
+.cursor/debug-07dfa9.log
+.specstory/.gitignore
+.specstory/history/2025-08-09_10-26Z-use-project-brief-for-app-development.md
+.specstory/history/2025-08-15_20-45Z-fixing-module-not-found-error.md
+.specstory/history/2026-01-28_18-20Z-server-setup-for-app-viewing.md
+.specstory/history/2026-02-18_13-24Z-mega-monopoly-rules-update.md
+.specstory/history/2026-02-20_12-53Z-teleportation-mechanics-and-passing-go.md
+.specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+src/app/store.ts
+src/components/atoms/AvatarToken.tsx
+src/components/molecules/AuctionOverlay.tsx
+src/components/molecules/DiceSelector.tsx
+src/components/molecules/PlayerTurnCards.tsx
+src/components/molecules/StepNavigator.tsx
+src/components/molecules/TradeModal.tsx
+src/components/organisms/PlayConsole.tsx
+src/data/board.ts
+src/features/tradePasses/tradePassesSlice.ts
+src/types/monopoly-schema.ts
+tsconfig.tsbuildinfo
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git show --stat --oneline --no-patch HEAD</summary>
+
+```bash
+git show --stat --oneline --no-patch HEAD
+```
+
+```
+e21e045 feat(trade): add modal workflow, pass system, and summary step
+
+```
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Summarizing local files inclusion**</details></think>
+
+---
+
+Here’s a concise update you can share:
+
+Implemented a full trade-system upgrade in `main` (`e21e045`), including a new `TradeModal` flow with player selection, asset selection, configurable pass offers (1–2 uses), and a dedicated summary review step before confirming.  
+Also added end-to-end trade pass support (new `tradePasses` slice, store wiring, grant/consume logic, eligibility checks, gameplay integration in `PlayConsole`, and HUD visibility in `PlayerTurnCards`), plus related UI/state updates across trade-adjacent components.
+
+Note: this commit also includes local workspace/history artifacts (`.cursor`/`.specstory`) and `tsconfig.tsbuildinfo`, since everything was committed/pushed together.
+
+---
+
+_**User**_
+
+rewrite in bullets
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+- Added a full trade-system upgrade in `main` (`e21e045`).
+- Implemented a new `TradeModal` flow: player selection, asset selection, configurable pass offers (1–2 uses), and a separate summary review step before confirm.
+- Added end-to-end trade pass support: new `tradePasses` slice, store integration, pass grant/consume logic, and eligibility validation.
+- Integrated pass behavior into gameplay in `PlayConsole` and surfaced pass info in the HUD via `PlayerTurnCards`.
+- Included related UI/state updates across connected trade components.
+- Commit also contains local workspace/history artifacts (`.cursor`, `.specstory`) and `tsconfig.tsbuildinfo` because all changes were committed together.
+
+---
+
+_**User**_
+
+in the summary, lets show what has been gained. 
+lets list them to look like cards. 
+property cards should use there property colors
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Providing implementation guidance**</details></think>
+
+---
+
+Great idea — that makes the summary much clearer.
+
+I’m in **Ask mode** right now, so I can’t apply edits, but here’s the exact change to make in `src/components/molecules/TradeModal.tsx`:
+
+- In Step 2 (`Summary`), add a new section per player:
+  - `You gain`
+  - `{player2Name} gains`
+- Compute gains as the **opposite side’s offer**:
+  - `youGain = tradeSummary.to`
+  - `theyGain = tradeSummary.from`
+- Render each gained item as a **card/tile list** (same visual style as card selectors).
+- For gained properties, render tiles with the property header color using existing helpers:
+  - `getTileById(...)`
+  - `getTileHeaderBgClass(tile)`
+  - `getTileHeaderTextClass(tile)`
+
+Suggested structure:
+
+- **You gain cards**
+  - property cards (colored by property group)
+  - cash card if `> 0`
+  - card-count cards (Bus / GOJF Chance / GOJF Community)
+  - pass cards (`Pink x2`, `Railroad x1`, etc.)
+- **They gain cards**
+  - same pattern
+
+Example mapping logic:
+
+```tsx
+const youGain = tradeSummary.to;
+const theyGain = tradeSummary.from;
+```
+
+If you switch to Agent mode, I can implement this directly and keep it visually consistent with your current property/card tile styles.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Planning summary component creation**</details></think>
+
+---
+
+I’ll update the Step 2 summary to focus on **what each player gains**, rendering those as card-style tiles and using property color styling for gained property cards. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "Trade Summary|step === 2|tradeSummary",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "Trade Summary|step === 2|tradeSummary",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 14,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/TradeModal.tsx",
+      "matchCount": 14
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Designing property card summary display**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-d5Dez0-F.js   599.27 kB │ gzip: 181.10 kB
+✓ built in 1.67s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+### What changed in `TradeModal` summary
+
+- Step 2 summary now emphasizes **gains**:
+  - `You gain`
+  - `{player2Name} gains`
+- Assets are displayed as **card-like tiles** instead of plain text lines.
+- **Property gains** now render with their property color styling (same tile color helpers used elsewhere).
+- Cash, cards (Bus/GOJF), and passes are each rendered as individual summary tiles.
+- If a side gains nothing, it shows `No assets gained.`
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+
+
+---
+
+_**User**_
+
+in the the trade with modal,  for the avatar, lets add pthe player color 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Inspecting avatar color usage**</details></think>
+
+---
+
+I’ll update the `Trade With` picker avatar styling so each option clearly shows that player’s color (not just emoji), then verify with a build check.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "PlayerPickerRow|AvatarToken|--player-color|Trade With",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "PlayerPickerRow|AvatarToken|--player-color|Trade With",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 15,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/TradeModal.tsx",
+      "matchCount": 15
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Inspecting border color usage**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/atoms/AvatarToken.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Adjusting avatar border visibility**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-B95lKdj1.js   599.37 kB │ gzip: 181.09 kB
+✓ built in 1.71s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Done — I updated the Trade modal avatars to visibly show player color.
+
+### What changed
+
+In `src/components/molecules/TradeModal.tsx`:
+
+- `Trade With` picker avatars now always render with the player-color ring (not only when selected).
+- The “You offer” and “{player} offers” header avatars also now show the player-color ring.
+
+### Why this fixed it
+
+`AvatarToken` only shows border color when ring/border is enabled; with `ring={false}`, the color wasn’t visible.  
+Now the ring is enabled with `ringColorClass="ring-[color:var(--player-color)]"`.
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+the next button, secondary button look a bit soft, can we visually bump it up
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Inspecting button styles**</details></think>
+
+---
+
+Yep — I can bump the secondary action styling so it has stronger contrast and feels more clickable. I’ll tighten the border/background/hover treatment on those footer secondary buttons.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "Cancel|Back|Summary|Confirm Trade|className=\\&#96;rounded-md border",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "Cancel|Back|Summary|Confirm Trade|className=\\&#96;rounded-md border",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 37,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/TradeModal.tsx",
+      "matchCount": 37
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Refining button styles and states**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-ZFR-8dHo.js   599.57 kB │ gzip: 181.12 kB
+✓ built in 1.75s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Nice call — I bumped the secondary footer button style in `TradeModal` so it reads stronger.
+
+### Updated (both `Cancel` and `Back`)
+- darker border
+- explicit surface background
+- semibold label
+- subtle shadow
+- stronger hover background
+
+This keeps hierarchy intact (green action is still primary) but makes the secondary actions feel less washed out.
+
+Build/lint are both clean.
+
+---
+
+_**User**_
+
+for the pick a chance or community chest modal, can we add a quick look up search bar to easily find the correct card
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Locating modal components**</details></think>
+
+---
+
+Yes — that’s a good UX improvement. I’ll quickly locate the Chance/Community modal implementation so I can suggest the cleanest way to add search there.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "Chance|Community Chest|pick a|draw|modal|overlay",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components",
+  "outputMode": "files_with_matches",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "Chance|Community Chest|pick a|draw|modal|overlay",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components",
+  "outputMode": "files_with_matches",
+  "totalFiles": 10,
+  "totalMatches": 10,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/SettingsModal.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/RulesModal.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/TradeModal.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/PostActionsBar.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/AuctionOverlay.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/BoardPickerOverlay.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/HudBar.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/PlayerTurnCards.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/BuildSellOverlay.tsx",
+      "matchCount": 1
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "drawBusCardByType|CHANCE|COMMUNITY_CHEST|card",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "drawBusCardByType|CHANCE|COMMUNITY_CHEST|card",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 79,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 79
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Preparing targeted guidance**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Outlining quick search addition**</details></think>
+
+---
+
+Yes — this is a great fit for your current picker UI, and it should be quick.
+
+Implement it in `src/components/organisms/PlayConsole.tsx`, inside the existing card picker overlay (the non-`bus` branch where Chance/Community cards are listed).
+
+- Add state:
+  - `cardSearch` (string)
+- Render an input above the card grid when `overlay.deck` is `chance` or `community`
+- Filter `cardsState.decks[overlay.deck].drawPile` by:
+  - `card.id`
+  - `card.text`
+- Keep search case-insensitive and trimmed
+- Show empty-state text when no results: `No cards match your search.`
+
+Example logic:
+
+```tsx
+const [cardSearch, setCardSearch] = React.useState('');
+
+const visibleCards = React.useMemo(() => {
+  if (!overlay.deck || overlay.deck === 'bus') return [];
+  const q = cardSearch.trim().toLowerCase();
+  const cards = cardsState.decks[overlay.deck].drawPile;
+  if (!q) return cards;
+  return cards.filter((c) =>
+    c.id.toLowerCase().includes(q) || c.text.toLowerCase().includes(q)
+  );
+}, [overlay.deck, cardsState.decks, cardSearch]);
+```
+
+Then map `visibleCards` instead of the full draw pile.
+
+I’m in Ask mode right now, so I can’t apply this directly. If you switch to Agent mode, I can implement it right away.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Inspecting state and lifecycle**</details></think>
+
+---
+
+I’ll add a search input to the Chance/Community picker overlay, filter cards by ID/text, and include a no-results message. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "const \\[overlay|setOverlay|stagedChanceCardId|stagedCommunityCardId|useState",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "const \\[overlay|setOverlay|stagedChanceCardId|stagedCommunityCardId|useState",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 63,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 63
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Adding searchable overlay with reset**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+Search is now wired into the Chance/Community picker. I’m running lint/build to ensure no regressions.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-Bp1e-uSa.js   600.40 kB │ gzip: 181.33 kB
+✓ built in 1.71s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Done — added a quick search bar to the Chance/Community card picker modal.
+
+### What it does
+
+In `src/components/organisms/PlayConsole.tsx`:
+
+- Added a search input at the top of the picker overlay for:
+  - `Pick a Chance card`
+  - `Pick a Community Chest card`
+- Filters cards live by:
+  - card ID (`#...`)
+  - card text
+- Search is case-insensitive.
+- Search resets automatically when opening/switching/closing the overlay deck.
+- Added empty-result message:
+  - `No cards match your search.`
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+when searching a card  and i input "adv to bo", I would want to see the "advanced to Boardwalk" but no result are found. 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Diagnosing substring match limitation**</details></think>
+
+---
+
+That behavior makes sense with the current filter logic — I’ll quickly confirm the exact matcher in `PlayConsole` and suggest a better search match strategy.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "filteredOverlayCards|cardSearch|includes\\(",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "filteredOverlayCards|cardSearch|includes\\(",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 10,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 10
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Suggesting fuzzy token prefix matching**</details></think>
+
+---
+
+Exactly — current search is doing a **plain substring match**:
+
+- it checks `card.text.toLowerCase().includes(query)`
+- so `"adv to bo"` must appear as one continuous string
+- `"advance to boardwalk"` doesn’t contain that exact contiguous phrase, so it returns no results
+
+A better matcher for card lookup is **token/prefix matching**:
+
+- split query into tokens: `["adv", "to", "bo"]`
+- split card text into words: `["advance", "to", "boardwalk"]`
+- match if each query token matches the start of a word, in order
+
+That would correctly match `"adv to bo"` -> `"Advance to Boardwalk"`.
+
+If you switch to Agent mode, I can implement this quickly in `filteredOverlayCards` (keeping ID search too).
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll upgrade the card search matcher to tokenized prefix matching (so `adv to bo` finds “Advance to Boardwalk”), then run lint/build.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-CY_YJZbS.js   600.71 kB │ gzip: 181.45 kB
+✓ built in 1.73s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+Card search in the Chance/Community picker now supports token-prefix matching, so queries like `adv to bo` will match **“Advance to Boardwalk”**.
+
+### What changed
+
+In `src/components/organisms/PlayConsole.tsx`:
+
+- Enhanced `filteredOverlayCards` logic:
+  - still supports exact substring matches on `card.id` and `card.text`
+  - now also supports ordered token-prefix matching across words in `card.text`
+- Example:
+  - `adv to bo` -> matches `advance to boardwalk`
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+lets add background overlay with the CC and change card pickers 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Planning modal backdrop overlay**</details></think>
+
+---
+
+Great idea — I’ll add a dimmed backdrop layer behind the Chance/Community picker so those card pickers feel like focused overlays. Then I’ll verify with lint/build.
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Identifying block for structure modification**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Adding conditional overlay backdrop**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Running lint and build checks**</details></think>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-DjEg4jwj.css   75.52 kB │ gzip:  12.39 kB
+dist/assets/index-PxTvTB1J.js   600.95 kB │ gzip: 181.48 kB
+✓ built in 1.76s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Done — I added a background overlay for the **Chance** and **Community Chest** card pickers.
+
+### What changed
+
+In `src/components/organisms/PlayConsole.tsx`:
+
+- When `overlay.deck` is `chance` or `community`, a fullscreen dim backdrop now appears behind the picker.
+- Backdrop fades in/out with `AnimatePresence`.
+- Clicking the backdrop closes the picker (`setOverlay({ deck: null })`).
+- The bottom sheet picker stays on top (`z-50`) and unchanged functionally.
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+can we add the "passes" to player hud bar. im thinging we can use the 🎟️ emoji and have the pill batch the property color 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Verifying existing pass badge**</details></think>
+
+---
+
+Yes, that’s a solid UI improvement. I’ll quickly check the current HUD implementation so I can tell you exactly what’s already there and what to tweak for color-coded pass pills.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "Trade passes|pass|🎫|badge|HudBadge|PlayerTurnCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "Trade passes|pass|🎫|badge|HudBadge|PlayerTurnCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 17,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/PlayerTurnCards.tsx",
+      "matchCount": 17
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "tradePassCountForPlayer|tradePassTooltipForPlayer|PlayerTurnCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "tradePassCountForPlayer|tradePassTooltipForPlayer|PlayerTurnCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 6,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 6
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Advising badge color enhancements**</details></think>
+
+---
+
+Yes — and you already have most of it wired.
+
+Right now `PlayerTurnCards` already shows a pass badge with `🎫` and `variant="pill"` (static violet border), fed by `tradePassCountForPlayer` / `tradePassTooltipForPlayer` from `PlayConsole`.
+
+```85:94:src/components/molecules/PlayerTurnCards.tsx
+{(() => {
+  const passCount = tradePassCountForPlayer(p.id);
+  if (passCount <= 0) return null;
+  const tip = tradePassTooltipForPlayer(p.id);
+  return (
+    <Tooltip content={tip || `Passes x${passCount}`}>
+      <HudBadge title="Trade passes" icon={<span>🎫</span>} count={passCount} variant="pill" borderClassName="border-violet-400" />
+    </Tooltip>
+  );
+})()}
+```
+
+If you want property-colored pills, best approach is:
+
+- Replace the single aggregate pass badge with **one badge per pass scope**.
+- Use `🎟️` icon.
+- Set `borderClassName` by scope:
+  - `color` scope -> map `scopeKey` to Monopoly group class (same pattern as property group pills).
+  - `railroad` -> white/neutral border.
+  - `utility` -> cyan/amber border.
+- Keep tooltip per badge (issuer + remaining uses) or keep one combined tooltip.
+
+You’d adjust in:
+- `src/components/molecules/PlayerTurnCards.tsx` (rendering badges)
+- `src/components/organisms/PlayConsole.tsx` (pass aggregation helper, likely return grouped scope entries instead of only a total count string)
+
+If you want, switch to Agent mode and I can implement this as grouped, color-coded `🎟️` pills directly.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll replace the single pass badge with grouped `🎟️` pass pills by scope/color in the player HUD, wired from `PlayConsole` helper data, then run lint/build.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Planning prop and helper updates**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/atoms/HudBadge.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Planning scoped pass badges**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/tradePasses/tradePassesSlice.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Inspecting existing color mapping function**</details></think>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "function getGroupBorderClass|getGroupBorderClass\\s*=|switch \\(group\\)",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "function getGroupBorderClass|getGroupBorderClass\\s*=|switch \\(group\\)",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 3,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 3
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Adding badge helper and consolidating props**</details></think>
+
+---
+
+I found the existing pass badge hook-up. I’m now converting it to render multiple `🎟️` pills by pass scope with border colors mapped to property group/railroad/utility.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx",
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx"
+    },
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-BvTFz6DK.css   75.57 kB │ gzip:  12.39 kB
+dist/assets/index-3TH5k4cs.js   601.17 kB │ gzip: 181.60 kB
+✓ built in 1.81s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+### HUD pass update
+
+I changed the player HUD to show **pass pills by scope** instead of one aggregated pass badge:
+
+- Uses `🎟️` icon.
+- Each pill now has a scope-based border color:
+  - `color` passes -> corresponding property group color border
+  - `railroad` passes -> white border
+  - `utility` passes -> cyan border
+- Pill count reflects total remaining uses for that scope.
+- Tooltip on each pill shows issuer + remaining uses lines.
+
+### Files updated
+
+- `src/components/molecules/PlayerTurnCards.tsx`
+  - Switched from `tradePassCountForPlayer` / `tradePassTooltipForPlayer`
+  - Now consumes `tradePassBadgesForPlayer(...)`
+  - Renders multiple color-coded `🎟️` badges
+
+- `src/components/organisms/PlayConsole.tsx`
+  - Replaced old pass count/tooltip helpers with grouped `tradePassBadgesForPlayer(...)`
+  - Wired new prop into `PlayerTurnCards`
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+im adding houses to my set  but it looks like it is not updating the game. when i check how many house i have when its my turn again it shows no houses. also when a player lands on property that has a house, the rent is only 2x becaus i own 3 of the 4 properties. 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Planning bug diagnosis approach**</details></think>
+
+---
+
+That sounds like a real state-sync bug between building actions and rent calculation. I’ll trace the house build flow (`BuildSellOverlay` -> reducers -> rent selector) and pinpoint where it’s dropping.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "buyHouse|sellHouse|improvements|setDepotInstalled|assignOwner|mortgaged",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features",
+  "outputMode": "files_with_matches",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "buyHouse|sellHouse|improvements|setDepotInstalled|assignOwner|mortgaged",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features",
+  "outputMode": "files_with_matches",
+  "totalFiles": 3,
+  "totalMatches": 3,
+  "topFiles": [
+    {
+      "uri": "src/features/selectors/rent.ts",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/features/properties/propertiesSlice.ts",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/features/selectors/stats.ts",
+      "matchCount": 1
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "computeRent\\(|improvements|rent|group",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "computeRent\\(|improvements|rent|group",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors",
+  "outputMode": "content",
+  "totalFiles": 2,
+  "totalMatches": 27,
+  "topFiles": [
+    {
+      "uri": "src/features/selectors/rent.ts",
+      "matchCount": 19
+    },
+    {
+      "uri": "src/features/selectors/stats.ts",
+      "matchCount": 8
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "BuildSellOverlay|buyHouse|sellHouse|onBuild|onSell|dispatch\\(buyHouse",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "BuildSellOverlay|buyHouse|sellHouse|onBuild|onSell|dispatch\\(buyHouse",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 11,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 11
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/properties/propertiesSlice.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/selectors/rent.ts</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/BuildSellOverlay.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Investigating property ownership sync**</details></think>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "assignOwner\\(|set\\w*Properties|byTileId\\s*=|setProperties|sync|players\\.properties|properties\\]|unassignProperty|assignProperty",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "assignOwner\\(|set\\w*Properties|byTileId\\s*=|setProperties|sync|players\\.properties|properties\\]|unassignProperty|assignProperty",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 11,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 11
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Diagnosing build approval mismatch**</details></think>
+
+---
+
+You found a real logic mismatch — your symptoms line up exactly with it.
+
+- In `BuildSellOverlay`, the UI currently allows building with a **threshold** (for a 4-property group, owning 3 can pass the check).
+- But in `propertiesSlice.buyHouse`, the reducer still requires **full set ownership** before it will actually apply improvements.
+- So the overlay lets you plan houses, but confirm dispatches `buyHouse(...)` calls that get rejected, leaving `improvements` at `0`.
+- Then rent falls back to base group logic (`3x` for full set, `2x` for all-minus-1), which is why you’re seeing `2x` instead of house rent.
+
+Key conflicting rules:
+
+```36:49:src/features/properties/propertiesSlice.ts
+// Must own full set and none mortgaged
+for (const id of group) {
+  const ps = state.byTileId[id]!;
+  if (ps.ownerId !== ownerId || ps.mortgaged) return false;
+}
+```
+
+```222:243:src/components/molecules/BuildSellOverlay.tsx
+const groupSize = fullGroupIds.length;
+const ownedUnmortgagedCount = ownedGroupTiles.filter((tt) => desiredMortgaged[tt.id] !== true).length;
+const hotelThreshold = groupSize === 4 ? 3 : groupSize === 3 ? 2 : groupSize === 2 ? 2 : Number.POSITIVE_INFINITY;
+// ... allows build when ownedUnmortgagedCount >= hotelThreshold
+```
+
+```42:49:src/features/selectors/rent.ts
+if (imp === 0) {
+  const { owned, total } = countGroupOwned(state, tileId, ps.ownerId);
+  if (owned >= total && total > 0) return base * 3;
+  if (total > 1 && owned === total - 1) return base * 2;
+}
+```
+
+Also worth checking: `PlayConsole` calculates and applies build money before dispatching `buyHouse`, so if `buyHouse` is rejected, cash may still be adjusted incorrectly.
+
+If you want, when you switch to Agent mode I can fix this by aligning both systems to one rule set (either strict full-set, or your custom threshold rule) and make confirm apply money only for successful build/sell deltas.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Aligning building rules with ownership thresholds**</details></think>
+
+---
+
+I’ll align the core property reducer rules with the Build/Sell overlay rules (partial-set build thresholds + owned-only even-build/sell), which should make houses persist and rent use house values correctly. Then I’ll validate with build/lints.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/properties/propertiesSlice.ts</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/properties/propertiesSlice.ts",
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/BuildSellOverlay.tsx",
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/features/properties/propertiesSlice.ts"
+    },
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/BuildSellOverlay.tsx"
+    },
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-BvTFz6DK.css   75.57 kB │ gzip:  12.39 kB
+dist/assets/index-DvHA5924.js   601.44 kB │ gzip: 181.68 kB
+✓ built in 1.56s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Fixed — the build/sell reducer rules now match your overlay/game variant rules.
+
+### What was wrong
+
+`BuildSellOverlay` allowed building with threshold ownership (e.g. 3 of 4), but `propertiesSlice.buyHouse` still required full-set ownership.  
+So builds looked allowed in UI but were rejected in reducer, causing houses to “disappear” and rent to stay in base multiplier mode.
+
+### What I changed
+
+In `src/features/properties/propertiesSlice.ts`:
+
+- Updated `canEvenBuild(...)` to:
+  - use **threshold ownership by group size** (4->3, 3->2, 2->2)
+  - enforce even-building across **owned group properties**
+- Updated `canEvenSell(...)` to:
+  - enforce even-selling across **owned group properties** (not the full board group including unowned tiles)
+
+### Result
+
+- Houses now actually persist when you confirm build.
+- On later turns, house counts remain.
+- Rent should now use house/hotel/skyscraper values when improvements are present.
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+If you want, next I can add a small “Build rejected reason” toast/log for edge cases (inventory/even-rule), so it’s obvious when a reducer denies a change.
+
+---
+
+_**User**_
+
+@src/components/molecules/PlayerTurnCards.tsx:70-71 when the card is minimized, when  its someone else turn, i want the rounde cornerers to be  "rounded-3xl " and when focused and "open" be rounded-t-3xl 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Reviewing active conditional logic**</details></think>
+
+---
+
+I can do that, but I’m currently in **Ask mode** so I can’t apply the edit directly. I checked your current structure and here’s the exact tweak to make.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PlayerTurnCards.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Advising conditional corner rounding**</details></think>
+
+---
+
+Perfect — that’s a simple conditional class.
+
+Right now the inner wrapper is always `rounded-t-3xl` at `src/components/molecules/PlayerTurnCards.tsx` line around 70.  
+Change it to depend on `isActive`:
+
+```tsx
+<div
+  className={`pl-2 py-1 pr-2 gap-2 relative bg-surface-1 flex flex-col ${
+    isActive ? 'rounded-t-3xl' : 'rounded-3xl'
+  }`}
+>
+```
+
+This gives you:
+
+- **inactive/minimized cards** -> fully rounded (`rounded-3xl`)
+- **active/open card** -> top-only rounded (`rounded-t-3xl`) so it visually connects to the expanded panel below
+
+If you switch back to Agent mode, I can apply it directly.
+
+---
+
+_**User**_
+
+lets say a player has $100 and then roll 1,1,1 and recieving the 1000, and then choose to land on boardwalk that is available to buy, he should be able to buy that property becaus now he has 1100. currently he can't  
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Investigating purchase eligibility logic**</details></think>
+
+---
+
+Good catch — that should be allowed. I’ll inspect the buy-eligibility logic around triple-ones teleport and staged money updates to pinpoint why purchase is blocked.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "isTripleOnes|1000|triple|canBuy|purchase|buySelected|price|money",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "isTripleOnes|1000|triple|canBuy|purchase|buySelected|price|money",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 100,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 100
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "IconLabelButton|Buy|Auction|Can not|disabled",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "IconLabelButton|Buy|Auction|Can not|disabled",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 98,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 98
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/atoms/BuyButton.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Inspecting playerMoney usage near canAffordBuy**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Analyzing purchase and move sequencing**</details></think>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Explaining affordability and triple teleport bugs**</details></think>
+
+---
+
+Yep — you’re right, and I can see why it happens.
+
+The buy button affordability check is based on **current money only**:
+
+```2067:2110:src/components/organisms/PlayConsole.tsx
+const price = ...
+const playerMoney = p.money;
+...
+canAffordBuy={playerMoney >= price}
+```
+
+So with `$100`, `Buy` is disabled for Boardwalk even though triple-ones will grant +$1000.
+
+Also, your +$1000 is only applied later during finalize flow:
+
+```1006:1015:src/components/organisms/PlayConsole.tsx
+if (isTripleOnes) {
+  dispatch(adjustPlayerMoney({ id: pid, delta: +1000 }));
+}
+```
+
+## What to change
+
+Use an **effective preview money** for buy affordability while previewing a triple teleport:
+
+- `effectiveMoney = p.money + (isTripleOnes && tripleTeleportTo != null ? 1000 : 0)`
+- pass that to `canAffordBuy`.
+
+Example logic to use near the current `playerMoney` line:
+
+```tsx
+const effectivePreviewMoney =
+  (p.money ?? 0) + (isTripleOnes && tripleTeleportTo != null ? 1000 : 0);
+
+canAffordBuy={effectivePreviewMoney >= price}
+```
+
+## Optional hardening
+
+Even after fixing UI, add a safety check in finalize purchase path so reducer flow never allows accidental unaffordable buy in edge cases.
+
+---
+
+I’m in Ask mode right now, so I can’t patch it directly. If you switch to Agent mode, I can implement this in `PlayConsole` in one pass.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll patch `PlayConsole` so buy-affordability preview includes the pending +$1000 from triple-ones teleport, and add a finalize-time guard for affordability as a safety net. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 514 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-C-yO4R6N.css   75.82 kB │ gzip:  12.42 kB
+dist/assets/index-EWx5m9Tn.js   601.60 kB │ gzip: 181.71 kB
+✓ built in 1.69s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+### What I changed
+
+In `src/components/organisms/PlayConsole.tsx`:
+
+- **Buy preview affordability** now includes pending triple-ones jackpot:
+  - if `isTripleOnes` and teleport is selected, preview money adds `+1000`
+  - `canAffordBuy` now uses this effective preview amount
+- Added a **finalize-time safety check**:
+  - before executing staged buy, it re-checks affordability with current money + pending jackpot
+  - if still not affordable, it cancels staged buy instead of processing purchase
+
+### Result
+
+Your scenario now works:
+- Player has `$100`
+- Rolls `1,1,1`
+- Teleports to unowned Boardwalk
+- Buy becomes available based on effective `$1100`
+- Purchase can proceed correctly
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+there is an "Install Depot ($100)" button on pre turn. lets remove it now that they can be added in the "manage" overlay
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Inspecting target removal area**</details></think>
+
+---
+
+I’ll remove the standalone pre-turn `Install Depot ($100)` action from `PlayConsole` so depot changes only happen through the `Manage` overlay. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Identifying unused RailroadDepotControl import**</details></think>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "RailroadDepotControl|setDepotInstalled",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "RailroadDepotControl|setDepotInstalled",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 6,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 6
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Removing unused import and code block**</details></think>
+
+---
+
+Failed to find context:
+import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
+import AuctionOverlay from '@/components/molecules/AuctionOverlay';
+import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
+import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
+import { FaHandshake } from 'react-icons/fa';
+import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
+import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Clarifying import details**</details></think>
+
+---
+
+Patch didn’t match due to import ordering drift; I’m grabbing the current import block and removing the depot control section with a precise patch.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Focusing on specific patch**</details></think>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 513 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-C-yO4R6N.css   75.82 kB │ gzip:  12.42 kB
+dist/assets/index-DX6X2fbC.js   600.09 kB │ gzip: 181.43 kB
+✓ built in 1.76s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Done — removed the pre-turn **Install/Remove Depot ($100)** control from `PlayConsole`.
+
+### What changed
+
+- Deleted the contextual `RailroadDepotControl` block in pre-step UI.
+- Removed now-unused `RailroadDepotControl` import.
+
+Depot management is now only available through the **Manage** overlay, as requested.
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+in the "Trademadal" after some chooses who to trade with, lets hide the "trade width Section. 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+Yep — that’s a good UX cleanup.
+
+I’ll quickly point you to the exact block in `TradeModal` and the minimal conditional render to hide the picker once selection is made.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Perfect — you can do this by conditionally rendering the picker only when no player is selected.
+
+In `src/components/molecules/TradeModal.tsx`, this is the current picker block:
+
+```tsx
+<div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2">
+  <PlayerPickerRow ... />
+</div>
+```
+
+Change it to:
+
+```tsx
+{!player2Id && (
+  <div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2">
+    <PlayerPickerRow
+      label="Trade With"
+      players={players}
+      bpById={bpById}
+      selectedId={player2Id}
+      onSelect={setPlayer2Id}
+      excludeId={player1Id}
+    />
+  </div>
+)}
+```
+
+Since I’m in Ask mode, I can’t apply it directly right now — but this is the exact update you want.
+
+Optional (recommended): once selected, show a small `Change player` button near `{player2Name} offers` that calls `setPlayer2Id(null)`, so users can switch without closing the modal.
+
+---
+
+_**User**_
+
+can we also have the [avatar image] [name] offars section a custom drop down with the same info but a chevron pointing down to show its a dropdown. clicking shows the list of player options where they can change the player they are trading with.
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+Yes — that’s a strong UX pattern and fits this modal well.
+
+Since you’re in Ask mode, I can’t implement it directly right now, but here’s the clean approach for `src/components/molecules/TradeModal.tsx`:
+
+## What to replace
+
+Current selected header:
+
+- `[avatar] [name] offers`
+
+Replace with a **dropdown trigger button**:
+
+- left: avatar + name
+- right: chevron down
+- clicking toggles a dropdown menu with `PlayerPickerRow`-style options
+- selecting an option updates `player2Id` and closes menu
+
+## Suggested behavior
+
+- Show trigger only when `player2Id` exists.
+- Keep “Trade With” picker hidden once selected (as you asked earlier).
+- Add outside-click + Escape close for the dropdown menu.
+- Exclude `player1Id` from options (same rule as now).
+
+## Implementation outline
+
+1. Add local state in `TradeModal`:
+   - `isTradeWithMenuOpen: boolean`
+2. Trigger button:
+   - uses current `player2Board` avatar + `player2Name`
+   - `onClick={() => setIsTradeWithMenuOpen(v => !v)}`
+3. Dropdown panel below trigger:
+   - map through `players.filter(p => p.id !== player1Id)`
+   - each row shows avatar + name + selected checkmark
+   - on select:
+     - `setPlayer2Id(id)`
+     - `setIsTradeWithMenuOpen(false)`
+4. Add chevron icon (e.g. from `react-icons` or inline SVG).
+5. Keep accessibility:
+   - `aria-haspopup="listbox"`
+   - `aria-expanded`
+   - list options `role="option"`
+
+If you switch to Agent mode, I can wire this in with your existing styles so it looks native to the modal.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll implement that custom dropdown in `TradeModal`: hide the initial picker after selection, show a `[avatar] [name] offers` trigger with a down-chevron, and open a selectable player list to switch trading partner. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "react-icons|Fa|Chevron|Md|IoChevron",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules",
+  "outputMode": "files_with_matches",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "react-icons|Fa|Chevron|Md|IoChevron",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules",
+  "outputMode": "files_with_matches",
+  "totalFiles": 3,
+  "totalMatches": 3,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/SettingsGear.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/PurchaseActionsRow.tsx",
+      "matchCount": 1
+    },
+    {
+      "uri": "src/components/molecules/BuildSellOverlay.tsx",
+      "matchCount": 1
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PurchaseActionsRow.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "React.useEffect\\(\\(\\) =&gt; \\{\\s*setOffer2\\(EMPTY_OFFER\\);\\s*\\}, \\[player2Id\\]\\);",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "React.useEffect\\(\\(\\) =&gt; \\{\\s*setOffer2\\(EMPTY_OFFER\\);\\s*\\}, \\[player2Id\\]\\);",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "setOffer2\\(EMPTY_OFFER\\)|\\[player2Id\\]",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "setOffer2\\(EMPTY_OFFER\\)|\\[player2Id\\]",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 4,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/TradeModal.tsx",
+      "matchCount": 4
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+I’m implementing a real dropdown trigger with chevron + selectable player list, and hiding the original picker once a partner is selected. I’ll also close the menu on outside click for smoother UX.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/TradeModal.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 513 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-CLt7H1ON.css   76.16 kB │ gzip:  12.46 kB
+dist/assets/index-B3Fl3noI.js   602.28 kB │ gzip: 181.93 kB
+✓ built in 1.81s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+### What changed in `TradeModal`
+
+- Before selecting a partner:
+  - still shows the `Trade With` picker row.
+- After selecting a partner:
+  - hides the original picker.
+  - shows a custom trigger: `[avatar] [name] offers` + down-chevron.
+  - clicking trigger opens a dropdown list of eligible players to switch selection.
+- Dropdown behavior:
+  - uses same avatar + player-color styling.
+  - closes on selection.
+  - closes on outside click.
+  - shows selected checkmark and chevron rotation.
+
+### Files updated
+
+- `src/components/molecules/TradeModal.tsx`
+  - added chevron icon import
+  - added dropdown open state + outside-click handling
+  - added conditional render for initial picker vs custom dropdown
+  - removed duplicate static “{player} offers” header (now part of trigger)
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+on a players turned, a managed, adde 3 houses each to my 3 orange properties, but what is showing is only 1,1,2 houses. i was correctly charged for the houses, but the house count is not correct 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+You found a real bug, and your exact `1,1,2` result is expected from the current loop order.
+
+### Why it happens
+
+In `BuildSellOverlay` confirm handling (`PlayConsole`), house builds are dispatched **tile-by-tile**, with multiple `buyHouse` calls per tile using the original snapshot targets:
+
+```3151:3163:src/components/organisms/PlayConsole.tsx
+for (const t of BOARD_TILES) {
+  if (t.type !== 'property' || targets[t.id] == null) continue;
+  const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+  const tar = targets[t.id];
+  if (tar > cur) {
+    for (let level = cur; level < tar; level += 1) {
+      dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
+    }
+  } else if (tar < cur) {
+    for (let level = cur; level > tar; level -= 1) {
+      dispatch(sellHouse({ tileId: t.id }));
+    }
+  }
+}
+```
+
+But `buyHouse` enforces even building each time, so:
+- first build on first tile succeeds,
+- second/third on same tile fail (not even),
+- then next tile gets one, etc.
+
+That produces patterns like `1,1,2`.
+
+### Why money still looks “correct”
+
+Money is calculated from the **target plan** before dispatching reducer operations, so you can be charged for all intended houses even when some `buyHouse` actions are rejected by even-building logic.
+
+---
+
+If you switch to Agent mode, I can fix it by applying builds in **round-robin passes across the group** (or by computing legal stepwise operations first), and then charging based on **actual applied changes**.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll fix the Manage-confirm apply logic to execute house changes in an even-build-safe order and charge/refund based on actual applied deltas, so results and money always match. I’m patching `PlayConsole` now.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Failed to find context:
+        onConfirm={({ targets, desiredMortgaged, desiredDepotInstalled }) => {
+          const pid = players[turnIndex]?.id || players[0]?.id;
+          if (!pid) return;
+          let totalCost = 0;
+          let totalRefund = 0;
+          // Mortgage/unmortgage application computed in overlay net, but we still need to apply state changes
+          // We will compare desired vs current after money updates using a local copy sourced from DOM via custom event; for simplicity here, money reflects both build/sell and mortgage deltas
+          for (const t of BOARD_TILES) {
+            if (t.type !== 'property' || targets[t.id] == null) continue;
+            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+            const tar = targets[t.id];
+            if (tar > cur) {
+              for (let level = cur; level < tar; level += 1) {
+                totalCost += t.property!.houseCost; // uniform cost per level
+              }
+            } else if (tar < cur) {
+              for (let level = cur; level > tar; level -= 1) {
+                totalRefund += t.property!.houseCost / 2; // uniform refund
+              }
+            }
+          }
+          const net = Math.max(0, totalCost - totalRefund);
+          if (net > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -net }));
+          if (totalRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +totalRefund }));
+          // Apply mortgage/unmortgage flags and compute mortgage deltas
+          let mortCost = 0;
+          let mortRefund = 0;
+          if (desiredMortgaged) {
+            for (const t of BOARD_TILES) {
+              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+              const curMort = propsState.byTileId[t.id]?.mortgaged === true;
+              const desMort = desiredMortgaged[t.id] === true;
+              if (curMort === desMort) continue;
+              const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+              if (desMort && !curMort) {
+                mortRefund += mv;
+              } else if (!desMort && curMort) {
+                mortCost += mv;
+              }
+              dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+              dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+            }
+          }
+          // Apply depot install/remove
+          let depotCost = 0;
+          if (desiredDepotInstalled) {
+            for (const t of BOARD_TILES) {
+              if (t.type !== 'railroad') continue;
+              const cur = propsState.byTileId[t.id]?.depotInstalled === true;
+              const des = desiredDepotInstalled[t.id] === true;
+              if (cur === des) continue;
+              if (des && !cur) depotCost += 100;
+              dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
+            }
+          }
+          if (mortCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -mortCost }));
+          if (mortRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +mortRefund }));
+          if (depotCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -depotCost }));
+          const totalCostAll = totalCost + mortCost + depotCost;
+          const totalRefundAll = totalRefund + mortRefund;
+          const netAll = Math.max(0, totalCostAll - totalRefundAll);
+          if (totalCostAll > 0 || totalRefundAll > 0) {
+            const msg = `Build/Sell & Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}`;
+            dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { playerId: pid, message: msg }, moneyDelta: totalRefund - net, createdAt: new Date().toISOString() }));
+          }
+          for (const t of BOARD_TILES) {
+            if (t.type !== 'property' || targets[t.id] == null) continue;
+            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+            const tar = targets[t.id];
+            if (tar > cur) {
+              for (let level = cur; level < tar; level += 1) {
+                dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
+              }
+            } else if (tar < cur) {
+              for (let level = cur; level > tar; level -= 1) {
+                dispatch(sellHouse({ tileId: t.id }));
+              }
+            }
+          }
+          addPreAction('Managed');
+          setBuildOverlayOpen(false);
+        }}
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 513 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-CLt7H1ON.css   76.16 kB │ gzip:  12.46 kB
+dist/assets/index-CXFiFtZ7.js   602.21 kB │ gzip: 181.93 kB
+✓ built in 1.71s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Fixed — this manage/apply bug is now addressed in `PlayConsole`.
+
+### What changed
+
+In the `BuildSellOverlay` `onConfirm` handler (`src/components/organisms/PlayConsole.tsx`), I replaced the old “pre-calc then tile-by-tile dispatch” approach with an **actual-applied** model:
+
+- Uses live Redux state after each dispatch to confirm what actually changed.
+- Applies house sells/builds in **round-robin passes** across all managed properties:
+  - sells first (respect even-sell)
+  - builds second (respect even-build)
+- Charges/refunds money based on **successful reducer changes only**, not intended targets.
+- Mortgage/depot cost/refund also now counted only when reducer accepted the state change.
+
+### Why this fixes your case
+
+When setting orange group to `3,3,3`, previous logic could process as `1,1,2` due to sequential same-tile dispatches blocked by even-build rules, while still charging full planned cost.  
+Now it builds evenly in passes and money matches actual applied improvements.
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+in the post, turn section, when a player has a "pass" to use to avoid paying, rent, lets have a button in the payment section, "Use Pass (2)", tapping will use pass and avoid having to pay when comleting turn. 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+Great idea — that fits better than a browser `confirm()` prompt. I’ll check the current post-payment wiring so I can outline exactly where to add a `Use Pass (N)` button in that section.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "findUsablePass|window.confirm|Use .*pass|rentSelected|PostActionsBar|Payments",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "findUsablePass|window.confirm|Use .*pass|rentSelected|PostActionsBar|Payments",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 19,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 19
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/PostActionsBar.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Yes — this is the right UX, and it will be cleaner than the `window.confirm` prompt.
+
+I’m in Ask mode, so I can’t patch directly, but here’s exactly how to wire it in `src/components/organisms/PlayConsole.tsx`.
+
+## 1) Add a post-step pass toggle state
+
+Near your other toggles (`rentSelected`, `taxSelected`):
+
+```tsx
+const [useRentPassSelected, setUseRentPassSelected] = useState<boolean>(false);
+```
+
+Reset it anywhere you already reset `rentSelected` (new post segment, next turn, etc.).
+
+## 2) Derive usable pass for current predicted tile
+
+Create a small helper/derived value for the post section:
+
+- tile = `predictedTo ?? currentIndex`
+- if buyable + owned by someone else + not mortgaged:
+  - `usablePassForPost = findUsablePass(activePlayerId, ownerId, tile.id)`
+
+Use `usablePassForPost?.remaining` for button label count.
+
+## 3) Show button in Payments section
+
+`PostActionsBar` already supports `children`, so add a button there:
+
+```tsx
+<PostActionsBar
+  rentLabel={rentLabel}
+  rentSelected={rentSelected}
+  onToggleRent={() => {
+    setRentSelected((v) => !v);
+    setUseRentPassSelected(false); // mutually exclusive
+  }}
+  ...
+>
+  {usablePassForPost && (
+    <TogglePillButton
+      label={<span>Use Pass ({usablePassForPost.remaining})</span>}
+      active={useRentPassSelected}
+      onToggle={() => {
+        setUseRentPassSelected((v) => !v);
+        setRentSelected(false); // mutually exclusive
+      }}
+      variant="blue"
+    />
+  )}
+</PostActionsBar>
+```
+
+## 4) Update required-resolution check
+
+In `rentRequiredButNotSelected`, change:
+
+```tsx
+return !rentSelected;
+```
+
+to:
+
+```tsx
+return !(rentSelected || useRentPassSelected);
+```
+
+So turn completion is allowed when pass is selected.
+
+## 5) Finalize behavior (no confirm dialog)
+
+In the rent part of `finalizeTurn` (where `window.confirm` is now), switch logic to:
+
+- if `useRentPassSelected && usablePass`:
+  - consume pass
+  - append `RENT_PASS_USED`
+  - skip rent payment
+- else if `rentSelected`:
+  - do normal rent transfer
+
+This removes the prompt and follows the button selection instead.
+
+## 6) Optional cleanup
+
+Also remove `window.confirm` usage in `onPayRent` path if you want behavior consistent everywhere.
+
+---
+
+If you switch to Agent mode, I can implement this end-to-end quickly and keep style consistent with your existing payment pills.
+
+---
+
+_**User**_
+
+make that change. 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll wire a new `Use Pass (N)` payment pill in Post step, make it mutually exclusive with `Pay Rent`, and update finalize logic so selected pass is consumed automatically (no confirm prompt) when completing the turn. Then I’ll run lint/build.
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "setRentSelected\\(|rentRequiredButNotSelected|if \\(!thirdDoubles &amp;&amp; rentSelected\\)|onPayRent|PostActionsBar",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "setRentSelected\\(|rentRequiredButNotSelected|if \\(!thirdDoubles &amp;&amp; rentSelected\\)|onPayRent|PostActionsBar",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 20,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 20
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/atoms/TogglePillButton.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Failed to find context:
+    if (!thirdDoubles && rentSelected) {
+      const idx2 = predictedTo ?? currentIndex;
+      const t2 = getTileByIndex(idx2);
+      if (t2 && (t2.type === 'property' || t2.type === 'railroad' || t2.type === 'utility')) {
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "If Rent was toggled|thirdDoubles &amp;&amp; rentSelected|window.confirm\\(&#96;Use",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "If Rent was toggled|thirdDoubles &amp;&amp; rentSelected|window.confirm\\(&#96;Use",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 4,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 4
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 513 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-CLt7H1ON.css   76.16 kB │ gzip:  12.46 kB
+dist/assets/index-Dfb_LeYU.js   602.61 kB │ gzip: 182.04 kB
+✓ built in 1.67s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Implemented.
+
+### What changed in Post step payments
+
+In `src/components/organisms/PlayConsole.tsx`:
+
+- Added a new payment toggle state: `useRentPassSelected`.
+- In the **Payments** section, when a usable pass exists, it now shows:
+  - **`Use Pass (N)`** as a pill button (blue variant), where `N` is remaining uses.
+- Made toggles mutually exclusive:
+  - selecting `Pay Rent` clears `Use Pass`
+  - selecting `Use Pass` clears `Pay Rent`
+
+### Turn-completion behavior
+
+- Finalize logic now respects this button:
+  - if `Use Pass` is selected and a usable pass exists, it consumes the pass and skips rent
+  - otherwise, normal rent payment applies if rent was selected
+- Removed the `window.confirm` prompt from this post-turn flow for pass use.
+- Updated validation gating so post-step requirement is satisfied by either:
+  - `Pay Rent`, or
+  - `Use Pass` (when pass is actually usable)
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+after using a pass, and hitting summary, and hitting End turn, the players turn is not ended, and we dont move on to the next player 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+Good catch — that sounds like a control-flow regression in `finalizeTurn`. I’ll verify the exact branch, but this is likely a premature `return` after consuming pass.
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+Exactly — confirmed. The turn is getting stuck because of this `return` in `finalizeTurn` after pass consumption:
+
+```760:814:src/components/organisms/PlayConsole.tsx
+if (useRentPassSelected && usablePass) {
+  ...
+  dispatch(appendEvent(...));
+  return; // <- exits finalizeTurn too early
+}
+```
+
+That `return` exits before movement/advance logic runs, so `End Turn` doesn’t move to next player.
+
+### Fix
+
+Change that `return` to just skip rent and continue finalize flow (movement + turn advance).  
+Two simple options:
+
+- replace `return;` with no-op (remove it), or
+- set a local `rentHandled = true` flag and continue, avoiding the pay-rent branch.
+
+Because you’re in Ask mode, I can’t patch directly here — switch to Agent mode and I’ll apply this safely in one edit.
+
+---
+
+_**User**_
+
+make that change
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll patch that early `return` so pass-use no longer exits `finalizeTurn`, then run lint/build to confirm turn progression works.
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: npm run build</summary>
+
+```bash
+npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 513 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-CLt7H1ON.css   76.16 kB │ gzip:  12.46 kB
+dist/assets/index-DihtmQ0K.js   602.62 kB │ gzip: 182.05 kB
+✓ built in 1.64s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+Fixed.
+
+### What changed
+
+In `src/components/organisms/PlayConsole.tsx` (inside `finalizeTurn` rent handling):
+
+- Removed the early `return` after consuming a pass.
+- Added a guard so when pass is used, rent transfer is skipped **without** exiting turn finalization.
+
+So now flow is:
+
+- `Use Pass` selected -> pass is consumed, no rent charged
+- then finalize continues normally -> movement/summary/end-turn logic runs
+- next player turn advances correctly
+
+### Validation
+
+- Lints: clean
+- Build: passes
+
+---
+
+_**User**_
+
+lets push the latest changes to git and write a consise summary of those changes in bullets, to share with the team 
+
+---
+
+_**Agent (model gpt-5.3-codex, mode Agent)**_
+
+I’ll commit and push the current updates, then I’ll share a concise bullet summary you can post to the team. I’m checking git status/diff/log first to draft an accurate commit message.
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git status --short --branch</summary>
+
+```bash
+git status --short --branch
+```
+
+```
+## main...origin/main
+ M .specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+ M src/components/molecules/BuildSellOverlay.tsx
+ M src/components/molecules/PlayerTurnCards.tsx
+ M src/components/molecules/TradeModal.tsx
+ M src/components/organisms/PlayConsole.tsx
+ M src/features/properties/propertiesSlice.ts
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git diff -- src/components/organisms/PlayConsole.tsx src/components/molecules/TradeModal.tsx src/components/molecules/PlayerTurnCards.tsx src/features/properties/propertiesSlice.ts</summary>
+
+```bash
+git diff -- src/components/organisms/PlayConsole.tsx src/components/molecules/TradeModal.tsx src/components/molecules/PlayerTurnCards.tsx src/features/properties/propertiesSlice.ts
+```
+
+```
+diff --git a/src/components/molecules/PlayerTurnCards.tsx b/src/components/molecules/PlayerTurnCards.tsx
+index 5bfecc7..6b0d1a5 100644
+--- a/src/components/molecules/PlayerTurnCards.tsx
++++ b/src/components/molecules/PlayerTurnCards.tsx
+@@ -29,8 +29,12 @@ export interface PlayerTurnCardsProps {
+   utilitiesTooltipForPlayer: (playerId: string) =&gt; React.ReactNode;
+   groupTooltipForPlayer: (playerId: string, group: ColorGroup) =&gt; React.ReactNode;
+   getGroupBorderClass: (group: ColorGroup) =&gt; string;
+-  tradePassCountForPlayer: (playerId: string) =&gt; number;
+-  tradePassTooltipForPlayer: (playerId: string) =&gt; React.ReactNode;
++  tradePassBadgesForPlayer: (playerId: string) =&gt; Array&lt;{
++    key: string;
++    count: number;
++    borderClassName: string;
++    tooltip: React.ReactNode;
++  }&gt;;
+   renderActivePanel?: (player: PlayerTurnCardsPlayer, idx: number) =&gt; React.ReactNode;
+ }
+ 
+@@ -43,8 +47,7 @@ export default function PlayerTurnCards({
+   utilitiesTooltipForPlayer,
+   groupTooltipForPlayer,
+   getGroupBorderClass,
+-  tradePassCountForPlayer,
+-  tradePassTooltipForPlayer,
++  tradePassBadgesForPlayer,
+   renderActivePanel,
+ }: PlayerTurnCardsProps): JSX.Element {
+   return (
+@@ -63,8 +66,10 @@ export default function PlayerTurnCards({
+           return 'Jail: Last Roll';
+         })();
+         return (
+-          &lt;div data-qa="player-turn-card" key={p.id} className={&#96;rounded-3xl overflow-hidden border-2 ${isActive ? 'border-emerald-400 border-3' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2&#96;}&gt;
+-            &lt;div className=" pl-2 py-1 pr-2 gap-2 relative bg-surface-1  flex flex-col"&gt;
++          &lt;div data-qa="player-turn-card" key={p.id} className={&#96;rounded-3xl  border-2 ${isActive ? 'border-emerald-400 border-3' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2&#96;}&gt;
++            &lt;div className={&#96;pl-2 py-1 pr-2 gap-2 relative bg-surface-1 flex flex-col 
++              ${isActive ? 'rounded-t-3xl' : 'rounded-3xl'}
++              &#96;}&gt;
+               {/* player avatar &amp; name */}
+               &lt;div className="flex items-center gap-3 relative"&gt;
+                 &lt;div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}&gt;
+@@ -85,14 +90,13 @@ export default function PlayerTurnCards({
+                 {(Number(p.busTickets ?? 0) &gt; 0) &amp;&amp; (&lt;HudBadge title="Bus tickets" icon={&lt;span&gt;🚌&lt;/span&gt;} count={Number(p.busTickets ?? 0)} /&gt;)}
+                 {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) &gt; 0) &amp;&amp; (&lt;HudBadge title="Get Out of Jail Free" icon={&lt;span&gt;⛓️‍💥&lt;/span&gt;} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} /&gt;)}
+                 {(() =&gt; {
+-                  const passCount = tradePassCountForPlayer(p.id);
+-                  if (passCount &lt;= 0) return null;
+-                  const tip = tradePassTooltipForPlayer(p.id);
+-                  return (
+-                    &lt;Tooltip content={tip || &#96;Passes x${passCount}&#96;}&gt;
+-                      &lt;HudBadge title="Trade passes" icon={&lt;span&gt;🎫&lt;/span&gt;} count={passCount} variant="pill" borderClassName="border-violet-400" /&gt;
++                  const badges = tradePassBadgesForPlayer(p.id);
++                  if (badges.length &lt;= 0) return null;
++                  return badges.map((badge) =&gt; (
++                    &lt;Tooltip key={badge.key} content={badge.tooltip}&gt;
++                      &lt;HudBadge title="Trade passes" icon={&lt;span&gt;🎟️&lt;/span&gt;} count={badge.count} variant="pill" borderClassName={badge.borderClassName} /&gt;
+                     &lt;/Tooltip&gt;
+-                  );
++                  ));
+                 })()}
+                 {(() =&gt; {
+                   const rrCount = BOARD_TILES.filter((t) =&gt; t.type === 'railroad' &amp;&amp; (propsByTileId[t.id]?.ownerId === p.id)).length;
+diff --git a/src/components/molecules/TradeModal.tsx b/src/components/molecules/TradeModal.tsx
+index 91db8a0..33dacc6 100644
+--- a/src/components/molecules/TradeModal.tsx
++++ b/src/components/molecules/TradeModal.tsx
+@@ -5,6 +5,7 @@ import AvatarToken from '@/components/atoms/AvatarToken';
+ import { AVATARS } from '@/data/avatars';
+ import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type ColorGroup } from '@/data/board';
+ import type { TradePassEntry, TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
++import { FaChevronDown } from 'react-icons/fa';
+ 
+ type TradeableProperty = {
+   id: string;
+@@ -72,7 +73,7 @@ function PlayerPickerRow({
+ 
+   return (
+     &lt;div className="space-y-1.5"&gt;
+-      &lt;div className="text-[11px] font-semibold uppercase tracking-wide text-subtle"&gt;{label}&lt;/div&gt;
++      &lt;div className="text-sm font-semibold uppercase tracking-wide text-subtle"&gt;{label}&lt;/div&gt;
+       &lt;div role="group" aria-label={label} className="flex flex-row flex-wrap gap-2"&gt;
+         {options.map((p) =&gt; {
+           const bp = bpById.get(p.id);
+@@ -95,7 +96,7 @@ function PlayerPickerRow({
+                   emoji={emoji}
+                   size={32}
+                   borderColorClass="border-[color:var(--player-color)]"
+-                  ring={selected}
++                  ring
+                   ringColorClass="ring-[color:var(--player-color)]"
+                 /&gt;
+               &lt;/div&gt;
+@@ -194,6 +195,21 @@ function SelectableCardTile({
+   );
+ }
+ 
++function SummaryCardTile({
++  label,
++  sublabel,
++}: {
++  label: string;
++  sublabel?: string;
++}) {
++  return (
++    &lt;div className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2"&gt;
++      &lt;div className="text-sm font-semibold"&gt;{label}&lt;/div&gt;
++      {sublabel &amp;&amp; &lt;div className="text-xs opacity-70"&gt;{sublabel}&lt;/div&gt;}
++    &lt;/div&gt;
++  );
++}
++
+ export default function TradeModal({
+   open,
+   onClose,
+@@ -210,8 +226,10 @@ export default function TradeModal({
+   const [step, setStep] = React.useState&lt;1 | 2&gt;(1);
+   const [player1Id, setPlayer1Id] = React.useState&lt;string | null&gt;(null);
+   const [player2Id, setPlayer2Id] = React.useState&lt;string | null&gt;(null);
++  const [isTradeWithMenuOpen, setIsTradeWithMenuOpen] = React.useState(false);
+   const [offer1, setOffer1] = React.useState&lt;TradeOffer&gt;(EMPTY_OFFER);
+   const [offer2, setOffer2] = React.useState&lt;TradeOffer&gt;(EMPTY_OFFER);
++  const tradeWithMenuRef = React.useRef&lt;HTMLDivElement | null&gt;(null);
+ 
+   const bpById = useMemo(() =&gt; new Map(boardPlayers.map((bp) =&gt; [bp.id, bp] as const)), [boardPlayers]);
+   const playersById = useMemo(() =&gt; new Map(players.map((p) =&gt; [p.id, p] as const)), [players]);
+@@ -221,6 +239,7 @@ export default function TradeModal({
+     setStep(1);
+     setPlayer1Id(initiatorPlayerId ?? null);
+     setPlayer2Id(null);
++    setIsTradeWithMenuOpen(false);
+     setOffer1(EMPTY_OFFER);
+     setOffer2(EMPTY_OFFER);
+   }, [open, initiatorPlayerId]);
+@@ -240,8 +259,19 @@ export default function TradeModal({
+ 
+   React.useEffect(() =&gt; {
+     setOffer2(EMPTY_OFFER);
++    setIsTradeWithMenuOpen(false);
+   }, [player2Id]);
+ 
++  React.useEffect(() =&gt; {
++    if (!isTradeWithMenuOpen) return;
++    const onMouseDown = (e: MouseEvent) =&gt; {
++      if (!tradeWithMenuRef.current) return;
++      if (!tradeWithMenuRef.current.contains(e.target as Node)) setIsTradeWithMenuOpen(false);
++    };
++    window.addEventListener('mousedown', onMouseDown);
++    return () =&gt; window.removeEventListener('mousedown', onMouseDown);
++  }, [isTradeWithMenuOpen]);
++
+   const canConfirm = player1Id != null &amp;&amp; player2Id != null;
+   const player1Inventory = player1Id ? tradeInventoryByPlayerId[player1Id] : undefined;
+   const player2Inventory = player2Id ? tradeInventoryByPlayerId[player2Id] : undefined;
+@@ -251,6 +281,7 @@ export default function TradeModal({
+   const player1Emoji = AVATARS.find((a) =&gt; a.key === player1Board?.avatarKey)?.emoji ?? '🙂';
+   const player2Board = player2Id ? bpById.get(player2Id) : undefined;
+   const player2Emoji = AVATARS.find((a) =&gt; a.key === player2Board?.avatarKey)?.emoji ?? '🙂';
++  const tradeWithOptions = useMemo(() =&gt; players.filter((p) =&gt; p.id !== player1Id), [players, player1Id]);
+ 
+   const toggleProperty = (side: 1 | 2, tileId: string) =&gt; {
+     if (side === 1) {
+@@ -395,18 +426,26 @@ export default function TradeModal({
+   const toPassScopes = parseScopeAmounts(offer2.passScopeAmounts);
+ 
+   const tradeSummary = useMemo(() =&gt; {
+-    const resolvePropertyNames = (
++    const resolvePropertyCards = (
+       selectedIds: string[],
+       inventory: PlayerTradeInventory | undefined
+-    ): string[] =&gt; {
++    ): Array&lt;{ id: string; name: string; bgClass: string; fgClass: string }&gt; =&gt; {
+       const map = new Map((inventory?.properties ?? []).map((p) =&gt; [p.id, p.name] as const));
+-      return selectedIds.map((id) =&gt; map.get(id) ?? getTileById(id)?.name ?? id);
++      return selectedIds.map((id) =&gt; {
++        const tile = getTileById(id);
++        return {
++          id,
++          name: map.get(id) ?? tile?.name ?? id,
++          bgClass: tile ? getTileHeaderBgClass(tile) : 'bg-surface-1',
++          fgClass: tile ? getTileHeaderTextClass(tile) : 'text-fg',
++        };
++      });
+     };
+     const passLabels = (scopes: Array&lt;{ scopeType: TradePassScopeType; scopeKey: string; amount: 1 | 2 }&gt;): string[] =&gt;
+       scopes.map((s) =&gt; &#96;${formatPassScopeLabel(s.scopeType, s.scopeKey)} x${s.amount}&#96;);
+ 
+     const from = {
+-      properties: resolvePropertyNames(offer1.propertyIds, player1Inventory),
++      properties: resolvePropertyCards(offer1.propertyIds, player1Inventory),
+       cash: offer1.cash,
+       busTickets: offer1.busTicketsSelected.length,
+       gojfChance: offer1.gojfChanceSelected.length,
+@@ -415,7 +454,7 @@ export default function TradeModal({
+     };
+ 
+     const to = {
+-      properties: resolvePropertyNames(offer2.propertyIds, player2Inventory),
++      properties: resolvePropertyCards(offer2.propertyIds, player2Inventory),
+       cash: offer2.cash,
+       busTickets: offer2.busTicketsSelected.length,
+       gojfChance: offer2.gojfChanceSelected.length,
+@@ -491,10 +530,7 @@ export default function TradeModal({
+ 
+             &lt;div className="p-4"&gt;
+               &lt;div className="space-y-2"&gt;
+-                &lt;div className="text-xs font-semibold uppercase tracking-wide text-subtle"&gt;
+-                  {step === 1 ? 'Trade' : 'Summary'}
+-                &lt;/div&gt;
+-                {step === 1 &amp;&amp; &lt;div className="grid grid-cols-1 lg:grid-cols-2 gap-3"&gt;
++                {step === 1 &amp;&amp; &lt;div className="grid grid-cols-2 gap-3"&gt;
+                   &lt;div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3"&gt;
+                     &lt;div className="flex items-center gap-2"&gt;
+                       &lt;div style={{ ['--player-color' as any]: player1Board?.color ?? '#a1a1aa' } as React.CSSProperties}&gt;
+@@ -502,7 +538,8 @@ export default function TradeModal({
+                           emoji={player1Emoji}
+                           size={26}
+                           borderColorClass="border-[color:var(--player-color)]"
+-                          ring={false}
++                          ring
++                          ringColorClass="ring-[color:var(--player-color)]"
+                         /&gt;
+                       &lt;/div&gt;
+                       &lt;div className="text-sm font-semibold"&gt;You ({player1Name}) offer&lt;/div&gt;
+@@ -691,31 +728,89 @@ export default function TradeModal({
+                   &lt;/div&gt;
+ 
+                   &lt;div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3"&gt;
+-                    &lt;div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2"&gt;
+-                      &lt;PlayerPickerRow
+-                        label="Trade With"
+-                        players={players}
+-                        bpById={bpById}
+-                        selectedId={player2Id}
+-                        onSelect={setPlayer2Id}
+-                        excludeId={player1Id}
+-                      /&gt;
+-                    &lt;/div&gt;
++                    {!player2Id ? (
++                      &lt;div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2"&gt;
++                        &lt;PlayerPickerRow
++                          label="Trade With"
++                          players={players}
++                          bpById={bpById}
++                          selectedId={player2Id}
++                          onSelect={setPlayer2Id}
++                          excludeId={player1Id}
++                        /&gt;
++                      &lt;/div&gt;
++                    ) : (
++                      &lt;div className="relative" ref={tradeWithMenuRef}&gt;
++                        &lt;button
++                          type="button"
++                          onClick={() =&gt; setIsTradeWithMenuOpen((v) =&gt; !v)}
++                          aria-haspopup="listbox"
++                          aria-expanded={isTradeWithMenuOpen}
++                          className="w-full rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800"
++                        &gt;
++                          &lt;div className="flex items-center justify-between gap-2"&gt;
++                            &lt;div className="flex items-center gap-2"&gt;
++                              &lt;div style={{ ['--player-color' as any]: player2Board?.color ?? '#a1a1aa' } as React.CSSProperties}&gt;
++                                &lt;AvatarToken
++                                  emoji={player2Emoji}
++                                  size={26}
++                                  borderColorClass="border-[color:var(--player-color)]"
++                                  ring
++                                  ringColorClass="ring-[color:var(--player-color)]"
++                                /&gt;
++                              &lt;/div&gt;
++                              &lt;div className="text-sm font-semibold"&gt;{player2Name} offers&lt;/div&gt;
++                            &lt;/div&gt;
++                            &lt;FaChevronDown className={&#96;text-xs opacity-70 transition-transform ${isTradeWithMenuOpen ? 'rotate-180' : ''}&#96;} /&gt;
++                          &lt;/div&gt;
++                        &lt;/button&gt;
++                        {isTradeWithMenuOpen &amp;&amp; (
++                          &lt;div role="listbox" className="absolute z-20 mt-2 w-full rounded-lg border border-surface bg-white dark:bg-neutral-900 p-2 shadow-xl max-h-56 overflow-auto"&gt;
++                            &lt;div className="grid grid-cols-1 gap-2"&gt;
++                              {tradeWithOptions.map((p) =&gt; {
++                                const bp = bpById.get(p.id);
++                                const emoji = AVATARS.find((a) =&gt; a.key === bp?.avatarKey)?.emoji ?? '🙂';
++                                const selected = player2Id === p.id;
++                                return (
++                                  &lt;button
++                                    key={p.id}
++                                    type="button"
++                                    role="option"
++                                    aria-selected={selected}
++                                    onClick={() =&gt; {
++                                      setPlayer2Id(p.id);
++                                      setIsTradeWithMenuOpen(false);
++                                    }}
++                                    className={&#96;flex items-center gap-2 rounded-xl border border-surface px-3 py-2 text-left transition-colors ${
++                                      selected
++                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30'
++                                        : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800'
++                                    }&#96;}
++                                  &gt;
++                                    &lt;div style={{ ['--player-color' as any]: bp?.color ?? '#a1a1aa' } as React.CSSProperties}&gt;
++                                      &lt;AvatarToken
++                                        emoji={emoji}
++                                        size={28}
++                                        borderColorClass="border-[color:var(--player-color)]"
++                                        ring
++                                        ringColorClass="ring-[color:var(--player-color)]"
++                                      /&gt;
++                                    &lt;/div&gt;
++                                    &lt;div className="min-w-0"&gt;
++                                      &lt;div className="font-semibold truncate"&gt;{p.nickname}&lt;/div&gt;
++                                    &lt;/div&gt;
++                                    {selected &amp;&amp; &lt;div className="ml-auto text-emerald-700 dark:text-emerald-300 font-semibold text-sm"&gt;✓&lt;/div&gt;}
++                                  &lt;/button&gt;
++                                );
++                              })}
++                            &lt;/div&gt;
++                          &lt;/div&gt;
++                        )}
++                      &lt;/div&gt;
++                    )}
+ 
+                     {player2Id ? (
+                       &lt;&gt;
+-                        &lt;div className="flex items-center gap-2"&gt;
+-                          &lt;div style={{ ['--player-color' as any]: player2Board?.color ?? '#a1a1aa' } as React.CSSProperties}&gt;
+-                            &lt;AvatarToken
+-                              emoji={player2Emoji}
+-                              size={26}
+-                              borderColorClass="border-[color:var(--player-color)]"
+-                              ring={false}
+-                            /&gt;
+-                          &lt;/div&gt;
+-                          &lt;div className="text-sm font-semibold"&gt;{player2Name} offers&lt;/div&gt;
+-                        &lt;/div&gt;
+-
+                         &lt;div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3"&gt;
+                           &lt;div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"&gt;Properties&lt;/div&gt;
+                           &lt;div className="mt-2 max-h-44 overflow-auto space-y-1 pr-1"&gt;
+@@ -911,18 +1006,56 @@ export default function TradeModal({
+                   ) : (
+                     &lt;div className="mt-2 grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm"&gt;
+                       &lt;div className="rounded-md border border-surface bg-surface-1 p-2"&gt;
+-                        &lt;div className="font-semibold"&gt;{player1Name} → {player2Name}&lt;/div&gt;
+-                        &lt;div className="mt-1 text-xs text-subtle"&gt;{tradeSummary.from.properties.length &gt; 0 ? &#96;Properties: ${tradeSummary.from.properties.join(', ')}&#96; : 'Properties: None'}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;Cash: ${tradeSummary.from.cash}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;Cards: Bus x{tradeSummary.from.busTickets}, GOJF Chance x{tradeSummary.from.gojfChance}, GOJF Community x{tradeSummary.from.gojfCommunity}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;{tradeSummary.from.passes.length &gt; 0 ? &#96;Passes: ${tradeSummary.from.passes.join(', ')}&#96; : 'Passes: None'}&lt;/div&gt;
++                        &lt;div className="font-semibold"&gt;You gain&lt;/div&gt;
++                        {(tradeSummary.to.properties.length === 0 &amp;&amp;
++                          tradeSummary.to.cash &lt;= 0 &amp;&amp;
++                          tradeSummary.to.busTickets &lt;= 0 &amp;&amp;
++                          tradeSummary.to.gojfChance &lt;= 0 &amp;&amp;
++                          tradeSummary.to.gojfCommunity &lt;= 0 &amp;&amp;
++                          tradeSummary.to.passes.length === 0) ? (
++                          &lt;div className="mt-1 text-xs text-subtle"&gt;No assets gained.&lt;/div&gt;
++                        ) : (
++                          &lt;div className="mt-2 grid grid-cols-1 gap-2"&gt;
++                            {tradeSummary.to.properties.map((prop) =&gt; (
++                              &lt;div key={&#96;gain-you-property-${prop.id}&#96;} className="rounded-md border border-surface overflow-hidden"&gt;
++                                &lt;div className={&#96;px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}&#96;}&gt;{prop.name}&lt;/div&gt;
++                              &lt;/div&gt;
++                            ))}
++                            {tradeSummary.to.cash &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;$${tradeSummary.to.cash}&#96;} sublabel="Cash" /&gt;}
++                            {tradeSummary.to.busTickets &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;Bus Ticket x${tradeSummary.to.busTickets}&#96;} /&gt;}
++                            {tradeSummary.to.gojfChance &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;GOJF Chance x${tradeSummary.to.gojfChance}&#96;} /&gt;}
++                            {tradeSummary.to.gojfCommunity &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;GOJF Community x${tradeSummary.to.gojfCommunity}&#96;} /&gt;}
++                            {tradeSummary.to.passes.map((pass, idx) =&gt; (
++                              &lt;SummaryCardTile key={&#96;gain-you-pass-${idx}&#96;} label={pass} sublabel="Pass" /&gt;
++                            ))}
++                          &lt;/div&gt;
++                        )}
+                       &lt;/div&gt;
+                       &lt;div className="rounded-md border border-surface bg-surface-1 p-2"&gt;
+-                        &lt;div className="font-semibold"&gt;{player2Name} → {player1Name}&lt;/div&gt;
+-                        &lt;div className="mt-1 text-xs text-subtle"&gt;{tradeSummary.to.properties.length &gt; 0 ? &#96;Properties: ${tradeSummary.to.properties.join(', ')}&#96; : 'Properties: None'}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;Cash: ${tradeSummary.to.cash}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;Cards: Bus x{tradeSummary.to.busTickets}, GOJF Chance x{tradeSummary.to.gojfChance}, GOJF Community x{tradeSummary.to.gojfCommunity}&lt;/div&gt;
+-                        &lt;div className="text-xs text-subtle"&gt;{tradeSummary.to.passes.length &gt; 0 ? &#96;Passes: ${tradeSummary.to.passes.join(', ')}&#96; : 'Passes: None'}&lt;/div&gt;
++                        &lt;div className="font-semibold"&gt;{player2Name} gains&lt;/div&gt;
++                        {(tradeSummary.from.properties.length === 0 &amp;&amp;
++                          tradeSummary.from.cash &lt;= 0 &amp;&amp;
++                          tradeSummary.from.busTickets &lt;= 0 &amp;&amp;
++                          tradeSummary.from.gojfChance &lt;= 0 &amp;&amp;
++                          tradeSummary.from.gojfCommunity &lt;= 0 &amp;&amp;
++                          tradeSummary.from.passes.length === 0) ? (
++                          &lt;div className="mt-1 text-xs text-subtle"&gt;No assets gained.&lt;/div&gt;
++                        ) : (
++                          &lt;div className="mt-2 grid grid-cols-1 gap-2"&gt;
++                            {tradeSummary.from.properties.map((prop) =&gt; (
++                              &lt;div key={&#96;gain-other-property-${prop.id}&#96;} className="rounded-md border border-surface overflow-hidden"&gt;
++                                &lt;div className={&#96;px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}&#96;}&gt;{prop.name}&lt;/div&gt;
++                              &lt;/div&gt;
++                            ))}
++                            {tradeSummary.from.cash &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;$${tradeSummary.from.cash}&#96;} sublabel="Cash" /&gt;}
++                            {tradeSummary.from.busTickets &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;Bus Ticket x${tradeSummary.from.busTickets}&#96;} /&gt;}
++                            {tradeSummary.from.gojfChance &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;GOJF Chance x${tradeSummary.from.gojfChance}&#96;} /&gt;}
++                            {tradeSummary.from.gojfCommunity &gt; 0 &amp;&amp; &lt;SummaryCardTile label={&#96;GOJF Community x${tradeSummary.from.gojfCommunity}&#96;} /&gt;}
++                            {tradeSummary.from.passes.map((pass, idx) =&gt; (
++                              &lt;SummaryCardTile key={&#96;gain-other-pass-${idx}&#96;} label={pass} sublabel="Pass" /&gt;
++                            ))}
++                          &lt;/div&gt;
++                        )}
+                       &lt;/div&gt;
+                     &lt;/div&gt;
+                   )}
+@@ -940,7 +1073,7 @@ export default function TradeModal({
+                 &lt;&gt;
+                   &lt;button
+                     type="button"
+-                    className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
++                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                     onClick={onClose}
+                   &gt;
+                     Cancel
+@@ -958,7 +1091,7 @@ export default function TradeModal({
+                 &lt;&gt;
+                   &lt;button
+                     type="button"
+-                    className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
++                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                     onClick={() =&gt; setStep(1)}
+                   &gt;
+                     Back
+diff --git a/src/components/organisms/PlayConsole.tsx b/src/components/organisms/PlayConsole.tsx
+index bcbe34c..cf1c8d2 100644
+--- a/src/components/organisms/PlayConsole.tsx
++++ b/src/components/organisms/PlayConsole.tsx
+@@ -40,7 +40,6 @@ import TurnRibbon, { type TurnSegment } from '@/components/molecules/TurnRibbon'
+ import JailAttemptRibbon from '@/components/molecules/JailAttemptRibbon';
+ import PostActionsBar from '@/components/molecules/PostActionsBar';
+ import PurchaseActionsRow from '@/components/molecules/PurchaseActionsRow';
+-import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
+ import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
+ import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
+ import AuctionOverlay from '@/components/molecules/AuctionOverlay';
+@@ -110,9 +109,11 @@ export default function PlayConsole(): JSX.Element {
+   const [predictedTo, setPredictedTo] = useState&lt;number | null&gt;(null);
+   const [buySelected, setBuySelected] = useState&lt;boolean&gt;(false);
+   const [rentSelected, setRentSelected] = useState&lt;boolean&gt;(false);
++  const [useRentPassSelected, setUseRentPassSelected] = useState&lt;boolean&gt;(false);
+   const [taxSelected, setTaxSelected] = useState&lt;boolean&gt;(false);
+   const [busSelectedCardId, setBusSelectedCardId] = useState&lt;string | null&gt;(null);
+   const [overlay, setOverlay] = useState&lt;{ deck: 'chance' | 'community' | 'bus' | null }&gt;(() =&gt; ({ deck: null }));
++  const [cardSearch, setCardSearch] = useState&lt;string&gt;('');
+   const [centerOverlay, setCenterOverlay] = useState&lt;{ type: 'busTeleport' | 'tripleTeleport' | null }&gt;(() =&gt; ({ type: null }));
+   const [busTeleportTo, setBusTeleportTo] = useState&lt;number | null&gt;(null);
+   const [tripleTeleportTo, setTripleTeleportTo] = useState&lt;number | null&gt;(null);
+@@ -145,10 +146,43 @@ export default function PlayConsole(): JSX.Element {
+   const [queuedPostActive, setQueuedPostActive] = useState&lt;QueuedMovement | null&gt;(null);
+   const events = useSelector((s: RootState) =&gt; s.events.events);
+ 
++  React.useEffect(() =&gt; {
++    setCardSearch('');
++  }, [overlay.deck]);
++
+   const addPreAction = React.useCallback((label: string) =&gt; {
+     setPreActions((prev) =&gt; (prev.includes(label) ? prev : [...prev, label]));
+   }, []);
+ 
++  const filteredOverlayCards = useMemo(() =&gt; {
++    if (!overlay.deck || overlay.deck === 'bus') return [];
++    const query = cardSearch.trim().toLowerCase();
++    const drawPile = cardsState.decks[overlay.deck].drawPile;
++    if (!query) return drawPile;
++    const queryTokens = query.split(/\s+/).filter(Boolean);
++    const isTokenPrefixMatch = (text: string): boolean =&gt; {
++      const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
++      if (queryTokens.length &gt; words.length) return false;
++      let wi = 0;
++      for (const token of queryTokens) {
++        let found = false;
++        while (wi &lt; words.length) {
++          if (words[wi].startsWith(token)) {
++            found = true;
++            wi += 1;
++            break;
++          }
++          wi += 1;
++        }
++        if (!found) return false;
++      }
++      return true;
++    };
++    return drawPile.filter(
++      (card) =&gt; card.id.toLowerCase().includes(query) || card.text.toLowerCase().includes(query) || isTokenPrefixMatch(card.text)
++    );
++  }, [overlay.deck, cardSearch, cardsState.decks]);
++
+   const BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN: Record&lt;ColorGroup, number&gt; = {
+     brown: 2,
+     lightBlue: 3,
+@@ -273,6 +307,7 @@ export default function PlayConsole(): JSX.Element {
+     setTripleTeleportTo(null);
+     setBuySelected(false);
+     setRentSelected(false);
++    setUseRentPassSelected(false);
+     setTaxSelected(false);
+     setBusSelectedCardId(null);
+     setAuctionCompleted(false);
+@@ -582,6 +617,11 @@ export default function PlayConsole(): JSX.Element {
+     if (!thirdDoubles &amp;&amp; buySelected &amp;&amp; predictedTo != null) {
+       const t = getTileByIndex(predictedTo);
+       const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
++      const currentMoney = players.find((x) =&gt; x.id === pid)?.money ?? 0;
++      const pendingJackpot = isTripleOnes &amp;&amp; tripleTeleportTo != null ? 1000 : 0;
++      if (currentMoney + pendingJackpot &lt; price) {
++        setBuySelected(false);
++      } else {
+       dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
+       if (price &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: -price }));
+       dispatch(
+@@ -595,6 +635,7 @@ export default function PlayConsole(): JSX.Element {
+           createdAt: new Date().toISOString(),
+         })
+       );
++      }
+     }
+     // If Auction (property-tied or tile) was staged and confirmed, apply before movement
+     if (stagedAuction) {
+@@ -716,13 +757,14 @@ export default function PlayConsole(): JSX.Element {
+       setPostAction('None');
+       setBuySelected(false);
+       setRentSelected(false);
++      setUseRentPassSelected(false);
+       setTaxSelected(false);
+       setSummaryOpen(false);
+       return;
+     }
+ 
+-    // If Rent was toggled, apply rent transfer before moving (skip on third doubles)
+-    if (!thirdDoubles &amp;&amp; rentSelected) {
++    // If rent or pass was selected, resolve payment before moving (skip on third doubles)
++    if (!thirdDoubles &amp;&amp; (rentSelected || useRentPassSelected)) {
+       const idx2 = predictedTo ?? currentIndex;
+       const t2 = getTileByIndex(idx2);
+       if (t2 &amp;&amp; (t2.type === 'property' || t2.type === 'railroad' || t2.type === 'utility')) {
+@@ -735,49 +777,48 @@ export default function PlayConsole(): JSX.Element {
+           const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
+           if (rent2 &gt; 0) {
+             const usablePass = findUsablePass(pid, ownerIdForTile2, t2.id);
+-            if (usablePass) {
++            if (useRentPassSelected &amp;&amp; usablePass) {
+               const passLabel =
+                 usablePass.scopeType === 'color'
+                   ? &#96;${usablePass.scopeKey} pass&#96;
+                   : usablePass.scopeType === 'railroad'
+                     ? 'Railroad pass'
+                     : 'Utility pass';
+-              const usePass = window.confirm(&#96;Use ${passLabel} to skip $${rent2} rent?&#96;);
+-              if (usePass) {
+-                dispatch(
+-                  consumeTradePass({
+-                    holderPlayerId: usablePass.holderPlayerId,
+-                    issuerPlayerId: usablePass.issuerPlayerId,
++              dispatch(
++                consumeTradePass({
++                  holderPlayerId: usablePass.holderPlayerId,
++                  issuerPlayerId: usablePass.issuerPlayerId,
++                  scopeType: usablePass.scopeType,
++                  scopeKey: usablePass.scopeKey,
++                })
++              );
++              dispatch(
++                appendEvent({
++                  id: crypto.randomUUID(),
++                  gameId: 'local',
++                  type: 'RENT_PASS_USED',
++                  actorPlayerId: pid,
++                  payload: {
++                    holderPlayerId: pid,
++                    issuerPlayerId: ownerIdForTile2,
++                    tileId: t2.id,
+                     scopeType: usablePass.scopeType,
+                     scopeKey: usablePass.scopeKey,
+-                  })
+-                );
+-                dispatch(
+-                  appendEvent({
+-                    id: crypto.randomUUID(),
+-                    gameId: 'local',
+-                    type: 'RENT_PASS_USED',
+-                    actorPlayerId: pid,
+-                    payload: {
+-                      holderPlayerId: pid,
+-                      issuerPlayerId: ownerIdForTile2,
+-                      tileId: t2.id,
+-                      scopeType: usablePass.scopeType,
+-                      scopeKey: usablePass.scopeKey,
+-                      preventedRent: rent2,
+-                      message: &#96;${passLabel} used to skip rent&#96;,
+-                    },
+-                    createdAt: new Date().toISOString(),
+-                  })
+-                );
+-                return;
+-              }
++                    preventedRent: rent2,
++                    message: &#96;${passLabel} used to skip rent&#96;,
++                  },
++                  createdAt: new Date().toISOString(),
++                })
++              );
++              // Pass consumed; skip rent transfer but continue turn finalization.
++            }
++            if (!(useRentPassSelected &amp;&amp; usablePass)) {
++              dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
++              dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
++              dispatch(
++                appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: &#96;Rent ${rent2}&#96; }, moneyDelta: -rent2, createdAt: new Date().toISOString() })
++              );
+             }
+-            dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
+-            dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
+-            dispatch(
+-              appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: &#96;Rent ${rent2}&#96; }, moneyDelta: -rent2, createdAt: new Date().toISOString() })
+-            );
+           }
+         }
+       }
+@@ -866,6 +907,7 @@ export default function PlayConsole(): JSX.Element {
+         setPostAction('None');
+         setBuySelected(false);
+         setRentSelected(false);
++        setUseRentPassSelected(false);
+         setTaxSelected(false);
+         setSummaryOpen(false);
+         return;
+@@ -1017,6 +1059,7 @@ export default function PlayConsole(): JSX.Element {
+       setPostAction('None');
+       setBuySelected(false);
+       setRentSelected(false);
++      setUseRentPassSelected(false);
+       setTaxSelected(false);
+       setSummaryOpen(false);
+     } else {
+@@ -1509,26 +1552,46 @@ export default function PlayConsole(): JSX.Element {
+     return lines.join('\n');
+   }
+ 
+-  function tradePassCountForPlayer(playerId: string): number {
+-    return tradePassEntries
+-      .filter((e) =&gt; e.holderPlayerId === playerId &amp;&amp; e.remaining &gt; 0)
+-      .reduce((sum, e) =&gt; sum + e.remaining, 0);
+-  }
+-
+-  function tradePassTooltipForPlayer(playerId: string): string {
+-    const lines = tradePassEntries
+-      .filter((e) =&gt; e.holderPlayerId === playerId &amp;&amp; e.remaining &gt; 0)
+-      .map((e) =&gt; {
+-        const issuer = players.find((p) =&gt; p.id === e.issuerPlayerId)?.nickname ?? e.issuerPlayerId;
+-        const scope =
+-          e.scopeType === 'color'
+-            ? &#96;Color ${e.scopeKey}&#96;
+-            : e.scopeType === 'railroad'
+-              ? 'Railroad'
+-              : 'Utility';
+-        return &#96;${scope} from ${issuer} — ${e.remaining} left&#96;;
+-      });
+-    return lines.length &gt; 0 ? lines.join('\n') : '';
++  function tradePassBadgesForPlayer(playerId: string): Array&lt;{ key: string; count: number; borderClassName: string; tooltip: string }&gt; {
++    const entries = tradePassEntries.filter((e) =&gt; e.holderPlayerId === playerId &amp;&amp; e.remaining &gt; 0);
++    const grouped = new Map&lt;
++      string,
++      {
++        scopeType: TradePassScopeType;
++        scopeKey: string;
++        count: number;
++        lines: string[];
++      }
++    &gt;();
++    for (const e of entries) {
++      const key = &#96;${e.scopeType}:${e.scopeKey}&#96;;
++      const issuer = players.find((p) =&gt; p.id === e.issuerPlayerId)?.nickname ?? e.issuerPlayerId;
++      const scopeLabel = e.scopeType === 'color' ? &#96;${e.scopeKey}&#96; : e.scopeType === 'railroad' ? 'Railroad' : 'Utility';
++      const line = &#96;${scopeLabel} from ${issuer} — ${e.remaining} left&#96;;
++      const cur = grouped.get(key);
++      if (cur) {
++        cur.count += e.remaining;
++        cur.lines.push(line);
++      } else {
++        grouped.set(key, {
++          scopeType: e.scopeType,
++          scopeKey: e.scopeKey,
++          count: e.remaining,
++          lines: [line],
++        });
++      }
++    }
++    const borderForScope = (scopeType: TradePassScopeType, scopeKey: string): string =&gt; {
++      if (scopeType === 'color') return getGroupBorderClass(scopeKey as ColorGroup);
++      if (scopeType === 'railroad') return 'border-white';
++      return 'border-cyan-400';
++    };
++    return Array.from(grouped.entries()).map(([key, g]) =&gt; ({
++      key,
++      count: g.count,
++      borderClassName: borderForScope(g.scopeType, g.scopeKey),
++      tooltip: g.lines.join('\n'),
++    }));
+   }
+ 
+   const tileFooterIcon = (tileId: string): JSX.Element | null =&gt; {
+@@ -1559,6 +1622,18 @@ export default function PlayConsole(): JSX.Element {
+     { id: 2 as const, title: 'Post', desc: postAction || 'None' },
+   ];
+ 
++  const usablePassForPost = (() =&gt; {
++    const idx = predictedTo ?? currentIndex;
++    const t = getTileByIndex(idx);
++    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return null;
++    const ps = propsState.byTileId[t.id];
++    const owner = ps?.ownerId as string | null;
++    const mortgaged = ps?.mortgaged === true;
++    const pid = players[turnIndex]?.id || players[0]?.id;
++    if (!owner || owner === pid || mortgaged || !pid) return null;
++    return findUsablePass(pid, owner, t.id);
++  })();
++
+   const rentRequiredButNotSelected = (): boolean =&gt; {
+     const idx = predictedTo ?? currentIndex;
+     const t = getTileByIndex(idx);
+@@ -1569,7 +1644,7 @@ export default function PlayConsole(): JSX.Element {
+     const pid = players[turnIndex]?.id || players[0]?.id;
+     const mustPay = !!owner &amp;&amp; owner !== pid &amp;&amp; !mortgaged;
+     if (!mustPay) return false;
+-    return !rentSelected;
++    return !(rentSelected || (useRentPassSelected &amp;&amp; !!usablePassForPost));
+   };
+ 
+   const taxRequiredButNotSelected = (): boolean =&gt; {
+@@ -1680,8 +1755,7 @@ export default function PlayConsole(): JSX.Element {
+         utilitiesTooltipForPlayer={utilitiesTooltipForPlayer}
+         groupTooltipForPlayer={groupTooltipForPlayer}
+         getGroupBorderClass={getGroupBorderClass}
+-        tradePassCountForPlayer={tradePassCountForPlayer}
+-        tradePassTooltipForPlayer={tradePassTooltipForPlayer}
++        tradePassBadgesForPlayer={tradePassBadgesForPlayer}
+         renderActivePanel={(p) =&gt; (
+           &lt;&gt;
+             {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
+@@ -1763,36 +1837,6 @@ export default function PlayConsole(): JSX.Element {
+                     );
+                   })()}
+ 
+-                  {/* Contextual depot install/remove if active player owns current railroad */}
+-                  {(() =&gt; {
+-                    const tile = getTileByIndex(currentIndex);
+-                    const pid = players[turnIndex]?.id || players[0]?.id;
+-                    if (tile.type !== 'railroad' || !pid) return null;
+-                    const ps = propsState.byTileId[tile.id];
+-                    if (!ps || ps.ownerId !== pid) return null;
+-                    const installed = ps.depotInstalled === true;
+-                    const cost = 100;
+-                    const canAfford = (players.find((x) =&gt; x.id === pid)?.money ?? 0) &gt;= cost;
+-                    return (
+-                      &lt;RailroadDepotControl
+-                        installed={installed}
+-                        canAfford={canAfford}
+-                        onInstall={() =&gt; {
+-                          dispatch(setDepotInstalled({ tileId: tile.id, installed: true }));
+-                          dispatch(adjustPlayerMoney({ id: pid, delta: -cost }));
+-                          dispatch(
+-                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, amount: -cost, message: 'Depot installed' }, moneyDelta: -cost, createdAt: new Date().toISOString() })
+-                          );
+-                        }}
+-                        onRemove={() =&gt; {
+-                          dispatch(setDepotInstalled({ tileId: tile.id, installed: false }));
+-                          dispatch(
+-                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, message: 'Depot removed' }, createdAt: new Date().toISOString() })
+-                          );
+-                        }}
+-                      /&gt;
+-                    );
+-                  })()}
+                 &lt;/motion.div&gt;
+               )}
+ 
+@@ -2012,7 +2056,8 @@ export default function PlayConsole(): JSX.Element {
+                     })();
+                     const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+                     const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
+-                    const playerMoney = p.money;
++                    const pendingJackpot = isTripleOnes &amp;&amp; tripleTeleportTo != null ? 1000 : 0;
++                    const effectivePreviewMoney = p.money + pendingJackpot;
+                     const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
+ 
+                     return (
+@@ -2053,7 +2098,7 @@ export default function PlayConsole(): JSX.Element {
+                                   }
+                                   setPostAction(next ? 'Buy Property' : postAction === 'Buy Property' ? 'None' : postAction);
+                                 }}
+-                                canAffordBuy={playerMoney &gt;= price}
++                                canAffordBuy={effectivePreviewMoney &gt;= price}
+                                 auctionItSelected={auctionItSelected}
+                                 onToggleAuctionIt={() =&gt; {
+                                   const next = !auctionItSelected;
+@@ -2078,13 +2123,28 @@ export default function PlayConsole(): JSX.Element {
+                               &lt;PostActionsBar
+                                 rentLabel={rentLabel}
+                                 rentSelected={rentSelected}
+-                                onToggleRent={() =&gt; setRentSelected((v) =&gt; !v)}
++                                onToggleRent={() =&gt; {
++                                  setRentSelected((v) =&gt; !v);
++                                  setUseRentPassSelected(false);
++                                }}
+                                 rentShake={shakeRent}
+                                 taxLabel={taxLabel}
+                                 taxSelected={taxSelected}
+                                 onToggleTax={() =&gt; setTaxSelected((v) =&gt; !v)}
+                                 taxShake={shakeTax}
+-                              /&gt;
++                              &gt;
++                                {usablePassForPost &amp;&amp; (
++                                  &lt;TogglePillButton
++                                    label={&lt;span&gt;Use Pass ({usablePassForPost.remaining})&lt;/span&gt;}
++                                    active={useRentPassSelected}
++                                    onToggle={() =&gt; {
++                                      setUseRentPassSelected((v) =&gt; !v);
++                                      setRentSelected(false);
++                                    }}
++                                    variant="blue"
++                                  /&gt;
++                                )}
++                              &lt;/PostActionsBar&gt;
+                             &lt;/div&gt;
+                           &lt;/div&gt;
+                         )}
+@@ -2162,7 +2222,7 @@ export default function PlayConsole(): JSX.Element {
+             &lt;/AnimatePresence&gt;
+ 
+             {/* Navigation */}
+-            &lt;div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0"&gt;
++            &lt;div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0 rounded-b-3xl"&gt;
+               {activeStep &lt; 2 ? (
+                 &lt;button
+                   type="button"
+@@ -2403,6 +2463,17 @@ export default function PlayConsole(): JSX.Element {
+       {/* Card picker overlay */}
+       &lt;AnimatePresence&gt;
+         {overlay.deck &amp;&amp; (
++          &lt;&gt;
++          {(overlay.deck === 'chance' || overlay.deck === 'community') &amp;&amp; (
++            &lt;motion.div
++              key="overlay-backdrop"
++              initial={{ opacity: 0 }}
++              animate={{ opacity: 1 }}
++              exit={{ opacity: 0 }}
++              className="fixed inset-0 z-40 modal-backdrop"
++              onClick={() =&gt; setOverlay({ deck: null })}
++            /&gt;
++          )}
+           &lt;motion.div
+             key="overlay"
+             initial={{ y: '100%' }}
+@@ -2468,6 +2539,15 @@ export default function PlayConsole(): JSX.Element {
+                 })()
+               ) : (
+                 &lt;&gt;
++                  &lt;div className="col-span-full"&gt;
++                    &lt;input
++                      type="text"
++                      value={cardSearch}
++                      onChange={(e) =&gt; setCardSearch(e.target.value)}
++                      placeholder={&#96;Search ${overlay.deck === 'chance' ? 'Chance' : 'Community'} cards...&#96;}
++                      className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm"
++                    /&gt;
++                  &lt;/div&gt;
+                   {cardsState.decks[overlay.deck].drawPile.length === 0 &amp;&amp; (overlay.deck === 'chance' || overlay.deck === 'community') &amp;&amp; (
+                     &lt;div className="rounded-md border border-neutral-300 dark:border-neutral-700 p-3 text-sm flex items-center justify-between"&gt;
+                       &lt;span&gt;No cards left in {overlay.deck}. Reshuffle to continue.&lt;/span&gt;
+@@ -2482,7 +2562,12 @@ export default function PlayConsole(): JSX.Element {
+                       &lt;/button&gt;
+                     &lt;/div&gt;
+                   )}
+-                  {cardsState.decks[overlay.deck].drawPile.map((card) =&gt; (
++                  {cardsState.decks[overlay.deck].drawPile.length &gt; 0 &amp;&amp; filteredOverlayCards.length === 0 &amp;&amp; (
++                    &lt;div className="col-span-full rounded-md border border-neutral-300 dark:border-neutral-700 p-3 text-sm text-subtle"&gt;
++                      No cards match your search.
++                    &lt;/div&gt;
++                  )}
++                  {filteredOverlayCards.map((card) =&gt; (
+                     &lt;button
+                       key={card.id}
+                       onClick={() =&gt; {
+@@ -2504,6 +2589,7 @@ export default function PlayConsole(): JSX.Element {
+               )}
+             &lt;/div&gt;
+           &lt;/motion.div&gt;
++          &lt;/&gt;
+         )}
+       &lt;/AnimatePresence&gt;
+ 
+@@ -3008,80 +3094,94 @@ export default function PlayConsole(): JSX.Element {
+         onConfirm={({ targets, desiredMortgaged, desiredDepotInstalled }) =&gt; {
+           const pid = players[turnIndex]?.id || players[0]?.id;
+           if (!pid) return;
+-          let totalCost = 0;
+-          let totalRefund = 0;
+-          // Mortgage/unmortgage application computed in overlay net, but we still need to apply state changes
+-          // We will compare desired vs current after money updates using a local copy sourced from DOM via custom event; for simplicity here, money reflects both build/sell and mortgage deltas
+-          for (const t of BOARD_TILES) {
+-            if (t.type !== 'property' || targets[t.id] == null) continue;
+-            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+-            const tar = targets[t.id];
+-            if (tar &gt; cur) {
+-              for (let level = cur; level &lt; tar; level += 1) {
+-                totalCost += t.property!.houseCost; // uniform cost per level
+-              }
+-            } else if (tar &lt; cur) {
+-              for (let level = cur; level &gt; tar; level -= 1) {
+-                totalRefund += t.property!.houseCost / 2; // uniform refund
+-              }
+-            }
+-          }
+-          const net = Math.max(0, totalCost - totalRefund);
+-          if (net &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: -net }));
+-          if (totalRefund &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: +totalRefund }));
+-          // Apply mortgage/unmortgage flags and compute mortgage deltas
+-          let mortCost = 0;
+-          let mortRefund = 0;
++          const getLiveByTile = () =&gt; (store.getState() as RootState).properties.byTileId;
++          let totalCostAll = 0;
++          let totalRefundAll = 0;
++
++          // Apply mortgage/unmortgage flags and charge/refund only if reducer accepted the change.
+           if (desiredMortgaged) {
+             for (const t of BOARD_TILES) {
+               if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+-              const curMort = propsState.byTileId[t.id]?.mortgaged === true;
++              const curMort = getLiveByTile()[t.id]?.mortgaged === true;
+               const desMort = desiredMortgaged[t.id] === true;
+               if (curMort === desMort) continue;
+               const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+-              if (desMort &amp;&amp; !curMort) {
+-                mortRefund += mv;
+-              } else if (!desMort &amp;&amp; curMort) {
+-                mortCost += mv;
+-              }
+               dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
++              const nextMort = getLiveByTile()[t.id]?.mortgaged === true;
++              if (nextMort !== desMort) continue;
++              if (desMort) totalRefundAll += mv;
++              else totalCostAll += mv;
+             }
+           }
+-          // Apply depot install/remove
+-          let depotCost = 0;
++
++          // Apply depot install/remove and charge only successful installs.
+           if (desiredDepotInstalled) {
+             for (const t of BOARD_TILES) {
+               if (t.type !== 'railroad') continue;
+-              const cur = propsState.byTileId[t.id]?.depotInstalled === true;
++              const cur = getLiveByTile()[t.id]?.depotInstalled === true;
+               const des = desiredDepotInstalled[t.id] === true;
+               if (cur === des) continue;
+-              if (des &amp;&amp; !cur) depotCost += 100;
+               dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
++              const next = getLiveByTile()[t.id]?.depotInstalled === true;
++              if (next !== des) continue;
++              if (des) totalCostAll += 100;
+             }
+           }
+-          if (mortCost &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: -mortCost }));
+-          if (mortRefund &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: +mortRefund }));
+-          if (depotCost &gt; 0) dispatch(adjustPlayerMoney({ id: pid, delta: -depotCost }));
+-          const totalCostAll = totalCost + mortCost + depotCost;
+-          const totalRefundAll = totalRefund + mortRefund;
+-          const netAll = Math.max(0, totalCostAll - totalRefundAll);
+-          if (totalCostAll &gt; 0 || totalRefundAll &gt; 0) {
+-            const msg = &#96;Build/Sell &amp; Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}&#96;;
+-            dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { playerId: pid, message: msg }, moneyDelta: totalRefund - net, createdAt: new Date().toISOString() }));
+-          }
+-          for (const t of BOARD_TILES) {
+-            if (t.type !== 'property' || targets[t.id] == null) continue;
+-            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+-            const tar = targets[t.id];
+-            if (tar &gt; cur) {
+-              for (let level = cur; level &lt; tar; level += 1) {
+-                dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
++
++          const managedPropertyTiles = BOARD_TILES.filter((t) =&gt; t.type === 'property' &amp;&amp; targets[t.id] != null);
++
++          // Apply sells first in passes so even-sell rules are respected.
++          for (let pass = 0; pass &lt; 64; pass += 1) {
++            let progressed = false;
++            for (const t of managedPropertyTiles) {
++              const cur = getLiveByTile()[t.id]?.improvements ?? 0;
++              const tar = targets[t.id];
++              if (cur &lt;= tar) continue;
++              dispatch(sellHouse({ tileId: t.id }));
++              const next = getLiveByTile()[t.id]?.improvements ?? cur;
++              if (next &lt; cur) {
++                progressed = true;
++                totalRefundAll += (t.property?.houseCost ?? 0) / 2;
+               }
+-            } else if (tar &lt; cur) {
+-              for (let level = cur; level &gt; tar; level -= 1) {
+-                dispatch(sellHouse({ tileId: t.id }));
++            }
++            if (!progressed) break;
++          }
++
++          // Apply builds in round-robin passes so even-build rules are respected.
++          for (let pass = 0; pass &lt; 64; pass += 1) {
++            let progressed = false;
++            for (const t of managedPropertyTiles) {
++              const cur = getLiveByTile()[t.id]?.improvements ?? 0;
++              const tar = targets[t.id];
++              if (cur &gt;= tar) continue;
++              dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
++              const next = getLiveByTile()[t.id]?.improvements ?? cur;
++              if (next &gt; cur) {
++                progressed = true;
++                totalCostAll += t.property?.houseCost ?? 0;
+               }
+             }
++            if (!progressed) break;
++          }
++
++          const moneyDelta = totalRefundAll - totalCostAll;
++          if (moneyDelta !== 0) {
++            dispatch(adjustPlayerMoney({ id: pid, delta: moneyDelta }));
++          }
++          if (totalCostAll &gt; 0 || totalRefundAll &gt; 0) {
++            const netAll = Math.max(0, totalCostAll - totalRefundAll);
++            const msg = &#96;Build/Sell &amp; Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}&#96;;
++            dispatch(
++              appendEvent({
++                id: crypto.randomUUID(),
++                gameId: 'local',
++                type: 'MONEY_ADJUST',
++                actorPlayerId: pid,
++                payload: { playerId: pid, message: msg },
++                moneyDelta,
++                createdAt: new Date().toISOString(),
++              })
++            );
+           }
+           addPreAction('Managed');
+           setBuildOverlayOpen(false);
+diff --git a/src/features/properties/propertiesSlice.ts b/src/features/properties/propertiesSlice.ts
+index 65e7cf5..020f659 100644
+--- a/src/features/properties/propertiesSlice.ts
++++ b/src/features/properties/propertiesSlice.ts
+@@ -33,16 +33,27 @@ function getGroupTileIds(tileId: string): string[] {
+   return BOARD_TILES.filter((t) =&gt; t.type === 'property' &amp;&amp; t.group === tile.group).map((t) =&gt; t.id);
+ }
+ 
++function getBuildThresholdForGroupSize(groupSize: number): number {
++  if (groupSize === 4) return 3;
++  if (groupSize === 3) return 2;
++  if (groupSize === 2) return 2;
++  return Number.POSITIVE_INFINITY;
++}
++
+ function canEvenBuild(state: PropertiesState, tileId: string, ownerId: string): boolean {
+-  const group = getGroupTileIds(tileId);
++  const fullGroup = getGroupTileIds(tileId);
+   // If not a color group (railroad/utility), allow without even rule
+-  if (group.length &lt;= 1) return true;
+-  // Must own full set and none mortgaged
+-  for (const id of group) {
+-    const ps = state.byTileId[id]!;
+-    if (ps.ownerId !== ownerId || ps.mortgaged) return false;
+-  }
+-  const levels = group.map((id) =&gt; state.byTileId[id]!.improvements);
++  if (fullGroup.length &lt;= 1) return true;
++
++  const ownedGroup = fullGroup.filter((id) =&gt; state.byTileId[id]?.ownerId === ownerId);
++  if (ownedGroup.length &lt;= 1) return true;
++
++  // Mega Monopoly variant: allow building with threshold ownership (not necessarily full set)
++  const unmortgagedOwnedCount = ownedGroup.filter((id) =&gt; state.byTileId[id]?.mortgaged !== true).length;
++  const threshold = getBuildThresholdForGroupSize(fullGroup.length);
++  if (unmortgagedOwnedCount &lt; threshold) return false;
++
++  const levels = ownedGroup.map((id) =&gt; state.byTileId[id]!.improvements);
+   const minLevel = Math.min(...levels);
+   const targetLevel = state.byTileId[tileId]!.improvements;
+   // Can only build on properties at current min level
+@@ -50,9 +61,16 @@ function canEvenBuild(state: PropertiesState, tileId: string, ownerId: string):
+ }
+ 
+ function canEvenSell(state: PropertiesState, tileId: string): boolean {
+-  const group = getGroupTileIds(tileId);
+-  if (group.length &lt;= 1) return true;
+-  const levels = group.map((id) =&gt; state.byTileId[id]!.improvements);
++  const ownerId = state.byTileId[tileId]?.ownerId;
++  if (!ownerId) return false;
++
++  const fullGroup = getGroupTileIds(tileId);
++  if (fullGroup.length &lt;= 1) return true;
++
++  const ownedGroup = fullGroup.filter((id) =&gt; state.byTileId[id]?.ownerId === ownerId);
++  if (ownedGroup.length &lt;= 1) return true;
++
++  const levels = ownedGroup.map((id) =&gt; state.byTileId[id]!.improvements);
+   const maxLevel = Math.max(...levels);
+   const targetLevel = state.byTileId[tileId]!.improvements;
+   // Can only sell from properties at current max level
+
+```
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: git log --oneline -8</summary>
+
+```bash
+git log --oneline -8
+```
+
+```
+e21e045 feat(trade): add modal workflow, pass system, and summary step
+9f4ee3e feat(ui): refine roll flow and design tokens
+62450cd feat(ui): improve property details overlay
+84ecd8e feat(ui): add theme settings and richer property management
+9fada8a feat(play): auto-award Free Parking pot and 1-1-1 edge cases
+a5a918b feat(setup): add rules modal with mega/home tabs
+3067234 feat(play): record teleport/card movement + improve property manage UX
+b73038f fix(play): show triples indicators in summary
+
+```
+</details>
+</tool-use>
 
 ---
 

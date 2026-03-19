@@ -5,6 +5,7 @@ import AvatarToken from '@/components/atoms/AvatarToken';
 import { AVATARS } from '@/data/avatars';
 import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type ColorGroup } from '@/data/board';
 import type { TradePassEntry, TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
+import { FaChevronDown } from 'react-icons/fa';
 
 type TradeableProperty = {
   id: string;
@@ -72,7 +73,7 @@ function PlayerPickerRow({
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-subtle">{label}</div>
+      <div className="text-sm font-semibold uppercase tracking-wide text-subtle">{label}</div>
       <div role="group" aria-label={label} className="flex flex-row flex-wrap gap-2">
         {options.map((p) => {
           const bp = bpById.get(p.id);
@@ -95,7 +96,7 @@ function PlayerPickerRow({
                   emoji={emoji}
                   size={32}
                   borderColorClass="border-[color:var(--player-color)]"
-                  ring={selected}
+                  ring
                   ringColorClass="ring-[color:var(--player-color)]"
                 />
               </div>
@@ -194,6 +195,21 @@ function SelectableCardTile({
   );
 }
 
+function SummaryCardTile({
+  label,
+  sublabel,
+}: {
+  label: string;
+  sublabel?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-2">
+      <div className="text-sm font-semibold">{label}</div>
+      {sublabel && <div className="text-xs opacity-70">{sublabel}</div>}
+    </div>
+  );
+}
+
 export default function TradeModal({
   open,
   onClose,
@@ -210,8 +226,10 @@ export default function TradeModal({
   const [step, setStep] = React.useState<1 | 2>(1);
   const [player1Id, setPlayer1Id] = React.useState<string | null>(null);
   const [player2Id, setPlayer2Id] = React.useState<string | null>(null);
+  const [isTradeWithMenuOpen, setIsTradeWithMenuOpen] = React.useState(false);
   const [offer1, setOffer1] = React.useState<TradeOffer>(EMPTY_OFFER);
   const [offer2, setOffer2] = React.useState<TradeOffer>(EMPTY_OFFER);
+  const tradeWithMenuRef = React.useRef<HTMLDivElement | null>(null);
 
   const bpById = useMemo(() => new Map(boardPlayers.map((bp) => [bp.id, bp] as const)), [boardPlayers]);
   const playersById = useMemo(() => new Map(players.map((p) => [p.id, p] as const)), [players]);
@@ -221,6 +239,7 @@ export default function TradeModal({
     setStep(1);
     setPlayer1Id(initiatorPlayerId ?? null);
     setPlayer2Id(null);
+    setIsTradeWithMenuOpen(false);
     setOffer1(EMPTY_OFFER);
     setOffer2(EMPTY_OFFER);
   }, [open, initiatorPlayerId]);
@@ -240,7 +259,18 @@ export default function TradeModal({
 
   React.useEffect(() => {
     setOffer2(EMPTY_OFFER);
+    setIsTradeWithMenuOpen(false);
   }, [player2Id]);
+
+  React.useEffect(() => {
+    if (!isTradeWithMenuOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (!tradeWithMenuRef.current) return;
+      if (!tradeWithMenuRef.current.contains(e.target as Node)) setIsTradeWithMenuOpen(false);
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    return () => window.removeEventListener('mousedown', onMouseDown);
+  }, [isTradeWithMenuOpen]);
 
   const canConfirm = player1Id != null && player2Id != null;
   const player1Inventory = player1Id ? tradeInventoryByPlayerId[player1Id] : undefined;
@@ -251,6 +281,7 @@ export default function TradeModal({
   const player1Emoji = AVATARS.find((a) => a.key === player1Board?.avatarKey)?.emoji ?? '🙂';
   const player2Board = player2Id ? bpById.get(player2Id) : undefined;
   const player2Emoji = AVATARS.find((a) => a.key === player2Board?.avatarKey)?.emoji ?? '🙂';
+  const tradeWithOptions = useMemo(() => players.filter((p) => p.id !== player1Id), [players, player1Id]);
 
   const toggleProperty = (side: 1 | 2, tileId: string) => {
     if (side === 1) {
@@ -395,18 +426,26 @@ export default function TradeModal({
   const toPassScopes = parseScopeAmounts(offer2.passScopeAmounts);
 
   const tradeSummary = useMemo(() => {
-    const resolvePropertyNames = (
+    const resolvePropertyCards = (
       selectedIds: string[],
       inventory: PlayerTradeInventory | undefined
-    ): string[] => {
+    ): Array<{ id: string; name: string; bgClass: string; fgClass: string }> => {
       const map = new Map((inventory?.properties ?? []).map((p) => [p.id, p.name] as const));
-      return selectedIds.map((id) => map.get(id) ?? getTileById(id)?.name ?? id);
+      return selectedIds.map((id) => {
+        const tile = getTileById(id);
+        return {
+          id,
+          name: map.get(id) ?? tile?.name ?? id,
+          bgClass: tile ? getTileHeaderBgClass(tile) : 'bg-surface-1',
+          fgClass: tile ? getTileHeaderTextClass(tile) : 'text-fg',
+        };
+      });
     };
     const passLabels = (scopes: Array<{ scopeType: TradePassScopeType; scopeKey: string; amount: 1 | 2 }>): string[] =>
       scopes.map((s) => `${formatPassScopeLabel(s.scopeType, s.scopeKey)} x${s.amount}`);
 
     const from = {
-      properties: resolvePropertyNames(offer1.propertyIds, player1Inventory),
+      properties: resolvePropertyCards(offer1.propertyIds, player1Inventory),
       cash: offer1.cash,
       busTickets: offer1.busTicketsSelected.length,
       gojfChance: offer1.gojfChanceSelected.length,
@@ -415,7 +454,7 @@ export default function TradeModal({
     };
 
     const to = {
-      properties: resolvePropertyNames(offer2.propertyIds, player2Inventory),
+      properties: resolvePropertyCards(offer2.propertyIds, player2Inventory),
       cash: offer2.cash,
       busTickets: offer2.busTicketsSelected.length,
       gojfChance: offer2.gojfChanceSelected.length,
@@ -491,10 +530,7 @@ export default function TradeModal({
 
             <div className="p-4">
               <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-subtle">
-                  {step === 1 ? 'Trade' : 'Summary'}
-                </div>
-                {step === 1 && <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {step === 1 && <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3">
                     <div className="flex items-center gap-2">
                       <div style={{ ['--player-color' as any]: player1Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
@@ -502,7 +538,8 @@ export default function TradeModal({
                           emoji={player1Emoji}
                           size={26}
                           borderColorClass="border-[color:var(--player-color)]"
-                          ring={false}
+                          ring
+                          ringColorClass="ring-[color:var(--player-color)]"
                         />
                       </div>
                       <div className="text-sm font-semibold">You ({player1Name}) offer</div>
@@ -691,31 +728,89 @@ export default function TradeModal({
                   </div>
 
                   <div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3">
-                    <div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2">
-                      <PlayerPickerRow
-                        label="Trade With"
-                        players={players}
-                        bpById={bpById}
-                        selectedId={player2Id}
-                        onSelect={setPlayer2Id}
-                        excludeId={player1Id}
-                      />
-                    </div>
+                    {!player2Id ? (
+                      <div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2">
+                        <PlayerPickerRow
+                          label="Trade With"
+                          players={players}
+                          bpById={bpById}
+                          selectedId={player2Id}
+                          onSelect={setPlayer2Id}
+                          excludeId={player1Id}
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative" ref={tradeWithMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setIsTradeWithMenuOpen((v) => !v)}
+                          aria-haspopup="listbox"
+                          aria-expanded={isTradeWithMenuOpen}
+                          className="w-full rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div style={{ ['--player-color' as any]: player2Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
+                                <AvatarToken
+                                  emoji={player2Emoji}
+                                  size={26}
+                                  borderColorClass="border-[color:var(--player-color)]"
+                                  ring
+                                  ringColorClass="ring-[color:var(--player-color)]"
+                                />
+                              </div>
+                              <div className="text-sm font-semibold">{player2Name} offers</div>
+                            </div>
+                            <FaChevronDown className={`text-xs opacity-70 transition-transform ${isTradeWithMenuOpen ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+                        {isTradeWithMenuOpen && (
+                          <div role="listbox" className="absolute z-20 mt-2 w-full rounded-lg border border-surface bg-white dark:bg-neutral-900 p-2 shadow-xl max-h-56 overflow-auto">
+                            <div className="grid grid-cols-1 gap-2">
+                              {tradeWithOptions.map((p) => {
+                                const bp = bpById.get(p.id);
+                                const emoji = AVATARS.find((a) => a.key === bp?.avatarKey)?.emoji ?? '🙂';
+                                const selected = player2Id === p.id;
+                                return (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={selected}
+                                    onClick={() => {
+                                      setPlayer2Id(p.id);
+                                      setIsTradeWithMenuOpen(false);
+                                    }}
+                                    className={`flex items-center gap-2 rounded-xl border border-surface px-3 py-2 text-left transition-colors ${
+                                      selected
+                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30'
+                                        : 'border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+                                    }`}
+                                  >
+                                    <div style={{ ['--player-color' as any]: bp?.color ?? '#a1a1aa' } as React.CSSProperties}>
+                                      <AvatarToken
+                                        emoji={emoji}
+                                        size={28}
+                                        borderColorClass="border-[color:var(--player-color)]"
+                                        ring
+                                        ringColorClass="ring-[color:var(--player-color)]"
+                                      />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="font-semibold truncate">{p.nickname}</div>
+                                    </div>
+                                    {selected && <div className="ml-auto text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {player2Id ? (
                       <>
-                        <div className="flex items-center gap-2">
-                          <div style={{ ['--player-color' as any]: player2Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
-                            <AvatarToken
-                              emoji={player2Emoji}
-                              size={26}
-                              borderColorClass="border-[color:var(--player-color)]"
-                              ring={false}
-                            />
-                          </div>
-                          <div className="text-sm font-semibold">{player2Name} offers</div>
-                        </div>
-
                         <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
                           <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Properties</div>
                           <div className="mt-2 max-h-44 overflow-auto space-y-1 pr-1">
@@ -911,18 +1006,56 @@ export default function TradeModal({
                   ) : (
                     <div className="mt-2 grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
                       <div className="rounded-md border border-surface bg-surface-1 p-2">
-                        <div className="font-semibold">{player1Name} → {player2Name}</div>
-                        <div className="mt-1 text-xs text-subtle">{tradeSummary.from.properties.length > 0 ? `Properties: ${tradeSummary.from.properties.join(', ')}` : 'Properties: None'}</div>
-                        <div className="text-xs text-subtle">Cash: ${tradeSummary.from.cash}</div>
-                        <div className="text-xs text-subtle">Cards: Bus x{tradeSummary.from.busTickets}, GOJF Chance x{tradeSummary.from.gojfChance}, GOJF Community x{tradeSummary.from.gojfCommunity}</div>
-                        <div className="text-xs text-subtle">{tradeSummary.from.passes.length > 0 ? `Passes: ${tradeSummary.from.passes.join(', ')}` : 'Passes: None'}</div>
+                        <div className="font-semibold">You gain</div>
+                        {(tradeSummary.to.properties.length === 0 &&
+                          tradeSummary.to.cash <= 0 &&
+                          tradeSummary.to.busTickets <= 0 &&
+                          tradeSummary.to.gojfChance <= 0 &&
+                          tradeSummary.to.gojfCommunity <= 0 &&
+                          tradeSummary.to.passes.length === 0) ? (
+                          <div className="mt-1 text-xs text-subtle">No assets gained.</div>
+                        ) : (
+                          <div className="mt-2 grid grid-cols-1 gap-2">
+                            {tradeSummary.to.properties.map((prop) => (
+                              <div key={`gain-you-property-${prop.id}`} className="rounded-md border border-surface overflow-hidden">
+                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`}>{prop.name}</div>
+                              </div>
+                            ))}
+                            {tradeSummary.to.cash > 0 && <SummaryCardTile label={`$${tradeSummary.to.cash}`} sublabel="Cash" />}
+                            {tradeSummary.to.busTickets > 0 && <SummaryCardTile label={`Bus Ticket x${tradeSummary.to.busTickets}`} />}
+                            {tradeSummary.to.gojfChance > 0 && <SummaryCardTile label={`GOJF Chance x${tradeSummary.to.gojfChance}`} />}
+                            {tradeSummary.to.gojfCommunity > 0 && <SummaryCardTile label={`GOJF Community x${tradeSummary.to.gojfCommunity}`} />}
+                            {tradeSummary.to.passes.map((pass, idx) => (
+                              <SummaryCardTile key={`gain-you-pass-${idx}`} label={pass} sublabel="Pass" />
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="rounded-md border border-surface bg-surface-1 p-2">
-                        <div className="font-semibold">{player2Name} → {player1Name}</div>
-                        <div className="mt-1 text-xs text-subtle">{tradeSummary.to.properties.length > 0 ? `Properties: ${tradeSummary.to.properties.join(', ')}` : 'Properties: None'}</div>
-                        <div className="text-xs text-subtle">Cash: ${tradeSummary.to.cash}</div>
-                        <div className="text-xs text-subtle">Cards: Bus x{tradeSummary.to.busTickets}, GOJF Chance x{tradeSummary.to.gojfChance}, GOJF Community x{tradeSummary.to.gojfCommunity}</div>
-                        <div className="text-xs text-subtle">{tradeSummary.to.passes.length > 0 ? `Passes: ${tradeSummary.to.passes.join(', ')}` : 'Passes: None'}</div>
+                        <div className="font-semibold">{player2Name} gains</div>
+                        {(tradeSummary.from.properties.length === 0 &&
+                          tradeSummary.from.cash <= 0 &&
+                          tradeSummary.from.busTickets <= 0 &&
+                          tradeSummary.from.gojfChance <= 0 &&
+                          tradeSummary.from.gojfCommunity <= 0 &&
+                          tradeSummary.from.passes.length === 0) ? (
+                          <div className="mt-1 text-xs text-subtle">No assets gained.</div>
+                        ) : (
+                          <div className="mt-2 grid grid-cols-1 gap-2">
+                            {tradeSummary.from.properties.map((prop) => (
+                              <div key={`gain-other-property-${prop.id}`} className="rounded-md border border-surface overflow-hidden">
+                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`}>{prop.name}</div>
+                              </div>
+                            ))}
+                            {tradeSummary.from.cash > 0 && <SummaryCardTile label={`$${tradeSummary.from.cash}`} sublabel="Cash" />}
+                            {tradeSummary.from.busTickets > 0 && <SummaryCardTile label={`Bus Ticket x${tradeSummary.from.busTickets}`} />}
+                            {tradeSummary.from.gojfChance > 0 && <SummaryCardTile label={`GOJF Chance x${tradeSummary.from.gojfChance}`} />}
+                            {tradeSummary.from.gojfCommunity > 0 && <SummaryCardTile label={`GOJF Community x${tradeSummary.from.gojfCommunity}`} />}
+                            {tradeSummary.from.passes.map((pass, idx) => (
+                              <SummaryCardTile key={`gain-other-pass-${idx}`} label={pass} sublabel="Pass" />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -940,7 +1073,7 @@ export default function TradeModal({
                 <>
                   <button
                     type="button"
-                    className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
+                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
                     onClick={onClose}
                   >
                     Cancel
@@ -958,7 +1091,7 @@ export default function TradeModal({
                 <>
                   <button
                     type="button"
-                    className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
+                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
                     onClick={() => setStep(1)}
                   >
                     Back

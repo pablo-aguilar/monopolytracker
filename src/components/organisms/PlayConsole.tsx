@@ -40,7 +40,6 @@ import TurnRibbon, { type TurnSegment } from '@/components/molecules/TurnRibbon'
 import JailAttemptRibbon from '@/components/molecules/JailAttemptRibbon';
 import PostActionsBar from '@/components/molecules/PostActionsBar';
 import PurchaseActionsRow from '@/components/molecules/PurchaseActionsRow';
-import RailroadDepotControl from '@/components/molecules/RailroadDepotControl';
 import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
@@ -110,9 +109,11 @@ export default function PlayConsole(): JSX.Element {
   const [predictedTo, setPredictedTo] = useState<number | null>(null);
   const [buySelected, setBuySelected] = useState<boolean>(false);
   const [rentSelected, setRentSelected] = useState<boolean>(false);
+  const [useRentPassSelected, setUseRentPassSelected] = useState<boolean>(false);
   const [taxSelected, setTaxSelected] = useState<boolean>(false);
   const [busSelectedCardId, setBusSelectedCardId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null }>(() => ({ deck: null }));
+  const [cardSearch, setCardSearch] = useState<string>('');
   const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | 'tripleTeleport' | null }>(() => ({ type: null }));
   const [busTeleportTo, setBusTeleportTo] = useState<number | null>(null);
   const [tripleTeleportTo, setTripleTeleportTo] = useState<number | null>(null);
@@ -145,9 +146,42 @@ export default function PlayConsole(): JSX.Element {
   const [queuedPostActive, setQueuedPostActive] = useState<QueuedMovement | null>(null);
   const events = useSelector((s: RootState) => s.events.events);
 
+  React.useEffect(() => {
+    setCardSearch('');
+  }, [overlay.deck]);
+
   const addPreAction = React.useCallback((label: string) => {
     setPreActions((prev) => (prev.includes(label) ? prev : [...prev, label]));
   }, []);
+
+  const filteredOverlayCards = useMemo(() => {
+    if (!overlay.deck || overlay.deck === 'bus') return [];
+    const query = cardSearch.trim().toLowerCase();
+    const drawPile = cardsState.decks[overlay.deck].drawPile;
+    if (!query) return drawPile;
+    const queryTokens = query.split(/\s+/).filter(Boolean);
+    const isTokenPrefixMatch = (text: string): boolean => {
+      const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
+      if (queryTokens.length > words.length) return false;
+      let wi = 0;
+      for (const token of queryTokens) {
+        let found = false;
+        while (wi < words.length) {
+          if (words[wi].startsWith(token)) {
+            found = true;
+            wi += 1;
+            break;
+          }
+          wi += 1;
+        }
+        if (!found) return false;
+      }
+      return true;
+    };
+    return drawPile.filter(
+      (card) => card.id.toLowerCase().includes(query) || card.text.toLowerCase().includes(query) || isTokenPrefixMatch(card.text)
+    );
+  }, [overlay.deck, cardSearch, cardsState.decks]);
 
   const BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN: Record<ColorGroup, number> = {
     brown: 2,
@@ -273,6 +307,7 @@ export default function PlayConsole(): JSX.Element {
     setTripleTeleportTo(null);
     setBuySelected(false);
     setRentSelected(false);
+    setUseRentPassSelected(false);
     setTaxSelected(false);
     setBusSelectedCardId(null);
     setAuctionCompleted(false);
@@ -582,6 +617,11 @@ export default function PlayConsole(): JSX.Element {
     if (!thirdDoubles && buySelected && predictedTo != null) {
       const t = getTileByIndex(predictedTo);
       const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
+      const currentMoney = players.find((x) => x.id === pid)?.money ?? 0;
+      const pendingJackpot = isTripleOnes && tripleTeleportTo != null ? 1000 : 0;
+      if (currentMoney + pendingJackpot < price) {
+        setBuySelected(false);
+      } else {
       dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
       if (price > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -price }));
       dispatch(
@@ -595,6 +635,7 @@ export default function PlayConsole(): JSX.Element {
           createdAt: new Date().toISOString(),
         })
       );
+      }
     }
     // If Auction (property-tied or tile) was staged and confirmed, apply before movement
     if (stagedAuction) {
@@ -716,13 +757,14 @@ export default function PlayConsole(): JSX.Element {
       setPostAction('None');
       setBuySelected(false);
       setRentSelected(false);
+      setUseRentPassSelected(false);
       setTaxSelected(false);
       setSummaryOpen(false);
       return;
     }
 
-    // If Rent was toggled, apply rent transfer before moving (skip on third doubles)
-    if (!thirdDoubles && rentSelected) {
+    // If rent or pass was selected, resolve payment before moving (skip on third doubles)
+    if (!thirdDoubles && (rentSelected || useRentPassSelected)) {
       const idx2 = predictedTo ?? currentIndex;
       const t2 = getTileByIndex(idx2);
       if (t2 && (t2.type === 'property' || t2.type === 'railroad' || t2.type === 'utility')) {
@@ -735,49 +777,48 @@ export default function PlayConsole(): JSX.Element {
           const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
           if (rent2 > 0) {
             const usablePass = findUsablePass(pid, ownerIdForTile2, t2.id);
-            if (usablePass) {
+            if (useRentPassSelected && usablePass) {
               const passLabel =
                 usablePass.scopeType === 'color'
                   ? `${usablePass.scopeKey} pass`
                   : usablePass.scopeType === 'railroad'
                     ? 'Railroad pass'
                     : 'Utility pass';
-              const usePass = window.confirm(`Use ${passLabel} to skip $${rent2} rent?`);
-              if (usePass) {
-                dispatch(
-                  consumeTradePass({
-                    holderPlayerId: usablePass.holderPlayerId,
-                    issuerPlayerId: usablePass.issuerPlayerId,
+              dispatch(
+                consumeTradePass({
+                  holderPlayerId: usablePass.holderPlayerId,
+                  issuerPlayerId: usablePass.issuerPlayerId,
+                  scopeType: usablePass.scopeType,
+                  scopeKey: usablePass.scopeKey,
+                })
+              );
+              dispatch(
+                appendEvent({
+                  id: crypto.randomUUID(),
+                  gameId: 'local',
+                  type: 'RENT_PASS_USED',
+                  actorPlayerId: pid,
+                  payload: {
+                    holderPlayerId: pid,
+                    issuerPlayerId: ownerIdForTile2,
+                    tileId: t2.id,
                     scopeType: usablePass.scopeType,
                     scopeKey: usablePass.scopeKey,
-                  })
-                );
-                dispatch(
-                  appendEvent({
-                    id: crypto.randomUUID(),
-                    gameId: 'local',
-                    type: 'RENT_PASS_USED',
-                    actorPlayerId: pid,
-                    payload: {
-                      holderPlayerId: pid,
-                      issuerPlayerId: ownerIdForTile2,
-                      tileId: t2.id,
-                      scopeType: usablePass.scopeType,
-                      scopeKey: usablePass.scopeKey,
-                      preventedRent: rent2,
-                      message: `${passLabel} used to skip rent`,
-                    },
-                    createdAt: new Date().toISOString(),
-                  })
-                );
-                return;
-              }
+                    preventedRent: rent2,
+                    message: `${passLabel} used to skip rent`,
+                  },
+                  createdAt: new Date().toISOString(),
+                })
+              );
+              // Pass consumed; skip rent transfer but continue turn finalization.
             }
-            dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
-            dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
-            dispatch(
-              appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: `Rent ${rent2}` }, moneyDelta: -rent2, createdAt: new Date().toISOString() })
-            );
+            if (!(useRentPassSelected && usablePass)) {
+              dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
+              dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
+              dispatch(
+                appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: `Rent ${rent2}` }, moneyDelta: -rent2, createdAt: new Date().toISOString() })
+              );
+            }
           }
         }
       }
@@ -866,6 +907,7 @@ export default function PlayConsole(): JSX.Element {
         setPostAction('None');
         setBuySelected(false);
         setRentSelected(false);
+        setUseRentPassSelected(false);
         setTaxSelected(false);
         setSummaryOpen(false);
         return;
@@ -1017,6 +1059,7 @@ export default function PlayConsole(): JSX.Element {
       setPostAction('None');
       setBuySelected(false);
       setRentSelected(false);
+      setUseRentPassSelected(false);
       setTaxSelected(false);
       setSummaryOpen(false);
     } else {
@@ -1509,26 +1552,46 @@ export default function PlayConsole(): JSX.Element {
     return lines.join('\n');
   }
 
-  function tradePassCountForPlayer(playerId: string): number {
-    return tradePassEntries
-      .filter((e) => e.holderPlayerId === playerId && e.remaining > 0)
-      .reduce((sum, e) => sum + e.remaining, 0);
-  }
-
-  function tradePassTooltipForPlayer(playerId: string): string {
-    const lines = tradePassEntries
-      .filter((e) => e.holderPlayerId === playerId && e.remaining > 0)
-      .map((e) => {
-        const issuer = players.find((p) => p.id === e.issuerPlayerId)?.nickname ?? e.issuerPlayerId;
-        const scope =
-          e.scopeType === 'color'
-            ? `Color ${e.scopeKey}`
-            : e.scopeType === 'railroad'
-              ? 'Railroad'
-              : 'Utility';
-        return `${scope} from ${issuer} — ${e.remaining} left`;
-      });
-    return lines.length > 0 ? lines.join('\n') : '';
+  function tradePassBadgesForPlayer(playerId: string): Array<{ key: string; count: number; borderClassName: string; tooltip: string }> {
+    const entries = tradePassEntries.filter((e) => e.holderPlayerId === playerId && e.remaining > 0);
+    const grouped = new Map<
+      string,
+      {
+        scopeType: TradePassScopeType;
+        scopeKey: string;
+        count: number;
+        lines: string[];
+      }
+    >();
+    for (const e of entries) {
+      const key = `${e.scopeType}:${e.scopeKey}`;
+      const issuer = players.find((p) => p.id === e.issuerPlayerId)?.nickname ?? e.issuerPlayerId;
+      const scopeLabel = e.scopeType === 'color' ? `${e.scopeKey}` : e.scopeType === 'railroad' ? 'Railroad' : 'Utility';
+      const line = `${scopeLabel} from ${issuer} — ${e.remaining} left`;
+      const cur = grouped.get(key);
+      if (cur) {
+        cur.count += e.remaining;
+        cur.lines.push(line);
+      } else {
+        grouped.set(key, {
+          scopeType: e.scopeType,
+          scopeKey: e.scopeKey,
+          count: e.remaining,
+          lines: [line],
+        });
+      }
+    }
+    const borderForScope = (scopeType: TradePassScopeType, scopeKey: string): string => {
+      if (scopeType === 'color') return getGroupBorderClass(scopeKey as ColorGroup);
+      if (scopeType === 'railroad') return 'border-white';
+      return 'border-cyan-400';
+    };
+    return Array.from(grouped.entries()).map(([key, g]) => ({
+      key,
+      count: g.count,
+      borderClassName: borderForScope(g.scopeType, g.scopeKey),
+      tooltip: g.lines.join('\n'),
+    }));
   }
 
   const tileFooterIcon = (tileId: string): JSX.Element | null => {
@@ -1559,6 +1622,18 @@ export default function PlayConsole(): JSX.Element {
     { id: 2 as const, title: 'Post', desc: postAction || 'None' },
   ];
 
+  const usablePassForPost = (() => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return null;
+    const ps = propsState.byTileId[t.id];
+    const owner = ps?.ownerId as string | null;
+    const mortgaged = ps?.mortgaged === true;
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    if (!owner || owner === pid || mortgaged || !pid) return null;
+    return findUsablePass(pid, owner, t.id);
+  })();
+
   const rentRequiredButNotSelected = (): boolean => {
     const idx = predictedTo ?? currentIndex;
     const t = getTileByIndex(idx);
@@ -1569,7 +1644,7 @@ export default function PlayConsole(): JSX.Element {
     const pid = players[turnIndex]?.id || players[0]?.id;
     const mustPay = !!owner && owner !== pid && !mortgaged;
     if (!mustPay) return false;
-    return !rentSelected;
+    return !(rentSelected || (useRentPassSelected && !!usablePassForPost));
   };
 
   const taxRequiredButNotSelected = (): boolean => {
@@ -1680,8 +1755,7 @@ export default function PlayConsole(): JSX.Element {
         utilitiesTooltipForPlayer={utilitiesTooltipForPlayer}
         groupTooltipForPlayer={groupTooltipForPlayer}
         getGroupBorderClass={getGroupBorderClass}
-        tradePassCountForPlayer={tradePassCountForPlayer}
-        tradePassTooltipForPlayer={tradePassTooltipForPlayer}
+        tradePassBadgesForPlayer={tradePassBadgesForPlayer}
         renderActivePanel={(p) => (
           <>
             {/* Turn ribbon across the whole turn (show only when multi-roll is relevant) */}
@@ -1763,36 +1837,6 @@ export default function PlayConsole(): JSX.Element {
                     );
                   })()}
 
-                  {/* Contextual depot install/remove if active player owns current railroad */}
-                  {(() => {
-                    const tile = getTileByIndex(currentIndex);
-                    const pid = players[turnIndex]?.id || players[0]?.id;
-                    if (tile.type !== 'railroad' || !pid) return null;
-                    const ps = propsState.byTileId[tile.id];
-                    if (!ps || ps.ownerId !== pid) return null;
-                    const installed = ps.depotInstalled === true;
-                    const cost = 100;
-                    const canAfford = (players.find((x) => x.id === pid)?.money ?? 0) >= cost;
-                    return (
-                      <RailroadDepotControl
-                        installed={installed}
-                        canAfford={canAfford}
-                        onInstall={() => {
-                          dispatch(setDepotInstalled({ tileId: tile.id, installed: true }));
-                          dispatch(adjustPlayerMoney({ id: pid, delta: -cost }));
-                          dispatch(
-                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, amount: -cost, message: 'Depot installed' }, moneyDelta: -cost, createdAt: new Date().toISOString() })
-                          );
-                        }}
-                        onRemove={() => {
-                          dispatch(setDepotInstalled({ tileId: tile.id, installed: false }));
-                          dispatch(
-                            appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { tileId: tile.id, message: 'Depot removed' }, createdAt: new Date().toISOString() })
-                          );
-                        }}
-                      />
-                    );
-                  })()}
                 </motion.div>
               )}
 
@@ -2012,7 +2056,8 @@ export default function PlayConsole(): JSX.Element {
                     })();
                     const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
                     const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
-                    const playerMoney = p.money;
+                    const pendingJackpot = isTripleOnes && tripleTeleportTo != null ? 1000 : 0;
+                    const effectivePreviewMoney = p.money + pendingJackpot;
                     const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
 
                     return (
@@ -2053,7 +2098,7 @@ export default function PlayConsole(): JSX.Element {
                                   }
                                   setPostAction(next ? 'Buy Property' : postAction === 'Buy Property' ? 'None' : postAction);
                                 }}
-                                canAffordBuy={playerMoney >= price}
+                                canAffordBuy={effectivePreviewMoney >= price}
                                 auctionItSelected={auctionItSelected}
                                 onToggleAuctionIt={() => {
                                   const next = !auctionItSelected;
@@ -2078,13 +2123,28 @@ export default function PlayConsole(): JSX.Element {
                               <PostActionsBar
                                 rentLabel={rentLabel}
                                 rentSelected={rentSelected}
-                                onToggleRent={() => setRentSelected((v) => !v)}
+                                onToggleRent={() => {
+                                  setRentSelected((v) => !v);
+                                  setUseRentPassSelected(false);
+                                }}
                                 rentShake={shakeRent}
                                 taxLabel={taxLabel}
                                 taxSelected={taxSelected}
                                 onToggleTax={() => setTaxSelected((v) => !v)}
                                 taxShake={shakeTax}
-                              />
+                              >
+                                {usablePassForPost && (
+                                  <TogglePillButton
+                                    label={<span>Use Pass ({usablePassForPost.remaining})</span>}
+                                    active={useRentPassSelected}
+                                    onToggle={() => {
+                                      setUseRentPassSelected((v) => !v);
+                                      setRentSelected(false);
+                                    }}
+                                    variant="blue"
+                                  />
+                                )}
+                              </PostActionsBar>
                             </div>
                           </div>
                         )}
@@ -2162,7 +2222,7 @@ export default function PlayConsole(): JSX.Element {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0">
+            <div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0 rounded-b-3xl">
               {activeStep < 2 ? (
                 <button
                   type="button"
@@ -2403,6 +2463,17 @@ export default function PlayConsole(): JSX.Element {
       {/* Card picker overlay */}
       <AnimatePresence>
         {overlay.deck && (
+          <>
+          {(overlay.deck === 'chance' || overlay.deck === 'community') && (
+            <motion.div
+              key="overlay-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 modal-backdrop"
+              onClick={() => setOverlay({ deck: null })}
+            />
+          )}
           <motion.div
             key="overlay"
             initial={{ y: '100%' }}
@@ -2468,6 +2539,15 @@ export default function PlayConsole(): JSX.Element {
                 })()
               ) : (
                 <>
+                  <div className="col-span-full">
+                    <input
+                      type="text"
+                      value={cardSearch}
+                      onChange={(e) => setCardSearch(e.target.value)}
+                      placeholder={`Search ${overlay.deck === 'chance' ? 'Chance' : 'Community'} cards...`}
+                      className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm"
+                    />
+                  </div>
                   {cardsState.decks[overlay.deck].drawPile.length === 0 && (overlay.deck === 'chance' || overlay.deck === 'community') && (
                     <div className="rounded-md border border-neutral-300 dark:border-neutral-700 p-3 text-sm flex items-center justify-between">
                       <span>No cards left in {overlay.deck}. Reshuffle to continue.</span>
@@ -2482,7 +2562,12 @@ export default function PlayConsole(): JSX.Element {
                       </button>
                     </div>
                   )}
-                  {cardsState.decks[overlay.deck].drawPile.map((card) => (
+                  {cardsState.decks[overlay.deck].drawPile.length > 0 && filteredOverlayCards.length === 0 && (
+                    <div className="col-span-full rounded-md border border-neutral-300 dark:border-neutral-700 p-3 text-sm text-subtle">
+                      No cards match your search.
+                    </div>
+                  )}
+                  {filteredOverlayCards.map((card) => (
                     <button
                       key={card.id}
                       onClick={() => {
@@ -2504,6 +2589,7 @@ export default function PlayConsole(): JSX.Element {
               )}
             </div>
           </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -3008,80 +3094,94 @@ export default function PlayConsole(): JSX.Element {
         onConfirm={({ targets, desiredMortgaged, desiredDepotInstalled }) => {
           const pid = players[turnIndex]?.id || players[0]?.id;
           if (!pid) return;
-          let totalCost = 0;
-          let totalRefund = 0;
-          // Mortgage/unmortgage application computed in overlay net, but we still need to apply state changes
-          // We will compare desired vs current after money updates using a local copy sourced from DOM via custom event; for simplicity here, money reflects both build/sell and mortgage deltas
-          for (const t of BOARD_TILES) {
-            if (t.type !== 'property' || targets[t.id] == null) continue;
-            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
-            const tar = targets[t.id];
-            if (tar > cur) {
-              for (let level = cur; level < tar; level += 1) {
-                totalCost += t.property!.houseCost; // uniform cost per level
-              }
-            } else if (tar < cur) {
-              for (let level = cur; level > tar; level -= 1) {
-                totalRefund += t.property!.houseCost / 2; // uniform refund
-              }
-            }
-          }
-          const net = Math.max(0, totalCost - totalRefund);
-          if (net > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -net }));
-          if (totalRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +totalRefund }));
-          // Apply mortgage/unmortgage flags and compute mortgage deltas
-          let mortCost = 0;
-          let mortRefund = 0;
+          const getLiveByTile = () => (store.getState() as RootState).properties.byTileId;
+          let totalCostAll = 0;
+          let totalRefundAll = 0;
+
+          // Apply mortgage/unmortgage flags and charge/refund only if reducer accepted the change.
           if (desiredMortgaged) {
             for (const t of BOARD_TILES) {
               if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
-              const curMort = propsState.byTileId[t.id]?.mortgaged === true;
+              const curMort = getLiveByTile()[t.id]?.mortgaged === true;
               const desMort = desiredMortgaged[t.id] === true;
               if (curMort === desMort) continue;
               const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
-              if (desMort && !curMort) {
-                mortRefund += mv;
-              } else if (!desMort && curMort) {
-                mortCost += mv;
-              }
               dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+              const nextMort = getLiveByTile()[t.id]?.mortgaged === true;
+              if (nextMort !== desMort) continue;
+              if (desMort) totalRefundAll += mv;
+              else totalCostAll += mv;
             }
           }
-          // Apply depot install/remove
-          let depotCost = 0;
+
+          // Apply depot install/remove and charge only successful installs.
           if (desiredDepotInstalled) {
             for (const t of BOARD_TILES) {
               if (t.type !== 'railroad') continue;
-              const cur = propsState.byTileId[t.id]?.depotInstalled === true;
+              const cur = getLiveByTile()[t.id]?.depotInstalled === true;
               const des = desiredDepotInstalled[t.id] === true;
               if (cur === des) continue;
-              if (des && !cur) depotCost += 100;
               dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
+              const next = getLiveByTile()[t.id]?.depotInstalled === true;
+              if (next !== des) continue;
+              if (des) totalCostAll += 100;
             }
           }
-          if (mortCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -mortCost }));
-          if (mortRefund > 0) dispatch(adjustPlayerMoney({ id: pid, delta: +mortRefund }));
-          if (depotCost > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -depotCost }));
-          const totalCostAll = totalCost + mortCost + depotCost;
-          const totalRefundAll = totalRefund + mortRefund;
-          const netAll = Math.max(0, totalCostAll - totalRefundAll);
+
+          const managedPropertyTiles = BOARD_TILES.filter((t) => t.type === 'property' && targets[t.id] != null);
+
+          // Apply sells first in passes so even-sell rules are respected.
+          for (let pass = 0; pass < 64; pass += 1) {
+            let progressed = false;
+            for (const t of managedPropertyTiles) {
+              const cur = getLiveByTile()[t.id]?.improvements ?? 0;
+              const tar = targets[t.id];
+              if (cur <= tar) continue;
+              dispatch(sellHouse({ tileId: t.id }));
+              const next = getLiveByTile()[t.id]?.improvements ?? cur;
+              if (next < cur) {
+                progressed = true;
+                totalRefundAll += (t.property?.houseCost ?? 0) / 2;
+              }
+            }
+            if (!progressed) break;
+          }
+
+          // Apply builds in round-robin passes so even-build rules are respected.
+          for (let pass = 0; pass < 64; pass += 1) {
+            let progressed = false;
+            for (const t of managedPropertyTiles) {
+              const cur = getLiveByTile()[t.id]?.improvements ?? 0;
+              const tar = targets[t.id];
+              if (cur >= tar) continue;
+              dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
+              const next = getLiveByTile()[t.id]?.improvements ?? cur;
+              if (next > cur) {
+                progressed = true;
+                totalCostAll += t.property?.houseCost ?? 0;
+              }
+            }
+            if (!progressed) break;
+          }
+
+          const moneyDelta = totalRefundAll - totalCostAll;
+          if (moneyDelta !== 0) {
+            dispatch(adjustPlayerMoney({ id: pid, delta: moneyDelta }));
+          }
           if (totalCostAll > 0 || totalRefundAll > 0) {
+            const netAll = Math.max(0, totalCostAll - totalRefundAll);
             const msg = `Build/Sell & Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}`;
-            dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'MONEY_ADJUST', actorPlayerId: pid, payload: { playerId: pid, message: msg }, moneyDelta: totalRefund - net, createdAt: new Date().toISOString() }));
-          }
-          for (const t of BOARD_TILES) {
-            if (t.type !== 'property' || targets[t.id] == null) continue;
-            const cur = propsState.byTileId[t.id]?.improvements ?? 0;
-            const tar = targets[t.id];
-            if (tar > cur) {
-              for (let level = cur; level < tar; level += 1) {
-                dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
-              }
-            } else if (tar < cur) {
-              for (let level = cur; level > tar; level -= 1) {
-                dispatch(sellHouse({ tileId: t.id }));
-              }
-            }
+            dispatch(
+              appendEvent({
+                id: crypto.randomUUID(),
+                gameId: 'local',
+                type: 'MONEY_ADJUST',
+                actorPlayerId: pid,
+                payload: { playerId: pid, message: msg },
+                moneyDelta,
+                createdAt: new Date().toISOString(),
+              })
+            );
           }
           addPreAction('Managed');
           setBuildOverlayOpen(false);

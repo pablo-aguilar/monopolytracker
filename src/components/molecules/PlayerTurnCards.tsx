@@ -29,8 +29,12 @@ export interface PlayerTurnCardsProps {
   utilitiesTooltipForPlayer: (playerId: string) => React.ReactNode;
   groupTooltipForPlayer: (playerId: string, group: ColorGroup) => React.ReactNode;
   getGroupBorderClass: (group: ColorGroup) => string;
-  tradePassCountForPlayer: (playerId: string) => number;
-  tradePassTooltipForPlayer: (playerId: string) => React.ReactNode;
+  tradePassBadgesForPlayer: (playerId: string) => Array<{
+    key: string;
+    count: number;
+    borderClassName: string;
+    tooltip: React.ReactNode;
+  }>;
   renderActivePanel?: (player: PlayerTurnCardsPlayer, idx: number) => React.ReactNode;
 }
 
@@ -43,8 +47,7 @@ export default function PlayerTurnCards({
   utilitiesTooltipForPlayer,
   groupTooltipForPlayer,
   getGroupBorderClass,
-  tradePassCountForPlayer,
-  tradePassTooltipForPlayer,
+  tradePassBadgesForPlayer,
   renderActivePanel,
 }: PlayerTurnCardsProps): JSX.Element {
   return (
@@ -63,8 +66,10 @@ export default function PlayerTurnCards({
           return 'Jail: Last Roll';
         })();
         return (
-          <div data-qa="player-turn-card" key={p.id} className={`rounded-3xl overflow-hidden border-2 ${isActive ? 'border-emerald-400 border-3' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2`}>
-            <div className=" pl-2 py-1 pr-2 gap-2 relative bg-surface-1  flex flex-col">
+          <div data-qa="player-turn-card" key={p.id} className={`rounded-3xl  border-2 ${isActive ? 'border-emerald-400 border-3' : 'border-neutral-200 dark:border-neutral-700'} bg-surface-2`}>
+            <div className={`pl-2 py-1 pr-2 gap-2 relative bg-surface-1 flex flex-col 
+              ${isActive ? 'rounded-t-3xl' : 'rounded-3xl'}
+              `}>
               {/* player avatar & name */}
               <div className="flex items-center gap-3 relative">
                 <div style={{ ['--player-color' as any]: p.color } as React.CSSProperties}>
@@ -85,14 +90,13 @@ export default function PlayerTurnCards({
                 {(Number(p.busTickets ?? 0) > 0) && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={Number(p.busTickets ?? 0)} />)}
                 {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
                 {(() => {
-                  const passCount = tradePassCountForPlayer(p.id);
-                  if (passCount <= 0) return null;
-                  const tip = tradePassTooltipForPlayer(p.id);
-                  return (
-                    <Tooltip content={tip || `Passes x${passCount}`}>
-                      <HudBadge title="Trade passes" icon={<span>🎫</span>} count={passCount} variant="pill" borderClassName="border-violet-400" />
+                  const badges = tradePassBadgesForPlayer(p.id);
+                  if (badges.length <= 0) return null;
+                  return badges.map((badge) => (
+                    <Tooltip key={badge.key} content={badge.tooltip}>
+                      <HudBadge title="Trade passes" icon={<span>🎟️</span>} count={badge.count} variant="pill" borderClassName={badge.borderClassName} />
                     </Tooltip>
-                  );
+                  ));
                 })()}
                 {(() => {
                   const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsByTileId[t.id]?.ownerId === p.id)).length;
