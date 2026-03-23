@@ -11,21 +11,19 @@ import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema
 import EventLog from '@/components/molecules/EventLog';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
-import { addToFreeParking, resetFreeParking } from '@/features/session/sessionSlice';
+import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
 import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
-import { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
+import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
-import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail } from '@/features/players/playersSlice';
+import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
 import { persistor, type RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
-import FromToIndicator from '@/components/atoms/FromToIndicator';
 import HudBadge from '@/components/atoms/HudBadge';
 import Tooltip from '@/components/atoms/Tooltip';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
 import { AVATARS } from '@/data/avatars';
 import TogglePillButton from '@/components/atoms/TogglePillButton';
 import StatPill from '@/components/atoms/StatPill';
@@ -33,7 +31,7 @@ import HudBar from '@/components/molecules/HudBar';
 import BuyButton from '@/components/atoms/BuyButton';
 import IconLabelButton from '@/components/atoms/IconLabelButton';
 import { AnimatePresence, motion } from 'framer-motion';
-import { advanceTurn, setRacePotWinner } from '@/features/session/sessionSlice';
+import { advanceTurn, setRacePotWinner, setTurnIndex } from '@/features/session/sessionSlice';
 import DiceSelector from '@/components/molecules/DiceSelector';
 import StepNavigator from '@/components/molecules/StepNavigator';
 import TurnRibbon, { type TurnSegment } from '@/components/molecules/TurnRibbon';
@@ -41,11 +39,14 @@ import JailAttemptRibbon from '@/components/molecules/JailAttemptRibbon';
 import PostActionsBar from '@/components/molecules/PostActionsBar';
 import PurchaseActionsRow from '@/components/molecules/PurchaseActionsRow';
 import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
 import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
+import SettingsGear from '@/components/molecules/SettingsGear';
 import { FaHandshake } from 'react-icons/fa';
+import { MdReceiptLong } from 'react-icons/md';
 import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 
 export default function PlayConsole(): JSX.Element {
@@ -95,6 +96,18 @@ export default function PlayConsole(): JSX.Element {
     card?: { deck: 'chance' | 'community'; cardId: string; effectType: string; rawSteps?: number; awardGoIfPassed?: boolean };
   };
 
+  type PendingLiquidationPlan = {
+    payerId: string;
+    payeeId: string;
+    tileId: string;
+    rentDue: number;
+    targets: Record<string, number>;
+    desiredMortgaged: Record<string, boolean>;
+    desiredDepotInstalled: Record<string, boolean>;
+    projectedNetNow: number;
+    projectedCashAfter: number;
+  };
+
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [d6A, setD6A] = useState<number | null>(null);
   const [d6B, setD6B] = useState<number | null>(null);
@@ -122,6 +135,11 @@ export default function PlayConsole(): JSX.Element {
   const [shakeTax, setShakeTax] = useState<boolean>(false);
   const [shakeBus, setShakeBus] = useState<boolean>(false);
   const [buildOverlayOpen, setBuildOverlayOpen] = useState<boolean>(false);
+  const [buildOverlayMode, setBuildOverlayMode] = useState<'manage' | 'liquidate_for_rent'>('manage');
+  const [liquidationContext, setLiquidationContext] = useState<{ payerId: string; payeeId: string; tileId: string; rentDue: number } | null>(null);
+  const [pendingLiquidation, setPendingLiquidation] = useState<PendingLiquidationPlan | null>(null);
+  const [resolvedRentKey, setResolvedRentKey] = useState<string | null>(null);
+  const [liquidationBanner, setLiquidationBanner] = useState<string | null>(null);
   const [boardOverlayOpen, setBoardOverlayOpen] = useState<boolean>(false);
   const [auctionOpen, setAuctionOpen] = useState<boolean>(false);
   const [tradeModalOpen, setTradeModalOpen] = useState<boolean>(false);
@@ -136,6 +154,7 @@ export default function PlayConsole(): JSX.Element {
   const [stagedBusTickets, setStagedBusTickets] = useState<number>(0);
   const [stagedBigBus, setStagedBigBus] = useState<boolean>(false);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
+  const [eventLogOpen, setEventLogOpen] = useState<boolean>(false);
   const [gmToolsOpen, setGmToolsOpen] = useState<boolean>(false);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = useState<boolean>(false);
   const [rollCount, setRollCount] = useState<number>(1);
@@ -146,9 +165,130 @@ export default function PlayConsole(): JSX.Element {
   const [queuedPostActive, setQueuedPostActive] = useState<QueuedMovement | null>(null);
   const events = useSelector((s: RootState) => s.events.events);
 
+  const closeBuildOverlay = React.useCallback(() => {
+    setBuildOverlayOpen(false);
+    setBuildOverlayMode('manage');
+    setLiquidationContext(null);
+  }, []);
+
+  const makeRentSettlementKey = React.useCallback((payerId: string, tileId: string, payeeId: string) => `${payerId}:${tileId}:${payeeId}`, []);
+  const applyPendingLiquidationPlan = React.useCallback((plan: PendingLiquidationPlan): boolean => {
+    const getLiveByTile = () => (store.getState() as RootState).properties.byTileId;
+    let totalCostAll = 0;
+    let totalRefundAll = 0;
+    let immediateMortgageCredit = 0;
+
+    const managedPropertyTiles = BOARD_TILES.filter((t) => t.type === 'property' && plan.targets[t.id] != null);
+
+    // Apply sells first in passes so even-sell rules are respected.
+    for (let pass = 0; pass < 64; pass += 1) {
+      let progressed = false;
+      for (const t of managedPropertyTiles) {
+        const cur = getLiveByTile()[t.id]?.improvements ?? 0;
+        const tar = plan.targets[t.id];
+        if (cur <= tar) continue;
+        dispatch(sellHouse({ tileId: t.id }));
+        const next = getLiveByTile()[t.id]?.improvements ?? cur;
+        if (next < cur) {
+          progressed = true;
+          totalRefundAll += (t.property?.houseCost ?? 0) / 2;
+        }
+      }
+      if (!progressed) break;
+    }
+
+    // Apply mortgage/unmortgage after sells.
+    for (const t of BOARD_TILES) {
+      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+      const curMort = getLiveByTile()[t.id]?.mortgaged === true;
+      const desMort = plan.desiredMortgaged[t.id] === true;
+      if (curMort === desMort) continue;
+      const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+      dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+      const nextMort = getLiveByTile()[t.id]?.mortgaged === true;
+      if (nextMort !== desMort) continue;
+      if (desMort) immediateMortgageCredit += mv;
+      else totalCostAll += mv;
+    }
+
+    const moneyDelta = totalRefundAll + immediateMortgageCredit - totalCostAll;
+    if (moneyDelta !== 0) {
+      dispatch(adjustPlayerMoney({ id: plan.payerId, delta: moneyDelta }));
+    }
+    if (totalCostAll > 0 || totalRefundAll > 0 || immediateMortgageCredit > 0) {
+      const netAll = Math.max(0, totalCostAll - totalRefundAll);
+      const msg = `Liquidation staged: cost $${totalCostAll}, refund $${totalRefundAll}, mortgage credit $${immediateMortgageCredit}, net now $${netAll}`;
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'MONEY_ADJUST',
+          actorPlayerId: plan.payerId,
+          payload: { playerId: plan.payerId, message: msg },
+          moneyDelta,
+          createdAt: new Date().toISOString(),
+        })
+      );
+    }
+
+    const payerMoneyAfter = (store.getState() as RootState).players.players.find((p) => p.id === plan.payerId)?.money ?? 0;
+    if (payerMoneyAfter < plan.rentDue) return false;
+
+    dispatch(adjustPlayerMoney({ id: plan.payerId, delta: -plan.rentDue }));
+    dispatch(adjustPlayerMoney({ id: plan.payeeId, delta: +plan.rentDue }));
+    dispatch(
+      appendEvent({
+        id: crypto.randomUUID(),
+        gameId: 'local',
+        type: 'RENT',
+        actorPlayerId: plan.payerId,
+        payload: {
+          tileId: plan.tileId,
+          from: plan.payerId,
+          to: plan.payeeId,
+          amount: plan.rentDue,
+          message: `Rent ${plan.rentDue} (liquidate & pay)`,
+        },
+        moneyDelta: -plan.rentDue,
+        createdAt: new Date().toISOString(),
+      })
+    );
+    return true;
+  }, [dispatch, store]);
+  const showLiquidationBanner = React.useCallback((message: string) => {
+    setLiquidationBanner(message);
+    if (liquidationBannerTimerRef.current) window.clearTimeout(liquidationBannerTimerRef.current);
+    liquidationBannerTimerRef.current = window.setTimeout(() => {
+      setLiquidationBanner(null);
+      liquidationBannerTimerRef.current = null;
+    }, 2600);
+  }, []);
+
+  const postDebugLog = React.useCallback((payload: Record<string, unknown>) => {
+    const url = '/__agent_debug/ingest/524dbb2d-2218-47b5-b464-246b740724e2';
+    const body = JSON.stringify(payload);
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'e6c2a6' },
+      body,
+    }).catch(() => {});
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([body], { type: 'application/json' });
+      navigator.sendBeacon(url, blob);
+    }
+  }, []);
+
   React.useEffect(() => {
     setCardSearch('');
   }, [overlay.deck]);
+  React.useEffect(() => {
+    // #region agent log
+    postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H0',location:'PlayConsole.tsx:mount',message:'play console mounted',data:{turnIndex,playersCount:players.length},timestamp:Date.now()});
+    // #endregion
+  }, [turnIndex, players.length, postDebugLog]);
+  React.useEffect(() => () => {
+    if (liquidationBannerTimerRef.current) window.clearTimeout(liquidationBannerTimerRef.current);
+  }, []);
 
   const addPreAction = React.useCallback((label: string) => {
     setPreActions((prev) => (prev.includes(label) ? prev : [...prev, label]));
@@ -285,6 +425,7 @@ export default function PlayConsole(): JSX.Element {
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const holdTimerRef = useRef<number | null>(null);
   const holdIntervalRef = useRef<number | null>(null);
+  const liquidationBannerTimerRef = useRef<number | null>(null);
 
   // Sync and reset only on turn change; avoid resetting when drawing Bus updates state
   const activePlayer = players[turnIndex] ?? players[0];
@@ -307,6 +448,8 @@ export default function PlayConsole(): JSX.Element {
     setTripleTeleportTo(null);
     setBuySelected(false);
     setRentSelected(false);
+    setResolvedRentKey(null);
+    setPendingLiquidation(null);
     setUseRentPassSelected(false);
     setTaxSelected(false);
     setBusSelectedCardId(null);
@@ -316,8 +459,25 @@ export default function PlayConsole(): JSX.Element {
     setJailChoice(null);
     setStagedChanceCardId(null);
     setStagedCommunityCardId(null);
-    // snapshot bus tickets available at start of turn
+    // Release deferred mortgage credit at start of this player's turn.
     const pid = (players[turnIndex] ?? players[0])?.id;
+    const pendingCredit = pid ? ((store.getState() as any).session?.pendingMortgageCreditByPlayerId?.[pid] ?? 0) : 0;
+    if (pid && pendingCredit > 0) {
+      dispatch(adjustPlayerMoney({ id: pid, delta: pendingCredit }));
+      dispatch(consumePendingMortgageCredit({ playerId: pid }));
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'MONEY_ADJUST',
+          actorPlayerId: pid,
+          payload: { playerId: pid, amount: pendingCredit, message: `Released $${pendingCredit} mortgage credit` },
+          moneyDelta: pendingCredit,
+          createdAt: new Date().toISOString(),
+        })
+      );
+    }
+    // snapshot bus tickets available at start of turn
     const startCount = pid ? (players.find((x) => x.id === pid)?.busTickets ?? 0) : 0;
     setBusTicketsAvailableThisTurn(startCount);
     // reset staging
@@ -355,10 +515,6 @@ export default function PlayConsole(): JSX.Element {
   }, [d6A, d6B, special]);
 
   // //#derived
-  const lastChance = cardsState.decks.chance.discardPile[0];
-  const lastCommunity = cardsState.decks.community.discardPile[0];
-  const lastBus = cardsState.decks.bus.discardPile[0];
-
   const specialNumeric: number = useMemo(() => {
     if (special === '+1') return 1;
     if (special === '-1') return -1;
@@ -375,8 +531,12 @@ export default function PlayConsole(): JSX.Element {
   const isTriple = d6A !== null && d6B !== null && d6A === d6B && typeof special === 'number' && special === d6A;
   const isTripleOnes = isTriple && d6A === 1;
 
-  const bankUnownedCount = useMemo(() => {
-    return Object.values(propsState.byTileId).filter((ps) => ps && ps.ownerId === null).length;
+  const bankUnownedLots = useMemo(() => {
+    return BOARD_TILES.filter((tile) => tile.type === 'property' && tile.group != null && propsState.byTileId[tile.id]?.ownerId === null).map((tile) => ({
+      id: tile.id,
+      name: tile.name,
+      group: tile.group as ColorGroup,
+    }));
   }, [propsState.byTileId]);
 
   const depotsInstalled = useMemo(() => {
@@ -388,6 +548,42 @@ export default function PlayConsole(): JSX.Element {
   const chanceLeft = cardsState.decks.chance.drawPile.length;
   const communityLeft = cardsState.decks.community.drawPile.length;
   const busLeft = cardsState.decks.bus.drawPile.length;
+  const liquidationPotentialByPlayerId = useMemo(() => {
+    const totals: Record<string, number> = {};
+    for (const p of players) totals[p.id] = 0;
+
+    for (const t of BOARD_TILES) {
+      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+      const ps = propsState.byTileId[t.id];
+      const ownerId = ps?.ownerId;
+      if (!ownerId) continue;
+
+      let tileLiquidation = 0;
+
+      if (t.type === 'property') {
+        const level = ps?.improvements ?? 0;
+        const unitCost = t.property?.houseCost ?? 0;
+        tileLiquidation += level * (unitCost / 2);
+      }
+
+      // After improvements are sold down, the tile can be mortgaged if not already mortgaged.
+      if (ps?.mortgaged !== true) {
+        tileLiquidation += t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+      }
+
+      totals[ownerId] = (totals[ownerId] ?? 0) + tileLiquidation;
+    }
+
+    return totals;
+  }, [players, propsState.byTileId]);
+  const turnCardPlayers = useMemo(
+    () =>
+      players.map((p) => ({
+        ...p,
+        liquidationPotential: liquidationPotentialByPlayerId[p.id] ?? 0,
+      })),
+    [players, liquidationPotentialByPlayerId]
+  );
 
   // //#handlers
   const onApplyMove = (playerId?: string, toIndexOverride?: number, advanceAfterMove: boolean = true, meta?: ApplyMoveMeta): void => {
@@ -568,6 +764,9 @@ export default function PlayConsole(): JSX.Element {
   };
 
   const finalizeTurn = (pid: string): void => {
+    // #region agent log
+    postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H2',location:'PlayConsole.tsx:finalizeTurn:entry',message:'finalizeTurn called',data:{pid,turnIndex,activeStep,currentIndex,predictedTo,summaryOpen,playersCount:players.length},timestamp:Date.now()});
+    // #endregion
     const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
     const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
     let resolvedQueuedThisCall = false;
@@ -757,10 +956,134 @@ export default function PlayConsole(): JSX.Element {
       setPostAction('None');
       setBuySelected(false);
       setRentSelected(false);
+      setResolvedRentKey(null);
+      setPendingLiquidation(null);
       setUseRentPassSelected(false);
       setTaxSelected(false);
       setSummaryOpen(false);
       return;
+    }
+
+    // Resolve strict insolvency before any normal rent selection/settlement flow.
+    if (!thirdDoubles) {
+      const insolvencyCtx = getActiveRentContext();
+      // #region agent log
+      postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H1',location:'PlayConsole.tsx:finalizeTurn:insolvency-check',message:'insolvency context before branch',data:{pid,insolvencyCtx},timestamp:Date.now()});
+      // #endregion
+      if (insolvencyCtx && insolvencyCtx.payerId === pid && insolvencyCtx.isInsolvent) {
+        const loserId = insolvencyCtx.payerId;
+        const creditorId = insolvencyCtx.payeeId;
+        // #region agent log
+        postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H1',location:'PlayConsole.tsx:finalizeTurn:insolvency-branch-enter',message:'entered insolvency settlement branch',data:{loserId,creditorId,turnIndex,playersCountBefore:players.length},timestamp:Date.now()});
+        // #endregion
+        const loserName = players.find((p) => p.id === loserId)?.nickname ?? loserId;
+        const creditorName = players.find((p) => p.id === creditorId)?.nickname ?? creditorId;
+        const getLiveByTile = () => (store.getState() as RootState).properties.byTileId;
+        const loserPropertyTiles = BOARD_TILES.filter((t) => t.type === 'property' && propsState.byTileId[t.id]?.ownerId === loserId);
+        let liquidationRefund = 0;
+
+        for (let pass = 0; pass < 64; pass += 1) {
+          let progressed = false;
+          for (const t of loserPropertyTiles) {
+            const before = getLiveByTile()[t.id]?.improvements ?? 0;
+            if (before <= 0) continue;
+            dispatch(sellHouse({ tileId: t.id }));
+            const after = getLiveByTile()[t.id]?.improvements ?? before;
+            if (after < before) {
+              progressed = true;
+              liquidationRefund += (t.property?.houseCost ?? 0) / 2;
+            }
+          }
+          if (!progressed) break;
+        }
+
+        if (liquidationRefund > 0) {
+          dispatch(adjustPlayerMoney({ id: loserId, delta: liquidationRefund }));
+        }
+
+        const transferableTileIds = BOARD_TILES
+          .filter((t) => t.type === 'property' || t.type === 'railroad' || t.type === 'utility')
+          .map((t) => t.id)
+          .filter((tileId) => getLiveByTile()[tileId]?.ownerId === loserId);
+
+        for (const tileId of transferableTileIds) {
+          dispatch(transferOwnerPreserveState({ tileId, ownerId: creditorId }));
+          dispatch(unassignProperty({ id: loserId, tileId }));
+          dispatch(assignProperty({ id: creditorId, tileId }));
+        }
+
+        dispatch(transferPlayerSpecialAssets({ fromId: loserId, toId: creditorId }));
+
+        const loserRemainingCash = (store.getState() as RootState).players.players.find((p) => p.id === loserId)?.money ?? 0;
+        if (loserRemainingCash > 0) {
+          dispatch(adjustPlayerMoney({ id: loserId, delta: -loserRemainingCash }));
+          dispatch(adjustPlayerMoney({ id: creditorId, delta: +loserRemainingCash }));
+        }
+
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'MONEY_ADJUST',
+            actorPlayerId: loserId,
+            payload: {
+              playerId: loserId,
+              message: `${loserName} is insolvent and lost to ${creditorName}. Transferred ${transferableTileIds.length} properties, $${loserRemainingCash} cash, and all bus/GOJF cards.`,
+            },
+            moneyDelta: -loserRemainingCash,
+            createdAt: new Date().toISOString(),
+          })
+        );
+
+        dispatch(consumePendingMortgageCredit({ playerId: loserId }));
+        dispatch(removePlayer(loserId));
+
+        const nextPlayerCount = Math.max(0, players.length - 1);
+        const nextIndex = nextPlayerCount > 0 ? Math.min(turnIndex, nextPlayerCount - 1) : 0;
+        dispatch(setTurnIndex(nextIndex));
+        const playersAfterRemoval = (store.getState() as RootState).players.players.map((p) => p.id);
+        // #region agent log
+        postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H3',location:'PlayConsole.tsx:finalizeTurn:after-remove',message:'post-removal state snapshot',data:{loserId,nextIndex,nextPlayerCount,playersAfterRemoval},timestamp:Date.now()});
+        // #endregion
+
+        setPostAction('Insolvency');
+        setPendingLiquidation(null);
+        setResolvedRentKey(null);
+        setRentSelected(false);
+        setUseRentPassSelected(false);
+        setTaxSelected(false);
+        setPredictedTo(null);
+        setTripleTeleportTo(null);
+        setBusTeleportTo(null);
+        setPostActionQueue([]);
+        setQueuedPostPending(false);
+        setQueuedPostActive(null);
+        setSummaryOpen(false);
+        // #region agent log
+        postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H4',location:'PlayConsole.tsx:finalizeTurn:before-return',message:'insolvency branch completed and modal close requested',data:{summaryOpenRequested:false},timestamp:Date.now()});
+        // #endregion
+        return;
+      }
+    }
+
+    // Apply deferred liquidation settlement for the current rent context.
+    if (!thirdDoubles && pendingLiquidation) {
+      const idxL = predictedTo ?? currentIndex;
+      const tL = getTileByIndex(idxL);
+      const psL = propsState.byTileId[tL.id];
+      const ownerIdL = psL?.ownerId as string | null;
+      const pendingKey = makeRentSettlementKey(pendingLiquidation.payerId, pendingLiquidation.tileId, pendingLiquidation.payeeId);
+      const currentKey = ownerIdL ? makeRentSettlementKey(pid, tL.id, ownerIdL) : '';
+      if (pendingKey === currentKey) {
+        const settled = applyPendingLiquidationPlan(pendingLiquidation);
+        if (!settled) return;
+        setResolvedRentKey(currentKey);
+        setPendingLiquidation(null);
+        setRentSelected(false);
+        setUseRentPassSelected(false);
+        setPostAction('Rent');
+        showLiquidationBanner(`Rent paid via liquidation: $${pendingLiquidation.rentDue}`);
+      }
     }
 
     // If rent or pass was selected, resolve payment before moving (skip on third doubles)
@@ -771,7 +1094,18 @@ export default function PlayConsole(): JSX.Element {
         const ps2 = propsState.byTileId[t2.id];
         const ownerIdForTile2 = ps2?.ownerId as string | null;
         const mortgaged2 = ps2?.mortgaged === true;
-        if (ownerIdForTile2 && ownerIdForTile2 !== pid && !mortgaged2) {
+        const pendingForThisRent = !!(
+          ownerIdForTile2 &&
+          pendingLiquidation &&
+          makeRentSettlementKey(pendingLiquidation.payerId, pendingLiquidation.tileId, pendingLiquidation.payeeId) === makeRentSettlementKey(pid, t2.id, ownerIdForTile2)
+        );
+        const alreadySettled = !!(ownerIdForTile2 && resolvedRentKey === makeRentSettlementKey(pid, t2.id, ownerIdForTile2));
+        if (alreadySettled) {
+          setResolvedRentKey(null);
+          setRentSelected(false);
+          setUseRentPassSelected(false);
+        }
+        if (ownerIdForTile2 && ownerIdForTile2 !== pid && !mortgaged2 && !alreadySettled && !pendingForThisRent) {
           const diceTotal2 = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
           const state2 = (window as any).__store__?.getState?.() as RootState | undefined;
           const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
@@ -813,6 +1147,8 @@ export default function PlayConsole(): JSX.Element {
               // Pass consumed; skip rent transfer but continue turn finalization.
             }
             if (!(useRentPassSelected && usablePass)) {
+              const payerMoney = players.find((p) => p.id === pid)?.money ?? 0;
+              if (payerMoney < rent2) return;
               dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));
               dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));
               dispatch(
@@ -907,6 +1243,8 @@ export default function PlayConsole(): JSX.Element {
         setPostAction('None');
         setBuySelected(false);
         setRentSelected(false);
+        setResolvedRentKey(null);
+        setPendingLiquidation(null);
         setUseRentPassSelected(false);
         setTaxSelected(false);
         setSummaryOpen(false);
@@ -1059,6 +1397,8 @@ export default function PlayConsole(): JSX.Element {
       setPostAction('None');
       setBuySelected(false);
       setRentSelected(false);
+      setResolvedRentKey(null);
+      setPendingLiquidation(null);
       setUseRentPassSelected(false);
       setTaxSelected(false);
       setSummaryOpen(false);
@@ -1134,6 +1474,8 @@ export default function PlayConsole(): JSX.Element {
     const ownerIdForTile = ps?.ownerId as string | null;
     const mortgaged = ps?.mortgaged === true;
     if (!moneyPlayerId || !ownerIdForTile || ownerIdForTile === moneyPlayerId || mortgaged || rent <= 0) return;
+    const payerMoney = players.find((p) => p.id === moneyPlayerId)?.money ?? 0;
+    if (payerMoney < rent) return;
     const usablePass = findUsablePass(moneyPlayerId, ownerIdForTile, tile.id);
     if (usablePass) {
       const passLabel =
@@ -1488,29 +1830,47 @@ export default function PlayConsole(): JSX.Element {
     }
   }
 
-  function improvementLabel(imp: number): string {
-    if (imp <= 0) return 'None';
-    if (imp >= 6) return 'Skyscraper';
-    if (imp === 5) return 'Hotel';
-    return `${imp} house${imp > 1 ? 's' : ''}`;
+  function renderImprovementIcons(imp: number): React.ReactNode {
+    if (imp <= 0) return null;
+    if (imp >= 6) {
+      return <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-4 w-4 shrink-0 inline-block align-middle" loading="lazy" decoding="async" />;
+    }
+    if (imp === 5) {
+      return <img src="/icons/hotel.webp" alt="Hotel" className="h-4 w-4 shrink-0 inline-block align-middle" loading="lazy" decoding="async" />;
+    }
+    return Array.from({ length: imp }).map((_, idx) => (
+      <img key={idx} src="/icons/house.webp" alt="House" className="h-4 w-4 shrink-0 inline-block align-middle" loading="lazy" decoding="async" />
+    ));
   }
 
-  function groupTooltipForPlayer(playerId: string, group: ColorGroup): string {
+  function abbreviateTooltipPropertyName(name: string): string {
+    return name.replace(/\bAvenue\b/g, 'Ave.');
+  }
+
+  function groupTooltipForPlayer(playerId: string, group: ColorGroup): React.ReactNode {
     const tiles = BOARD_TILES.filter((t) => t.type === 'property' && t.group === group);
-    const lines: string[] = [];
+    const rows: React.ReactNode[] = [];
     const state = store.getState();
     for (const t of tiles) {
       const ps = propsState.byTileId[t.id];
       const owned = ps?.ownerId === playerId;
       if (!owned) continue;
       const imp = ps?.improvements ?? 0;
-      const impText = improvementLabel(imp);
       const rent = computeRent(state, t.id, 0);
-      const rentText = rent > 0 ? ` — Rent $${rent}` : '';
-      lines.push(`${t.name}${imp > 0 ? ` — ${impText}` : ''}${rentText}`);
+      rows.push(
+        <div key={t.id} className="flex items-center gap-1 whitespace-nowrap">
+          <span>{abbreviateTooltipPropertyName(t.name)}</span>
+          {imp > 0 && (
+            <>
+              <span className="inline-flex items-center gap-0.5">{renderImprovementIcons(imp)}</span>
+            </>
+          )}
+          {rent > 0 && <span> Rent ${rent}</span>}
+        </div>,
+      );
     }
-    if (lines.length === 0) return '';
-    return lines.join('\n');
+    if (rows.length === 0) return '';
+    return <div className="space-y-0.5">{rows}</div>;
   }
 
   function railroadTooltipForPlayer(playerId: string): string {
@@ -1622,6 +1982,37 @@ export default function PlayConsole(): JSX.Element {
     { id: 2 as const, title: 'Post', desc: postAction || 'None' },
   ];
 
+  const getActiveRentContext = React.useCallback(() => {
+    const payerId = players[turnIndex]?.id || players[0]?.id;
+    if (!payerId) return null;
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return null;
+    const ps = propsState.byTileId[t.id];
+    const payeeId = ps?.ownerId as string | null;
+    const mortgaged = ps?.mortgaged === true;
+    if (!payeeId || payeeId === payerId || mortgaged) return null;
+    const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+    const state = (window as any).__store__?.getState?.() as RootState | undefined;
+    const rentDue = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+    if (rentDue <= 0) return null;
+    const payerCash = players.find((p) => p.id === payerId)?.money ?? 0;
+    const shortfall = Math.max(0, rentDue - payerCash);
+    const liquidationPotential = liquidationPotentialByPlayerId[payerId] ?? 0;
+    const canLiquidate = shortfall > 0 && liquidationPotential >= shortfall;
+    const isInsolvent = shortfall > 0 && liquidationPotential < shortfall;
+    return {
+      payerId,
+      payeeId,
+      tileId: t.id,
+      rentDue,
+      shortfall,
+      liquidationPotential,
+      canLiquidate,
+      isInsolvent,
+    };
+  }, [players, turnIndex, predictedTo, currentIndex, propsState, d6A, d6B, specialNumeric, liquidationPotentialByPlayerId]);
+
   const usablePassForPost = (() => {
     const idx = predictedTo ?? currentIndex;
     const t = getTileByIndex(idx);
@@ -1635,15 +2026,17 @@ export default function PlayConsole(): JSX.Element {
   })();
 
   const rentRequiredButNotSelected = (): boolean => {
-    const idx = predictedTo ?? currentIndex;
-    const t = getTileByIndex(idx);
-    if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
-    const ps = propsState.byTileId[t.id];
-    const owner = ps?.ownerId as string | null;
-    const mortgaged = ps?.mortgaged === true;
-    const pid = players[turnIndex]?.id || players[0]?.id;
-    const mustPay = !!owner && owner !== pid && !mortgaged;
-    if (!mustPay) return false;
+    const rentCtx = getActiveRentContext();
+    if (!rentCtx) return false;
+    if (rentCtx.isInsolvent) return false;
+    const pendingForThisRent = !!(
+      rentCtx.payerId &&
+      rentCtx.payeeId &&
+      pendingLiquidation &&
+      makeRentSettlementKey(pendingLiquidation.payerId, pendingLiquidation.tileId, pendingLiquidation.payeeId) === makeRentSettlementKey(rentCtx.payerId, rentCtx.tileId, rentCtx.payeeId)
+    );
+    if (pendingForThisRent) return false;
+    if (resolvedRentKey === makeRentSettlementKey(rentCtx.payerId, rentCtx.tileId, rentCtx.payeeId)) return false;
     return !(rentSelected || (useRentPassSelected && !!usablePassForPost));
   };
 
@@ -1689,6 +2082,8 @@ export default function PlayConsole(): JSX.Element {
     const state = (window as any).__store__?.getState?.() as RootState | undefined;
     const rent = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
     if (rent <= 0) return;
+    const payerMoney = players.find((p) => p.id === pid)?.money ?? 0;
+    if (payerMoney < rent) return;
     dispatch(adjustPlayerMoney({ id: pid, delta: -rent }));
     dispatch(adjustPlayerMoney({ id: ownerIdForTile, delta: +rent }));
     dispatch(
@@ -1718,6 +2113,21 @@ export default function PlayConsole(): JSX.Element {
   // //#render
   return (
     <div data-cmp="o/PlayConsole" className="w-full max-w-5xl space-y-6">
+      <AnimatePresence>
+        {liquidationBanner && (
+          <motion.div
+            key="liquidation-banner"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed right-4 top-4 z-[70] rounded-md border border-emerald-500 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 shadow-lg dark:bg-emerald-900/60 dark:text-emerald-200"
+            role="status"
+            aria-live="polite"
+          >
+            {liquidationBanner}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="flex items-center flex-col sm:flex-row sm:items-start justify-between">
         <h1 className="text-2xl font-semibold flex items-center gap-3">
           <button type="button" onClick={() => setBoardOverlayOpen(true)} className="hover:underline">
@@ -1731,23 +2141,149 @@ export default function PlayConsole(): JSX.Element {
           )}
         </h1>
         {/* HUD summary */}
-        <HudBar
-          className="mt-2 sm:mt-0"
-          housesRemaining={propsState.housesRemaining}
-          hotelsRemaining={propsState.hotelsRemaining}
-          skyscrapersRemaining={propsState.skyscrapersRemaining}
-          depotsLeft={depotsLeft}
-          freeParkingPot={freeParkingPot}
-          bankUnownedCount={bankUnownedCount}
-          chanceLeft={chanceLeft}
-          communityLeft={communityLeft}
-          busLeft={busLeft}
-        />
+        <div className="mt-2 sm:mt-0 flex w-full sm:w-auto items-center justify-end gap-2">
+          <HudBar
+            housesRemaining={propsState.housesRemaining}
+            hotelsRemaining={propsState.hotelsRemaining}
+            skyscrapersRemaining={propsState.skyscrapersRemaining}
+            depotsLeft={depotsLeft}
+            freeParkingPot={freeParkingPot}
+            bankUnownedLots={bankUnownedLots}
+            chanceLeft={chanceLeft}
+            communityLeft={communityLeft}
+            busLeft={busLeft}
+          />
+          <button
+            type="button"
+            onClick={() => setEventLogOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 px-3 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+          >
+            <MdReceiptLong className="h-4 w-4" aria-hidden />
+            <span>Logs</span>
+          </button>
+          <SettingsGear
+            className="shrink-0"
+            modalContent={(
+              <div className="w-full">
+                <button
+                  type="button"
+                  onClick={() => setGmToolsOpen((o) => !o)}
+                  className="flex items-center justify-between w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                >
+                  <span className="text-sm font-semibold">GM Tools</span>
+                  <span className="text-xs text-neutral-500">Manual actions and corrections</span>
+                  <span className="text-neutral-400">{gmToolsOpen ? '▼' : '▶'}</span>
+                </button>
+                {gmToolsOpen && (
+                  <div className="mt-3 space-y-4">
+                    {/* Context */}
+                    <div data-qa="gm-context" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Context</h3>
+                        {(() => {
+                          const p = players[turnIndex] ?? players[0];
+                          if (!p) return null;
+                          const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
+                          return (
+                            <div className="flex items-center gap-2" style={{ ['--player-color' as string]: p.color } as React.CSSProperties}>
+                              <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={24} />
+                              <span className="text-sm font-medium">{p.nickname}</span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <label className="block text-sm font-medium mb-1">Current Tile (for manual actions)</label>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">Actions below apply to this tile. Use 0-39 for board index.</p>
+                      <input data-qa="current-index" type="number" min={0} max={39} value={currentIndex} onChange={(e) => setCurrentIndex(parseInt(e.target.value || '0', 10))} className="w-full rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                      <p className="mt-1 text-xs opacity-80">{currentTileName} (index {currentIndex})</p>
+                    </div>
+
+                    {/* Movement */}
+                    <div data-qa="gm-movement" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Movement</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button data-qa="btn-apply-move" onClick={() => onApplyMove()} disabled={!hasRoll} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow hover:enabled:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title={hasRoll ? 'Move by dice' : 'Select D6 A and D6 B first'}>Apply Move (dice)</button>
+                        <button data-qa="btn-move-to-tile" onClick={() => onApplyMove(undefined, currentIndex)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold text-sm shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title="Move current player to Current Tile above">Move to Current Tile</button>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 mt-2">Use dice from Roll step, or move directly to Current Tile.</p>
+                    </div>
+
+                    {/* Money & Payments */}
+                    <div data-qa="gm-money" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Money & Payments</h3>
+                      <div className="flex flex-wrap items-end gap-2 mb-3">
+                        <div>
+                          <label className="block text-[11px] text-neutral-500 mb-0.5">Player</label>
+                          <select data-qa="money-player" value={moneyPlayerId} onChange={(e) => setMoneyPlayerId(e.target.value)} className="rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            <option value="">Select player</option>
+                            {players.map((p) => (
+                              <option value={p.id} key={p.id}>{p.nickname}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-neutral-500 mb-0.5">Amount (+/-)</label>
+                          <input data-qa="money-delta" type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} placeholder="+200 or -50" className="w-28 rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                        </div>
+                        <button data-qa="btn-apply-money" onClick={onAdjustMoney} className="rounded-md px-3 py-2 bg-slate-700 text-white font-semibold text-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button data-qa="btn-pay-rent" onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
+                        <button data-qa="btn-pay-tax" onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 mt-2">Uses current tile + selected player</p>
+                    </div>
+
+                    {/* Property */}
+                    <div data-qa="gm-property" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Property (for current tile)</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button data-qa="btn-mortgage" onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold text-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
+                        <button data-qa="btn-unmortgage" onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold text-sm hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
+                        <button data-qa="btn-build" onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold text-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
+                        <button data-qa="btn-sell" onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold text-sm hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 mt-2">Owner inferred from tile</p>
+                    </div>
+
+                    {/* Draw Cards */}
+                    <div data-qa="gm-cards" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Draw Cards</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button data-qa="btn-draw-chance" onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Chance</button>
+                        <button data-qa="btn-draw-community" onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold text-sm hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Community Chest</button>
+                        {((special === 'Bus') || (predictedTo != null && getTileByIndex(predictedTo).type === 'busStop')) && (
+                          <button data-qa="btn-draw-bus" onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold text-sm hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Bus</button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Game */}
+                    <div data-qa="gm-game" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
+                      <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Game</h3>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">Start over from Setup and clear the saved game state on this device.</p>
+                      <div className="flex items-center justify-end">
+                        <button
+                          data-qa="btn-new-game"
+                          type="button"
+                          onClick={() => setNewGameConfirmOpen(true)}
+                          className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                        >
+                          New Game
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          />
+        </div>
       </div>
 
       {/* Player turn cards */}
       <PlayerTurnCards
-        players={players}
+        players={turnCardPlayers}
         activePlayerIndex={turnIndex}
         getTileByIndex={getTileByIndex}
         propsByTileId={propsState.byTileId}
@@ -1794,7 +2330,11 @@ export default function PlayConsole(): JSX.Element {
                     iconSrc="/icons/house.webp"
                     label="Manage"
                     className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
-                    onClick={() => setBuildOverlayOpen(true)}
+                    onClick={() => {
+                      setBuildOverlayMode('manage');
+                      setLiquidationContext(null);
+                      setBuildOverlayOpen(true);
+                    }}
                   />
                 </div>
               );
@@ -1911,51 +2451,6 @@ export default function PlayConsole(): JSX.Element {
 
                           </div>
 
-                          {/* Triples: teleport footer (tied to roll) */}
-                          {(() => {
-                            if (!isTriple) return null;
-                            const cl =
-                              isTripleOnes
-                                ? {
-                                    ghost: 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30',
-                                    selected:
-                                      'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50',
-                                  }
-                                : {
-                                    ghost: 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30',
-                                    selected:
-                                      'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50',
-                                  };
-                            return (
-                              <div className="border-t border-surface bg-surface-0 px-3 py-2 rounded-b-lg">
-                                {tripleTeleportTo != null ? (
-                                  <button
-                                    type="button"
-                                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cl.selected}`}
-                                    onClick={() => {
-                                      setTripleTeleportTo(null);
-                                      setPredictedTo(null);
-                                    }}
-                                  >
-                                    <span>✓</span>
-                                    🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={busTeleportTo != null}
-                                    className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${cl.ghost}`}
-                                    onClick={() => {
-                                      setBusTeleportTo(null);
-                                      setCenterOverlay({ type: 'tripleTeleport' });
-                                    }}
-                                  >
-                                    Teleport (3-of-a-kind)
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })()}
                         </div>
 
                         {canUseBusInsteadOfRoll && (
@@ -2009,10 +2504,6 @@ export default function PlayConsole(): JSX.Element {
                 <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2 p-4 pt-1">
                   {(() => {
                     const pid = players[turnIndex]?.id || players[0]?.id;
-                    const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
-                    const isDblNow = (d6A !== null && d6B !== null && d6A === d6B);
-                    const thirdDbl = (rollCount >= 3) && isDblNow && (busTeleportTo == null);
-                    const toIdx: number | null = thirdDbl ? JAIL_INDEX : (predictedTo ?? null);
                     const t = getTileByIndex(predictedTo ?? currentIndex);
                     const ps = propsState.byTileId[t.id];
                     const owner = ps?.ownerId as string | null;
@@ -2024,19 +2515,75 @@ export default function PlayConsole(): JSX.Element {
                     const chanceVisible = t.type === 'chance';
                     const communityVisible = t.type === 'community';
 
-                    const maybeRentLabel = (): string | null => {
+                    const maybeRentInfo = (): { ownerId: string; ownerName: string; ownerEmoji: string; ownerColor: string; rentAmount: number; propertyName: string; improvements: number } | null => {
                       if (!pid || !isBuyable || !owner || owner === pid || mortgaged) return null;
                       const ownerPlayer = players.find((pl) => pl.id === owner);
                       const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
                       const state = (window as any).__store__?.getState?.() as RootState | undefined;
                       const rentAmount = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
                       const imp = propsState.byTileId[t.id]?.improvements ?? 0;
-                      const impSuffix = imp > 0 ? ` (${improvementLabel(imp)})` : '';
-                      return `Pay ${ownerPlayer?.nickname ?? 'owner'} $${rentAmount} for ${t.name}${impSuffix}`;
+                      const ownerEmoji = AVATARS.find((a) => a.key === ownerPlayer?.avatarKey)?.emoji ?? '🙂';
+                      return {
+                        ownerId: owner,
+                        ownerName: ownerPlayer?.nickname ?? 'owner',
+                        ownerEmoji,
+                        ownerColor: ownerPlayer?.color ?? '#71717a',
+                        rentAmount,
+                        propertyName: t.name,
+                        improvements: imp,
+                      };
                     };
                     const maybeTaxLabel = (): string | null => (t.type === 'tax' ? `Pay Tax $${t.taxAmount}` : null);
-                    const rentLabel = maybeRentLabel();
+                    const rentInfo = maybeRentInfo();
+                    const rentLabel = rentInfo
+                      ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>Pay</span>
+                          <span
+                            aria-hidden
+                            className="inline-flex h-5 w-5 items-center justify-center rounded-full"
+                            style={{ backgroundColor: rentInfo.ownerColor }}
+                          >
+                            {rentInfo.ownerEmoji}
+                          </span>
+                          <span>{rentInfo.ownerName}</span>
+                          <span>${rentInfo.rentAmount}</span>
+                        </span>
+                      )
+                      : null;
+                    const rentDueLabel = rentInfo
+                      ? (
+                        <span>
+                          Rent due for <span className="font-semibold">{rentInfo.propertyName}</span>
+                          {rentInfo.improvements > 0 && (
+                            <>
+                              {' '}with{' '}
+                              <span className="inline-flex items-center gap-0.5 align-middle">
+                                {rentInfo.improvements >= 6
+                                  ? <span aria-label="skyscraper">🏙️</span>
+                                  : rentInfo.improvements === 5
+                                    ? <span aria-label="hotel">🏨</span>
+                                    : Array.from({ length: rentInfo.improvements }).map((_, idx) => <span key={idx} aria-label="house">🏠</span>)}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      )
+                      : null;
                     const taxLabel = maybeTaxLabel();
+                    const paymentsHeader = rentDueLabel ?? 'Payments';
+                    const currentCash = players.find((x) => x.id === pid)?.money ?? 0;
+                    const rentShortfall = rentInfo ? Math.max(0, rentInfo.rentAmount - currentCash) : 0;
+                    const liquidationPotential = pid ? (liquidationPotentialByPlayerId[pid] ?? 0) : 0;
+                    const pendingForThisRent = !!(
+                      pid &&
+                      rentInfo &&
+                      pendingLiquidation &&
+                      makeRentSettlementKey(pendingLiquidation.payerId, pendingLiquidation.tileId, pendingLiquidation.payeeId) === makeRentSettlementKey(pid, t.id, rentInfo.ownerId)
+                    );
+                    const isInsolventForRent = !!rentInfo && rentShortfall > 0 && liquidationPotential < rentShortfall;
+                    const canLiquidateForRent = !!rentInfo && rentShortfall > 0 && liquidationPotential >= rentShortfall;
+                    const hidePayRentToggle = canLiquidateForRent || pendingForThisRent || isInsolventForRent;
 
                     const busVisible = (() => {
                       const bySpecial = special === 'Bus' ? 1 : 0;
@@ -2062,19 +2609,6 @@ export default function PlayConsole(): JSX.Element {
 
                     return (
                       <div className="space-y-3">
-                        {/* Roll */}
-                        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Roll</div>
-                          <div className="mt-2">
-                            <FromToIndicator
-                              from={getTileByIndex(fromIdx).name}
-                              to={toIdx != null ? getTileByIndex(toIdx).name : '—'}
-                              subtleTo
-                              alert={thirdDbl}
-                            />
-                          </div>
-                        </div>
-
                         {/* Property (buy/auction it) */}
                         {isUnownedBuyable && (
                           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
@@ -2118,33 +2652,98 @@ export default function PlayConsole(): JSX.Element {
                         {/* Payments */}
                         {(rentLabel || taxLabel) && (
                           <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Payments</div>
+                            <div
+                              className={rentDueLabel
+                                ? 'text-xs font-medium text-neutral-600 dark:text-neutral-300'
+                                : 'text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400'}
+                            >
+                              {paymentsHeader}
+                            </div>
                             <div className="mt-2">
                               <PostActionsBar
-                                rentLabel={rentLabel}
+                                rentLabel={hidePayRentToggle ? undefined : rentLabel}
                                 rentSelected={rentSelected}
-                                onToggleRent={() => {
+                                onToggleRent={hidePayRentToggle ? undefined : (() => {
                                   setRentSelected((v) => !v);
+                                  setResolvedRentKey(null);
                                   setUseRentPassSelected(false);
-                                }}
+                                })}
                                 rentShake={shakeRent}
                                 taxLabel={taxLabel}
                                 taxSelected={taxSelected}
                                 onToggleTax={() => setTaxSelected((v) => !v)}
                                 taxShake={shakeTax}
                               >
-                                {usablePassForPost && (
+                                {usablePassForPost && !isInsolventForRent && (
                                   <TogglePillButton
                                     label={<span>Use Pass ({usablePassForPost.remaining})</span>}
                                     active={useRentPassSelected}
                                     onToggle={() => {
                                       setUseRentPassSelected((v) => !v);
                                       setRentSelected(false);
+                                      setResolvedRentKey(null);
                                     }}
                                     variant="blue"
                                   />
                                 )}
                               </PostActionsBar>
+                              {rentInfo && rentShortfall > 0 && (
+                                isInsolventForRent ? (
+                                  <div className="mt-2 space-y-1">
+                                    <div className="text-[11px] font-black uppercase tracking-wider text-rose-700 dark:text-rose-300">
+                                      Bankrupt
+                                    </div>
+                                    <div className="text-xs text-rose-600">Not enough liquidation value to fully cover rent.</div>
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 flex items-center gap-2 text-xs">
+                                    <button
+                                      type="button"
+                                      disabled={!canLiquidateForRent}
+                                      className={`rounded-md border px-2 py-1 font-semibold ${
+                                        canLiquidateForRent
+                                          ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                                          : 'border-neutral-300 text-neutral-400 dark:border-neutral-700 dark:text-neutral-500 cursor-not-allowed'
+                                      }`}
+                                      onClick={() => {
+                                        if (!pid || !canLiquidateForRent || !rentInfo) return;
+                                        setBuildOverlayMode('liquidate_for_rent');
+                                        setLiquidationContext({
+                                          payerId: pid,
+                                          payeeId: rentInfo.ownerId,
+                                          tileId: t.id,
+                                          rentDue: rentInfo.rentAmount,
+                                        });
+                                        setBuildOverlayOpen(true);
+                                      }}
+                                    >
+                                      {pendingForThisRent ? 'Edit Liquidation' : 'Liquidate &amp; Pay'}
+                                    </button>
+                                    {pendingForThisRent && pendingLiquidation ? (
+                                      <span className="text-amber-700 dark:text-amber-300">
+                                        Pending settlement: net ${pendingLiquidation.projectedNetNow} now, cash after rent ${pendingLiquidation.projectedCashAfter}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted">Need ${rentShortfall} more to pay rent.</span>
+                                    )}
+                                  </div>
+                                )
+                              )}
+                              {pendingForThisRent && (
+                                <div className="mt-2">
+                                  <button
+                                    type="button"
+                                    className="rounded-md border border-neutral-300 dark:border-neutral-700 px-2 py-1 text-xs font-semibold text-fg hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                    onClick={() => {
+                                      setPendingLiquidation(null);
+                                      setResolvedRentKey(null);
+                                      setPostAction('None');
+                                    }}
+                                  >
+                                    Cancel Pending Liquidation
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -2222,7 +2821,44 @@ export default function PlayConsole(): JSX.Element {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div data-qa="play-console-footer" className="flex items-center justify-end p-2 px-3 bg-surface-0 rounded-b-3xl">
+            <div data-qa="play-console-footer" className="flex items-center justify-between gap-0 py-3 px-3 bg-surface-0 rounded-b-3xl">
+              <div className="flex items-center gap-2">
+                {activeStep === 1 && isTriple && (
+                  tripleTeleportTo != null ? (
+                    <button
+                      type="button"
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${
+                        isTripleOnes
+                          ? 'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                          : 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                      }`}
+                      onClick={() => {
+                        setTripleTeleportTo(null);
+                        setPredictedTo(null);
+                      }}
+                    >
+                      <span>✓</span>
+                      🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busTeleportTo != null}
+                      className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${
+                        isTripleOnes
+                          ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                          : 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                      }`}
+                      onClick={() => {
+                        setBusTeleportTo(null);
+                        setCenterOverlay({ type: 'tripleTeleport' });
+                      }}
+                    >
+                      Teleport (3-of-a-kind)
+                    </button>
+                  )
+                )}
+              </div>
               {activeStep < 2 ? (
                 <button
                   type="button"
@@ -2327,139 +2963,6 @@ export default function PlayConsole(): JSX.Element {
         )}
       />
 
-      {/* GM Tools — manual actions and corrections */}
-      <div className="w-full max-w-3xl">
-        <button
-          type="button"
-          onClick={() => setGmToolsOpen((o) => !o)}
-          className="flex items-center justify-between w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 px-4 py-3 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-        >
-          <span className="text-sm font-semibold">GM Tools</span>
-          <span className="text-xs text-neutral-500">Manual actions and corrections</span>
-          <span className="text-neutral-400">{gmToolsOpen ? '▼' : '▶'}</span>
-        </button>
-        {gmToolsOpen && (
-          <div className="mt-3 space-y-4">
-            {/* Context */}
-            <div data-qa="gm-context" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">Context</h3>
-                {(() => {
-                  const p = players[turnIndex] ?? players[0];
-                  if (!p) return null;
-                  const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
-                  return (
-                    <div className="flex items-center gap-2" style={{ ['--player-color' as string]: p.color } as React.CSSProperties}>
-                      <AvatarToken emoji={emoji} borderColorClass="border-[color:var(--player-color)]" ring ringColorClass="ring-[color:var(--player-color)]" size={24} />
-                      <span className="text-sm font-medium">{p.nickname}</span>
-                    </div>
-                  );
-                })()}
-              </div>
-              <label className="block text-sm font-medium mb-1">Current Tile (for manual actions)</label>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">Actions below apply to this tile. Use 0–39 for board index.</p>
-              <input data-qa="current-index" type="number" min={0} max={39} value={currentIndex} onChange={(e) => setCurrentIndex(parseInt(e.target.value || '0', 10))} className="w-full rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-              <p className="mt-1 text-xs opacity-80">{currentTileName} (index {currentIndex})</p>
-            </div>
-
-            {/* Movement */}
-            <div data-qa="gm-movement" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Movement</h3>
-              <div className="flex flex-wrap gap-2">
-                <button data-qa="btn-apply-move" onClick={() => onApplyMove()} disabled={!hasRoll} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm shadow hover:enabled:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title={hasRoll ? 'Move by dice' : 'Select D6 A and D6 B first'}>Apply Move (dice)</button>
-                <button data-qa="btn-move-to-tile" onClick={() => onApplyMove(undefined, currentIndex)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-emerald-600 text-white font-semibold text-sm shadow hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" title="Move current player to Current Tile above">Move to Current Tile</button>
-              </div>
-              <p className="text-[11px] text-neutral-500 mt-2">Use dice from Roll step, or move directly to Current Tile.</p>
-            </div>
-
-            {/* Money & Payments */}
-            <div data-qa="gm-money" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Money & Payments</h3>
-              <div className="flex flex-wrap items-end gap-2 mb-3">
-                <div>
-                  <label className="block text-[11px] text-neutral-500 mb-0.5">Player</label>
-                  <select data-qa="money-player" value={moneyPlayerId} onChange={(e) => setMoneyPlayerId(e.target.value)} className="rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                    <option value="">Select player</option>
-                    {players.map((p) => (
-                      <option value={p.id} key={p.id}>{p.nickname}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] text-neutral-500 mb-0.5">Amount (+/-)</label>
-                  <input data-qa="money-delta" type="number" value={moneyDelta} onChange={(e) => setMoneyDelta(parseInt(e.target.value || '0', 10))} placeholder="+200 or -50" className="w-28 rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-                </div>
-                <button data-qa="btn-apply-money" onClick={onAdjustMoney} className="rounded-md px-3 py-2 bg-slate-700 text-white font-semibold text-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400">Apply Money</button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button data-qa="btn-pay-rent" onClick={onPayRent} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">Pay Rent</button>
-                <button data-qa="btn-pay-tax" onClick={onPayTax} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400">Pay Tax</button>
-              </div>
-              <p className="text-[11px] text-neutral-500 mt-2">Uses current tile + selected player</p>
-            </div>
-
-            {/* Property */}
-            <div data-qa="gm-property" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Property (for current tile)</h3>
-              <div className="flex flex-wrap gap-2">
-                <button data-qa="btn-mortgage" onClick={() => onMortgageToggle(true)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-600 text-white font-semibold text-sm hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-400">Mortgage</button>
-                <button data-qa="btn-unmortgage" onClick={() => onMortgageToggle(false)} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-zinc-500 text-white font-semibold text-sm hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-300">Unmortgage</button>
-                <button data-qa="btn-build" onClick={onBuild} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-green-700 text-white font-semibold text-sm hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500">Build</button>
-                <button data-qa="btn-sell" onClick={onSell} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-yellow-700 text-white font-semibold text-sm hover:bg-yellow-800 focus:outline-none focus:ring-2 focus:ring-yellow-500">Sell</button>
-              </div>
-              <p className="text-[11px] text-neutral-500 mt-2">Owner inferred from tile</p>
-            </div>
-
-            {/* Draw Cards */}
-            <div data-qa="gm-cards" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Draw Cards</h3>
-              <div className="flex flex-wrap gap-2">
-                <button data-qa="btn-draw-chance" onClick={() => onDrawCard('chance')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400">Chance</button>
-                <button data-qa="btn-draw-community" onClick={() => onDrawCard('community')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-fuchsia-600 text-white font-semibold text-sm hover:bg-fuchsia-700 focus:outline-none focus:ring-2 focus:ring-fuchsia-400">Community Chest</button>
-                {((special === 'Bus') || (predictedTo != null && getTileByIndex(predictedTo).type === 'busStop')) && (
-                  <button data-qa="btn-draw-bus" onClick={() => onDrawCard('bus')} className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-cyan-600 text-white font-semibold text-sm hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-400">Bus</button>
-                )}
-              </div>
-            </div>
-
-            {/* Game */}
-            <div data-qa="gm-game" className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4">
-              <h3 className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">Game</h3>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">Start over from Setup and clear the saved game state on this device.</p>
-              <div className="flex items-center justify-end">
-                <button
-                  data-qa="btn-new-game"
-                  type="button"
-                  onClick={() => setNewGameConfirmOpen(true)}
-                  className="inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                >
-                  New Game
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* //#cards-last: quick reference of last drawn cards for GM */}
-      <div data-qa="cards-last" className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
-          <div className="font-semibold mb-1">Last Chance</div>
-          <div className="opacity-80 min-h-10">{lastChance ? lastChance.text : '—'}</div>
-        </div>
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
-          <div className="font-semibold mb-1">Last Community Chest</div>
-          <div className="opacity-80 min-h-10">{lastCommunity ? lastCommunity.text : '—'}</div>
-        </div>
-        <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 p-3 text-sm">
-          <div className="font-semibold mb-1">Last Bus</div>
-          <div className="opacity-80 min-h-10">{lastBus ? lastBus.text : '—'}</div>
-        </div>
-      </div>
-
-      {/* //#event-log: chronological record of GM actions for spectators and undo later */}
-      <EventLog />
-
       {/* Card picker overlay */}
       <AnimatePresence>
         {overlay.deck && (
@@ -2482,12 +2985,11 @@ export default function PlayConsole(): JSX.Element {
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 p-4 shadow-2xl"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-semibold">{
-                overlay.deck === 'community' ? 'Pick a Community Chest card' : overlay.deck === 'chance' ? 'Pick a Chance card' : 'Pick a Bus Ticket'
-              }</div>
-              <CloseIconButton onClick={() => setOverlay({ deck: null })} />
-            </div>
+            <OverlayHeader
+              title={overlay.deck === 'community' ? 'Pick a Community Chest card' : overlay.deck === 'chance' ? 'Pick a Chance card' : 'Pick a Bus Ticket'}
+              onClose={() => setOverlay({ deck: null })}
+              className="mb-2"
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[45vh] overflow-y-auto pr-1">
               {overlay.deck === 'bus' ? (
                 (() => {
@@ -2593,15 +3095,33 @@ export default function PlayConsole(): JSX.Element {
         )}
       </AnimatePresence>
 
+      {/* Event log modal */}
+      <AnimatePresence>
+        {eventLogOpen && (
+          <motion.div
+            key="event-log-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setEventLogOpen(false);
+            }}
+          >
+            <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700 max-h-[85vh] overflow-y-auto">
+              <OverlayHeader title="Event Logs" onClose={() => setEventLogOpen(false)} className="mb-3" />
+              <EventLog />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Summary overlay */}
       <AnimatePresence>
         {summaryOpen && (
           <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold">Turn Summary</div>
-                <CloseIconButton onClick={() => setSummaryOpen(false)} />
-              </div>
+              <OverlayHeader title="Turn Summary" onClose={() => setSummaryOpen(false)} className="mb-2" />
               <div className="space-y-2 text-sm">
                 {/* Completed segments recap */}
                 {turnSegments.length > 0 && (
@@ -2637,6 +3157,20 @@ export default function PlayConsole(): JSX.Element {
                   </div>
                 )}
                 <div className="opacity-80">Current: {rollSummary}</div>
+                {(() => {
+                  const insolvencyCtx = getActiveRentContext();
+                  if (!insolvencyCtx?.isInsolvent) return null;
+                  const loserName = players.find((p) => p.id === insolvencyCtx.payerId)?.nickname ?? insolvencyCtx.payerId;
+                  const creditorName = players.find((p) => p.id === insolvencyCtx.payeeId)?.nickname ?? insolvencyCtx.payeeId;
+                  return (
+                    <div className="rounded-md border border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-2">
+                      <div className="text-[11px] font-black uppercase tracking-wider">Bankrupt</div>
+                      <div className="text-xs">
+                        {loserName} lost to {creditorName}. Unable to cover rent even after liquidation.
+                      </div>
+                    </div>
+                  );
+                })()}
                 {(() => {
                   const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
                   const thirdDoubles = rollCount >= 3 && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
@@ -2689,6 +3223,9 @@ export default function PlayConsole(): JSX.Element {
                       className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${ blocked ? 'bg-emerald-600/40 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                       disabled={blocked}
                       onClick={() => {
+                        // #region agent log
+                        postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H5',location:'PlayConsole.tsx:summary:onConfirmClick',message:'summary confirm clicked',data:{blocked,isQueuedFlowActive,turnIndex,predictedTo,currentIndex},timestamp:Date.now()});
+                        // #endregion
                         if (blocked) return;
                         const pid = players[turnIndex]?.id || players[0]?.id;
                         if (!pid) return;
@@ -2721,7 +3258,7 @@ export default function PlayConsole(): JSX.Element {
               className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-sm font-semibold">Start a new game?</div>
+              <OverlayHeader title="Start a new game?" onClose={() => setNewGameConfirmOpen(false)} className="mb-1" />
               <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                 This will clear players, properties, decks, and the event log saved on this device and return you to Setup.
               </div>
@@ -2750,12 +3287,14 @@ export default function PlayConsole(): JSX.Element {
       <AnimatePresence>
         {centerOverlay.type && (
           <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
-            <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-semibold">{centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}</div>
-                <CloseIconButton onClick={() => setCenterOverlay({ type: null })} />
-              </div>
-              <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto">
+            <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
+              <OverlayHeader
+                title={centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}
+                subtitle="Pick a tile to set your teleport destination."
+                onClose={() => setCenterOverlay({ type: null })}
+                className="p-1 pl-3 bg-surface-1 rounded-t-xl"
+              />
+              <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto p-4 pt-2">
                 {BOARD_TILES.map((t) => {
                   const onTile = players.filter((pl) => pl.positionIndex === t.index);
                   const ownerIdForTile = (propsState.byTileId[t.id]?.ownerId as string | null) || null;
@@ -3038,7 +3577,9 @@ export default function PlayConsole(): JSX.Element {
       {/* Build & Sell overlay */}
       <BuildSellOverlay
         open={buildOverlayOpen}
-        onClose={() => setBuildOverlayOpen(false)}
+        onClose={closeBuildOverlay}
+        mode={buildOverlayMode}
+        rentDue={buildOverlayMode === 'liquidate_for_rent' ? (liquidationContext?.rentDue ?? 0) : 0}
         playerId={players[turnIndex]?.id || players[0]?.id}
         playerMoney={players[turnIndex]?.money || players[0]?.money || 0}
         tileLevels={useMemo(() => {
@@ -3092,41 +3633,72 @@ export default function PlayConsole(): JSX.Element {
         housesRemaining={propsState.housesRemaining}
         hotelsRemaining={propsState.hotelsRemaining}
         onConfirm={({ targets, desiredMortgaged, desiredDepotInstalled }) => {
-          const pid = players[turnIndex]?.id || players[0]?.id;
+          const defaultPid = players[turnIndex]?.id || players[0]?.id;
+          const pid = buildOverlayMode === 'liquidate_for_rent' ? (liquidationContext?.payerId ?? defaultPid) : defaultPid;
           if (!pid) return;
+          const isLiquidationFlow = buildOverlayMode === 'liquidate_for_rent' && liquidationContext?.payerId === pid;
+
+          // House rule: newly mortgaged cash cannot fund same-turn build/manage spend.
+          let plannedBuildCost = 0;
+          let plannedSellRefund = 0;
+          let plannedUnmortgageCost = 0;
+          let plannedMortgageCredit = 0;
+          let plannedDepotCost = 0;
+          for (const t of BOARD_TILES) {
+            if (t.type === 'property' && targets[t.id] != null) {
+              const cur = propsState.byTileId[t.id]?.improvements ?? 0;
+              const tar = targets[t.id];
+              const unitCost = t.property?.houseCost ?? 0;
+              if (tar > cur) plannedBuildCost += (tar - cur) * unitCost;
+              if (tar < cur) plannedSellRefund += (cur - tar) * (unitCost / 2);
+            }
+            if ((t.type === 'property' || t.type === 'railroad' || t.type === 'utility') && desiredMortgaged) {
+              const curMort = propsState.byTileId[t.id]?.mortgaged === true;
+              const desMort = desiredMortgaged[t.id] === true;
+              if (!curMort && desMort) {
+                plannedMortgageCredit += t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+              }
+              if (curMort && !desMort) {
+                plannedUnmortgageCost += t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+              }
+            }
+            if (!isLiquidationFlow && t.type === 'railroad' && desiredDepotInstalled) {
+              const curDepot = propsState.byTileId[t.id]?.depotInstalled === true;
+              const desDepot = desiredDepotInstalled[t.id] === true;
+              if (!curDepot && desDepot) plannedDepotCost += 100;
+            }
+          }
+          const currentMoney = players.find((p) => p.id === pid)?.money ?? 0;
+          const availableNow = currentMoney + plannedSellRefund + (isLiquidationFlow ? plannedMortgageCredit : 0);
+          const spendNow = plannedBuildCost + plannedUnmortgageCost + plannedDepotCost;
+          if (spendNow > availableNow) return;
+          if (isLiquidationFlow && liquidationContext) {
+            const projectedNetNow = plannedSellRefund + plannedMortgageCredit - plannedUnmortgageCost;
+            const projectedCashAfter = currentMoney + projectedNetNow - liquidationContext.rentDue;
+            setPendingLiquidation({
+              payerId: liquidationContext.payerId,
+              payeeId: liquidationContext.payeeId,
+              tileId: liquidationContext.tileId,
+              rentDue: liquidationContext.rentDue,
+              targets: { ...targets },
+              desiredMortgaged: { ...desiredMortgaged },
+              desiredDepotInstalled: {},
+              projectedNetNow,
+              projectedCashAfter,
+            });
+            setResolvedRentKey(null);
+            setRentSelected(false);
+            setUseRentPassSelected(false);
+            setPostAction('Rent (Pending)');
+            closeBuildOverlay();
+            return;
+          }
+
           const getLiveByTile = () => (store.getState() as RootState).properties.byTileId;
           let totalCostAll = 0;
           let totalRefundAll = 0;
-
-          // Apply mortgage/unmortgage flags and charge/refund only if reducer accepted the change.
-          if (desiredMortgaged) {
-            for (const t of BOARD_TILES) {
-              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
-              const curMort = getLiveByTile()[t.id]?.mortgaged === true;
-              const desMort = desiredMortgaged[t.id] === true;
-              if (curMort === desMort) continue;
-              const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
-              dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
-              const nextMort = getLiveByTile()[t.id]?.mortgaged === true;
-              if (nextMort !== desMort) continue;
-              if (desMort) totalRefundAll += mv;
-              else totalCostAll += mv;
-            }
-          }
-
-          // Apply depot install/remove and charge only successful installs.
-          if (desiredDepotInstalled) {
-            for (const t of BOARD_TILES) {
-              if (t.type !== 'railroad') continue;
-              const cur = getLiveByTile()[t.id]?.depotInstalled === true;
-              const des = desiredDepotInstalled[t.id] === true;
-              if (cur === des) continue;
-              dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
-              const next = getLiveByTile()[t.id]?.depotInstalled === true;
-              if (next !== des) continue;
-              if (des) totalCostAll += 100;
-            }
-          }
+          let immediateMortgageCredit = 0;
+          let deferredMortgageCredit = 0;
 
           const managedPropertyTiles = BOARD_TILES.filter((t) => t.type === 'property' && targets[t.id] != null);
 
@@ -3147,30 +3719,69 @@ export default function PlayConsole(): JSX.Element {
             if (!progressed) break;
           }
 
-          // Apply builds in round-robin passes so even-build rules are respected.
-          for (let pass = 0; pass < 64; pass += 1) {
-            let progressed = false;
-            for (const t of managedPropertyTiles) {
-              const cur = getLiveByTile()[t.id]?.improvements ?? 0;
-              const tar = targets[t.id];
-              if (cur >= tar) continue;
-              dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
-              const next = getLiveByTile()[t.id]?.improvements ?? cur;
-              if (next > cur) {
-                progressed = true;
-                totalCostAll += t.property?.houseCost ?? 0;
+          // Apply mortgage/unmortgage flags and charge/refund only if reducer accepted the change.
+          if (desiredMortgaged) {
+            for (const t of BOARD_TILES) {
+              if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;
+              const curMort = getLiveByTile()[t.id]?.mortgaged === true;
+              const desMort = desiredMortgaged[t.id] === true;
+              if (curMort === desMort) continue;
+              const mv = t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;
+              dispatch(setMortgaged({ tileId: t.id, mortgaged: desMort }));
+              const nextMort = getLiveByTile()[t.id]?.mortgaged === true;
+              if (nextMort !== desMort) continue;
+              if (desMort) {
+                if (isLiquidationFlow) immediateMortgageCredit += mv;
+                else deferredMortgageCredit += mv;
+              } else {
+                totalCostAll += mv;
               }
             }
-            if (!progressed) break;
           }
 
-          const moneyDelta = totalRefundAll - totalCostAll;
+          // Apply depot install/remove and charge only successful installs.
+          if (!isLiquidationFlow && desiredDepotInstalled) {
+            for (const t of BOARD_TILES) {
+              if (t.type !== 'railroad') continue;
+              const cur = getLiveByTile()[t.id]?.depotInstalled === true;
+              const des = desiredDepotInstalled[t.id] === true;
+              if (cur === des) continue;
+              dispatch(setDepotInstalled({ tileId: t.id, installed: des }));
+              const next = getLiveByTile()[t.id]?.depotInstalled === true;
+              if (next !== des) continue;
+              if (des) totalCostAll += 100;
+            }
+          }
+
+          // Apply builds in round-robin passes so even-build rules are respected.
+          if (!isLiquidationFlow) {
+            for (let pass = 0; pass < 64; pass += 1) {
+              let progressed = false;
+              for (const t of managedPropertyTiles) {
+                const cur = getLiveByTile()[t.id]?.improvements ?? 0;
+                const tar = targets[t.id];
+                if (cur >= tar) continue;
+                dispatch(buyHouse({ tileId: t.id, ownerId: pid }));
+                const next = getLiveByTile()[t.id]?.improvements ?? cur;
+                if (next > cur) {
+                  progressed = true;
+                  totalCostAll += t.property?.houseCost ?? 0;
+                }
+              }
+              if (!progressed) break;
+            }
+          }
+
+          const moneyDelta = totalRefundAll + immediateMortgageCredit - totalCostAll;
           if (moneyDelta !== 0) {
             dispatch(adjustPlayerMoney({ id: pid, delta: moneyDelta }));
           }
-          if (totalCostAll > 0 || totalRefundAll > 0) {
+          if (deferredMortgageCredit > 0) {
+            dispatch(addPendingMortgageCredit({ playerId: pid, amount: deferredMortgageCredit }));
+          }
+          if (totalCostAll > 0 || totalRefundAll > 0 || immediateMortgageCredit > 0 || deferredMortgageCredit > 0) {
             const netAll = Math.max(0, totalCostAll - totalRefundAll);
-            const msg = `Build/Sell & Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, net $${netAll}`;
+            const msg = `Build/Sell & Mortgage: cost $${totalCostAll}, refund $${totalRefundAll}, immediate mortgage credit $${immediateMortgageCredit}, deferred mortgage credit $${deferredMortgageCredit}, net now $${netAll}`;
             dispatch(
               appendEvent({
                 id: crypto.randomUUID(),
@@ -3184,7 +3795,7 @@ export default function PlayConsole(): JSX.Element {
             );
           }
           addPreAction('Managed');
-          setBuildOverlayOpen(false);
+          closeBuildOverlay();
         }}
       />
 

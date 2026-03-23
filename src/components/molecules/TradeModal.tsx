@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
 import AvatarToken from '@/components/atoms/AvatarToken';
+import MoneyInput from '@/components/atoms/MoneyInput';
 import { AVATARS } from '@/data/avatars';
 import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type ColorGroup } from '@/data/board';
 import type { TradePassEntry, TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 import { FaChevronDown } from 'react-icons/fa';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 
 type TradeableProperty = {
   id: string;
@@ -140,11 +141,6 @@ const BUILD_ELIGIBLE_GROUP_OWNERSHIP_MIN: Record<ColorGroup, number> = {
   green: 4,
   darkBlue: 2,
 };
-
-function clampInt(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) return min;
-  return Math.max(min, Math.min(max, Math.floor(value)));
-}
 
 function toggleIndexSelection(current: number[], idx: number): number[] {
   return current.includes(idx)
@@ -479,6 +475,12 @@ export default function TradeModal({
     return { from, to, hasAnything, netCashToPlayer1: to.cash - from.cash };
   }, [offer1, offer2, player1Inventory, player2Inventory, fromPassScopes, toPassScopes]);
 
+  const footerButtonBaseClass =
+    'rounded-md px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors';
+  const footerSecondaryButtonClass = `${footerButtonBaseClass} border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800`;
+  const footerPrimaryEnabledButtonClass = `${footerButtonBaseClass} text-white bg-emerald-600 hover:bg-emerald-700`;
+  const footerPrimaryDisabledButtonClass = `${footerButtonBaseClass} text-white bg-emerald-600/40 cursor-not-allowed`;
+
   if (!open) return null;
 
   const onConfirmTrade = (): void => {
@@ -523,10 +525,7 @@ export default function TradeModal({
           aria-label={title}
         >
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-            <div className="flex items-center bg-surface-1 justify-between px-4 pr-2 py-1">
-              <div className="text-sm font-semibold">{title}</div>
-              <CloseIconButton onClick={onClose} />
-            </div>
+            <OverlayHeader title={title} onClose={onClose} className="bg-surface-1 px-4 py-1" />
 
             <div className="p-4">
               <div className="space-y-2">
@@ -578,23 +577,18 @@ export default function TradeModal({
                     <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
                       <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Cash</div>
                       <div className="mt-2">
-                        <div className="inline-flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
-                          <span className="px-2 text-sm text-subtle">$</span>
-                          <input
-                            type="number"
-                            min={0}
-                            value={offer1.cash}
-                            onFocus={(e) => e.currentTarget.select()}
-                            onClick={(e) => e.currentTarget.select()}
-                            onChange={(e) =>
-                              setOffer1((prev) => ({
-                                ...prev,
-                                cash: clampInt(Number(e.target.value || 0), 0, player1Inventory?.maxCash ?? 0),
-                              }))
-                            }
-                            className="w-24 border-0 bg-transparent text-sm px-2 py-1 focus:outline-none"
-                          />
-                        </div>
+                        <MoneyInput
+                          value={offer1.cash}
+                          min={0}
+                          max={player1Inventory?.maxCash ?? 0}
+                          quickSteps={[5, 25, 100]}
+                          onChange={(cash) =>
+                            setOffer1((prev) => ({
+                              ...prev,
+                              cash,
+                            }))
+                          }
+                        />
                       </div>
                     </div>
 
@@ -613,7 +607,6 @@ export default function TradeModal({
                                 <SelectableCardTile
                                   key={`p1-bus-${idx}`}
                                   label="Bus Ticket"
-                                  sublabel={(player1Inventory?.busTickets ?? 0) > 1 ? `Ticket ${idx + 1}` : undefined}
                                   selected={selected}
                                   onToggle={() =>
                                     setOffer1((prev) => ({
@@ -844,23 +837,18 @@ export default function TradeModal({
                         <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
                           <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Cash</div>
                           <div className="mt-2">
-                            <div className="inline-flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-hidden">
-                              <span className="px-2 text-sm text-subtle">$</span>
-                              <input
-                                type="number"
-                                min={0}
-                                value={offer2.cash}
-                                onFocus={(e) => e.currentTarget.select()}
-                                onClick={(e) => e.currentTarget.select()}
-                                onChange={(e) =>
-                                  setOffer2((prev) => ({
-                                    ...prev,
-                                    cash: clampInt(Number(e.target.value || 0), 0, player2Inventory?.maxCash ?? 0),
-                                  }))
-                                }
-                                className="w-24 border-0 bg-transparent text-sm px-2 py-1 focus:outline-none"
-                              />
-                            </div>
+                            <MoneyInput
+                              value={offer2.cash}
+                              min={0}
+                              max={player2Inventory?.maxCash ?? 0}
+                              quickSteps={[ 5, 25, 100]}
+                              onChange={(cash) =>
+                                setOffer2((prev) => ({
+                                  ...prev,
+                                  cash,
+                                }))
+                              }
+                            />
                           </div>
                         </div>
 
@@ -879,7 +867,6 @@ export default function TradeModal({
                                     <SelectableCardTile
                                       key={`p2-bus-${idx}`}
                                       label="Bus Ticket"
-                                      sublabel={(player2Inventory?.busTickets ?? 0) > 1 ? `Ticket ${idx + 1}` : undefined}
                                       selected={selected}
                                       onToggle={() =>
                                         setOffer2((prev) => ({
@@ -1073,7 +1060,7 @@ export default function TradeModal({
                 <>
                   <button
                     type="button"
-                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    className={footerSecondaryButtonClass}
                     onClick={onClose}
                   >
                     Cancel
@@ -1081,7 +1068,7 @@ export default function TradeModal({
                   <button
                     type="button"
                     disabled={!canConfirm}
-                    className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${canConfirm ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-600/40 cursor-not-allowed'}`}
+                    className={canConfirm ? footerPrimaryEnabledButtonClass : footerPrimaryDisabledButtonClass}
                     onClick={() => setStep(2)}
                   >
                     Summary
@@ -1091,7 +1078,7 @@ export default function TradeModal({
                 <>
                   <button
                     type="button"
-                    className="rounded-md border border-neutral-400 dark:border-neutral-500 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm font-semibold shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    className={footerSecondaryButtonClass}
                     onClick={() => setStep(1)}
                   >
                     Back
@@ -1099,7 +1086,7 @@ export default function TradeModal({
                   <button
                     type="button"
                     disabled={!canConfirm}
-                    className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${canConfirm ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-600/40 cursor-not-allowed'}`}
+                    className={canConfirm ? footerPrimaryEnabledButtonClass : footerPrimaryDisabledButtonClass}
                     onClick={onConfirmTrade}
                   >
                     Confirm Trade

@@ -2,8 +2,9 @@ import React, { useMemo, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type BoardTileData } from '@/data/board';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 import AvatarToken from '@/components/atoms/AvatarToken';
+import MoneyInput from '@/components/atoms/MoneyInput';
 import { AVATARS } from '@/data/avatars';
 
 export interface AuctionOverlayProps {
@@ -70,10 +71,7 @@ export default function AuctionOverlay({ open, onClose, bankOwnedByTileId, playe
             className="absolute inset-x-0 bottom-0 mx-2 rounded-t-2xl overflow-hidden bg-surface-2 border-t border-surface shadow-2xl"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center bg-surface-1 justify-between px-4 pr-2 py-1">
-              <div className="text-sm font-semibold">Auction</div>
-              <CloseIconButton onClick={onClose} />
-            </div>
+            <OverlayHeader title="Auction" onClose={onClose} className="bg-surface-1 px-4 py-1" />
             <div className="space-y-3 ">
               {step === 1 && !presetTileId && (
                 <div className="space-y-2">
@@ -166,10 +164,14 @@ export default function AuctionOverlay({ open, onClose, bankOwnedByTileId, playe
 
                   <div className="pt-1">
                     <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Price</div>
-                    <div className="mt-1 inline-flex items-center gap-1">
-                      <button className="rounded-md border px-2 py-1 text-sm" onClick={() => setAmount((a) => Math.max(0, a - 5))}>-5</button>
-                      <input className="w-24 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-sm px-2 py-1" type="number" value={amount} onChange={(e) => setAmount(parseInt(e.target.value || '0', 10))} step={5} min={0} />
-                      <button className="rounded-md border px-2 py-1 text-sm" onClick={() => setAmount((a) => a + 5)}>+5</button>
+                    <div className="mt-1">
+                      <MoneyInput
+                        value={amount}
+                        min={0}
+                        onChange={setAmount}
+                        quickSteps={[5, 25, 100]}
+                        inputClassName="w-24 border-0 bg-transparent text-sm px-2 py-1 focus:outline-none"
+                      />
                     </div>
                   </div>
                 </div>

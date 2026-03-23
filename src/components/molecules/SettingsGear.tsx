@@ -2,7 +2,13 @@ import React from 'react';
 import { FaCog } from 'react-icons/fa';
 import SettingsModal from '@/components/molecules/SettingsModal';
 
-export default function SettingsGear({ className = '' }: { className?: string }): JSX.Element {
+export default function SettingsGear({
+  className = '',
+  modalContent,
+}: {
+  className?: string;
+  modalContent?: React.ReactNode;
+}): JSX.Element {
   const [open, setOpen] = React.useState(false);
   return (
     <div data-cmp="m/SettingsGear" className="contents">
@@ -14,7 +20,7 @@ export default function SettingsGear({ className = '' }: { className?: string })
       >
         <FaCog className="h-5 w-5 text-neutral-700 dark:text-neutral-200" />
       </button>
-      <SettingsModal open={open} onClose={() => setOpen(false)} />
+      <SettingsModal open={open} onClose={() => setOpen(false)} extraContent={modalContent} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ type SessionState = {
   racePot: RacePotState;
   turnIndex: number; // index into players array
   freeParkingPot: number;
+  pendingMortgageCreditByPlayerId: Record<string, number>;
 };
 
 const defaultRacePot = (): RacePotState => ({ active: false, amount: 0, participants: [], winnerId: null });
@@ -21,6 +22,7 @@ const initialState: SessionState = {
   racePot: defaultRacePot(),
   turnIndex: 0,
   freeParkingPot: 1000,
+  pendingMortgageCreditByPlayerId: {},
 };
 
 const sessionSlice = createSlice({
@@ -66,8 +68,30 @@ const sessionSlice = createSlice({
     resetFreeParking(state) {
       state.freeParkingPot = 0;
     },
+    addPendingMortgageCredit(state, action: PayloadAction<{ playerId: string; amount: number }>) {
+      const { playerId, amount } = action.payload;
+      if (!playerId || amount <= 0) return;
+      state.pendingMortgageCreditByPlayerId[playerId] =
+        (state.pendingMortgageCreditByPlayerId[playerId] ?? 0) + amount;
+    },
+    consumePendingMortgageCredit(state, action: PayloadAction<{ playerId: string }>) {
+      const { playerId } = action.payload;
+      if (!playerId) return;
+      delete state.pendingMortgageCreditByPlayerId[playerId];
+    },
   },
 });
 
-export const { setCurrentGameId, initializeRacePot, resetRacePot, setRacePotWinner, setTurnIndex, advanceTurn, addToFreeParking, resetFreeParking } = sessionSlice.actions;
+export const {
+  setCurrentGameId,
+  initializeRacePot,
+  resetRacePot,
+  setRacePotWinner,
+  setTurnIndex,
+  advanceTurn,
+  addToFreeParking,
+  resetFreeParking,
+  addPendingMortgageCredit,
+  consumePendingMortgageCredit,
+} = sessionSlice.actions;
 export default sessionSlice.reducer; 

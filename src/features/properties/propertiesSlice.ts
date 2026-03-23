@@ -91,6 +91,11 @@ const propertiesSlice = createSlice({
         ps.depotInstalled = false;
       }
     },
+    transferOwnerPreserveState(state, action: PayloadAction<{ tileId: string; ownerId: OwnerId }>) {
+      const ps = state.byTileId[action.payload.tileId];
+      if (!ps) return;
+      ps.ownerId = action.payload.ownerId;
+    },
     setMortgaged(state, action: PayloadAction<{ tileId: string; mortgaged: boolean }>) {
       const ps = state.byTileId[action.payload.tileId];
       if (!ps) return;
@@ -175,5 +180,5 @@ const propertiesSlice = createSlice({
   },
 });
 
-export const { assignOwner, setMortgaged, buyHouse, sellHouse, setDepotInstalled } = propertiesSlice.actions;
+export const { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } = propertiesSlice.actions;
 export default propertiesSlice.reducer;

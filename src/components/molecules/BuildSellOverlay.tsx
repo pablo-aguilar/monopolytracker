@@ -2,8 +2,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BOARD_TILES, type BoardTileData, type ColorGroup } from '@/data/board';
 import MortgageButton from '@/components/atoms/MortgageButton';
-import Tooltip from '@/components/atoms/Tooltip';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { computeRent, countGroupOwned } from '@/features/selectors/rent';
 import type { RootState } from '@/app/store';
@@ -14,6 +13,8 @@ import { FaMinus } from 'react-icons/fa';
 export interface BuildSellOverlayProps {
   open: boolean;
   onClose: () => void;
+  mode?: 'manage' | 'liquidate_for_rent';
+  rentDue?: number;
   playerId: string;
   playerMoney: number;
   // snapshot of current levels (by tile id) and mortgage flags
@@ -88,7 +89,8 @@ function HouseDropZone({ id, children }: { id: string; children: React.ReactNode
   );
 }
 
-export default function BuildSellOverlay({ open, onClose, playerId, playerMoney, tileLevels, tileMortgaged, ownedTileIds = [], railroadDepotInstalled = {}, housesRemaining, hotelsRemaining, skyscrapersRemaining = 12, onConfirm }: BuildSellOverlayProps): JSX.Element | null {
+export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentDue = 0, playerId, playerMoney, tileLevels, tileMortgaged, ownedTileIds = [], railroadDepotInstalled = {}, housesRemaining, hotelsRemaining, skyscrapersRemaining = 12, onConfirm }: BuildSellOverlayProps): JSX.Element | null {
+  const isLiquidationMode = mode === 'liquidate_for_rent';
   const ownedPropertyTiles: BoardTileData[] = React.useMemo(() => {
     return BOARD_TILES.filter((t) => t.type === 'property' && tileLevels[t.id] != null);
   }, [tileLevels]);
@@ -133,25 +135,50 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
 
   // planned target levels start at current
   const [targets, setTargets] = React.useState<Record<string, number>>(() => ({ ...tileLevels }));
-  React.useEffect(() => setTargets({ ...tileLevels }), [tileLevels]);
+  React.useEffect(() => {
+    if (!open) return;
+    setTargets({ ...tileLevels });
+  }, [open, tileLevels]);
 
   // desired mortgage state starts at current
   const [desiredMortgaged, setDesiredMortgaged] = React.useState<Record<string, boolean>>({});
   React.useEffect(() => {
+    if (!open) return;
     const init: Record<string, boolean> = {};
     for (const t of ownedAllTiles) init[t.id] = !!tileMortgaged[t.id];
     setDesiredMortgaged(init);
-  }, [ownedAllTiles, tileMortgaged]);
+  }, [open, ownedAllTiles, tileMortgaged]);
 
   // desired depot state for railroads
   const [desiredDepotInstalled, setDesiredDepotInstalled] = React.useState<Record<string, boolean>>({});
   React.useEffect(() => {
+    if (!open) return;
     const init: Record<string, boolean> = {};
     for (const t of ownedAllTiles) if (t.type === 'railroad') init[t.id] = !!railroadDepotInstalled[t.id];
     setDesiredDepotInstalled(init);
-  }, [ownedAllTiles, railroadDepotInstalled]);
+  }, [open, ownedAllTiles, railroadDepotInstalled]);
+
+  const openingLevelsRef = React.useRef<Record<string, number>>({});
+  const openingMortgagedRef = React.useRef<Record<string, boolean>>({});
+  const openingDepotRef = React.useRef<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    if (!open) return;
+    openingLevelsRef.current = { ...tileLevels };
+    openingMortgagedRef.current = Object.fromEntries(ownedAllTiles.map((t) => [t.id, !!tileMortgaged[t.id]]));
+    openingDepotRef.current = Object.fromEntries(ownedAllTiles.filter((t) => t.type === 'railroad').map((t) => [t.id, !!railroadDepotInstalled[t.id]]));
+  }, [open, tileLevels, ownedAllTiles, tileMortgaged, railroadDepotInstalled]);
+
+  const resetPlan = React.useCallback(() => {
+    setTargets({ ...openingLevelsRef.current });
+    setDesiredMortgaged({ ...openingMortgagedRef.current });
+    setDesiredDepotInstalled({ ...openingDepotRef.current });
+  }, []);
 
   const [detailsTileId, setDetailsTileId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!open) setDetailsTileId(null);
+  }, [open]);
   React.useEffect(() => {
     if (!detailsTileId) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -216,6 +243,10 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   // even rule checks per group
   function canIncrement(tile: BoardTileData): boolean {
     const cur = getLevelForTile(tile.id, targets, tileLevels);
+    if (isLiquidationMode) {
+      const opening = openingLevelsRef.current[tile.id] ?? tileLevels[tile.id] ?? 0;
+      if (cur >= opening) return false;
+    }
     // Use desired state: cannot build if (desired) mortgaged
     if (desiredMortgaged[tile.id]) return false;
     if (cur >= 6) return false;
@@ -261,7 +292,8 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
     if (delta < 0 && !canDecrement(tile)) return;
     setTargets((m) => {
       const cur = getLevelForTile(tile.id, m, tileLevels);
-      return { ...m, [tile.id]: Math.max(0, Math.min(6, cur + delta)) };
+      const maxAllowed = isLiquidationMode ? (openingLevelsRef.current[tile.id] ?? tileLevels[tile.id] ?? 0) : 6;
+      return { ...m, [tile.id]: Math.max(0, Math.min(maxAllowed, cur + delta)) };
     });
   }
 
@@ -303,6 +335,10 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
         if (toCount < 0 || toCount >= 4) return prev;
         if (desiredMortgaged[toTileId]) return prev;
         if (levels.some((l) => l >= 5)) return prev; // dragging only for houses
+        if (isLiquidationMode) {
+          const toOpening = openingLevelsRef.current[toTileId] ?? tileLevels[toTileId] ?? 0;
+          if (toCount + 1 > toOpening) return prev;
+        }
 
         const next = { ...prev, [fromTileId]: fromCount - 1, [toTileId]: toCount + 1 };
         const nextLevels = groupTiles.map((t) => getLevelForTile(t.id, next, tileLevels));
@@ -332,9 +368,12 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
   };
 
   // compute costs/refunds
-  const { totalCost, totalRefund, netCost } = React.useMemo(() => {
-    let cost = 0;
-    let refund = 0;
+  const { totalCost, totalRefund, netCost, sellRefund, spendNow, availableNow, mortgageCreditNextTurn } = React.useMemo(() => {
+    let buildCost = 0;
+    let sellRefund = 0;
+    let mortgageCost = 0;
+    let mortgageRefund = 0;
+    let depotCost = 0;
     for (const g of groups) {
       const tiles = g.tiles;
       if (tiles.length === 0) continue;
@@ -342,8 +381,8 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
       const curSum = tiles.reduce((acc, t) => acc + (tileLevels[t.id] ?? 0), 0);
       const tarSum = tiles.reduce((acc, t) => acc + getLevelForTile(t.id, targets, tileLevels), 0);
       const delta = tarSum - curSum;
-      if (delta > 0) cost += delta * houseCost;
-      else if (delta < 0) refund += (-delta) * (houseCost / 2);
+      if (delta > 0) buildCost += delta * houseCost;
+      else if (delta < 0) sellRefund += (-delta) * (houseCost / 2);
     }
     // mortgage/unmortgage deltas
     for (const t of ownedAllTiles) {
@@ -352,11 +391,11 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
       if (current === desired) continue;
       const mv = (t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0);
       if (desired && !current) {
-        // mortgage -> player receives money
-        refund += mv;
+        // mortgage credit is deferred to next turn
+        mortgageRefund += mv;
       } else if (!desired && current) {
         // unmortgage -> player pays mortgage value
-        cost += mv;
+        mortgageCost += mv;
       }
     }
     // depot install cost (install costs, removal free)
@@ -364,14 +403,30 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
       if (t.type !== 'railroad') continue;
       const current = !!railroadDepotInstalled[t.id];
       const desired = !!desiredDepotInstalled[t.id];
-      if (desired && !current) cost += 100;
+      if (desired && !current) depotCost += 100;
     }
-    return { totalCost: cost, totalRefund: refund, netCost: Math.max(0, cost - refund) };
-  }, [groups, targets, tileLevels, desiredMortgaged, desiredDepotInstalled, ownedAllTiles, tileMortgaged, railroadDepotInstalled]);
+    const immediateMortgageCredit = isLiquidationMode ? mortgageRefund : 0;
+    const totalCost = buildCost + mortgageCost + depotCost;
+    const totalRefund = sellRefund + mortgageRefund;
+    const spendNow = buildCost + mortgageCost + depotCost;
+    const availableNow = playerMoney + sellRefund + immediateMortgageCredit;
+    return {
+      totalCost,
+      totalRefund,
+      netCost: Math.max(0, totalCost - totalRefund),
+      sellRefund,
+      spendNow,
+      availableNow,
+      mortgageCreditNextTurn: isLiquidationMode ? 0 : mortgageRefund,
+    };
+  }, [groups, targets, tileLevels, desiredMortgaged, desiredDepotInstalled, ownedAllTiles, tileMortgaged, railroadDepotInstalled, playerMoney, isLiquidationMode]);
 
   const bank = computeBankDeltas();
   const bankOk = bank.housesNeeded <= housesRemaining && bank.hotelsNeeded <= hotelsRemaining && bank.skyscrapersNeeded <= skyscrapersRemaining;
-  const moneyOk = netCost <= playerMoney;
+  const moneyOk = spendNow <= availableNow;
+  const projectedCashAfterPlan = availableNow - spendNow;
+  const liquidationReady = !isLiquidationMode || projectedCashAfterPlan >= rentDue;
+  const liquidationShortfall = isLiquidationMode ? Math.max(0, rentDue - projectedCashAfterPlan) : 0;
   const hasChange = React.useMemo(() => {
     for (const t of ownedPropertyTiles) {
       const cur = tileLevels[t.id] ?? 0;
@@ -393,10 +448,13 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
         <motion.div data-cmp="m/BuildSellOverlay" key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="p-1 bg-surface-1 rounded-t-xl">
-              <div className="flex pl-2 items-center justify-between">
-                <div className="text-sm font-semibold">Property Management</div>
-                <CloseIconButton onClick={onClose} />
-              </div>
+              <OverlayHeader
+                title={isLiquidationMode ? 'Liquidate & Pay' : 'Property Management'}
+                onClose={onClose}
+                subtitle={isLiquidationMode ? 'You can undo sales and mortgages while planning. You cannot buy above starting levels.' : undefined}
+                className="pl-2"
+                subtitleClassName="pt-1 text-xs text-muted"
+              />
               <div className=" p-2 flex items-center justify-between text-sm">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <span className="inline-flex items-center gap-1">
@@ -415,15 +473,17 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                     <span className="opacity-70">/ {skyscrapersRemaining}</span>
                   </span>
                 </div>
-                <div className="space-x-3">
-                  <span>Refund: <strong className="text-emerald-700">${totalRefund}</strong></span>
-                  <span>Total: <strong>${totalCost}</strong></span>
-                  <span>Net: <strong className={netCost > playerMoney ? 'text-rose-600' : 'text-emerald-700'}>${netCost}</strong></span>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>Available: <strong>${availableNow}</strong></span>
+                  <span>Spending: <strong className={moneyOk ? 'text-emerald-700' : 'text-rose-600'}>${spendNow}</strong></span>
+                  {mortgageCreditNextTurn > 0 && (
+                    <span>Mortgage credit: <strong className="text-emerald-700">${mortgageCreditNextTurn}</strong></span>
+                  )}
                 </div>
               </div>
             </div>
             <DndContext onDragEnd={onDragEnd}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 place-content-start mx-auto gap-3 max-h-[60vh] overflow-auto p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 place-content-start mx-auto gap-3 max-h-[60vh] overflow-auto p-4">
                 {/* Properties by color group (one +/- per group) */}
                 {groups.map((g) => {
                   const tiles = g.tiles;
@@ -519,22 +579,33 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           };
 
                           return (
-                            <div key={t.id} className="rounded-xl bg-surface-tint-1 text-fg m-2 shadow-lg"> 
+                            <div key={t.id} className="rounded-xl bg-surface-tint-1 text-fg m-2 shadow-lg">
                               <div className="flex rounded-t-xl items-center justify-between px-2 py-1 gap-2 bg-surface-tint-2">
                                 <div className="text-sm font-medium truncate">{t.name}</div>
-                                <div className="text-sm font-bold  tabular-nums"><span className="opacity-80 font-normal text-xs">Rent</span> ${rent}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-sm font-bold tabular-nums">
+                                    <span className="opacity-80 font-normal text-xs">Rent</span> ${rent}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center rounded-md border border-surface-strong bg-surface-tint-3 px-2 py-1 text-sm font-semibold hover:brightness-[1.03] active:brightness-[0.98]"
+                                    onClick={() => setDetailsTileId(t.id)}
+                                    title="Details"
+                                    aria-label="Property details"
+                                  >
+                                    <MdOutlineMoreHoriz className="h-5 w-5" />
+                                  </button>
+                                </div>
                               </div>
                               <div className="mt-2 flex items-center justify-between px-2 py-2.5 pt-0 gap-2">
-                                {renderMarkers()}
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center rounded-md border border-surface-strong bg-surface-tint-3 px-2 py-1 text-sm font-semibold hover:brightness-[1.03] active:brightness-[0.98]"
-                                  onClick={() => setDetailsTileId(t.id)}
-                                  title="Details"
-                                  aria-label="Property details"
-                                >
-                                  <MdOutlineMoreHoriz className="h-5 w-5" />
-                                </button>
+                                <div className="min-w-0 flex-1">{renderMarkers()}</div>
+                                {canToggleMortgage && (
+                                  <MortgageButton
+                                    label={mort ? 'Unmortgage' : `Mortgage $${mv}`}
+                                    danger={mort}
+                                    onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))}
+                                  />
+                                )}
                               </div>
 
                               {/* Mortgage toggle: hide when any improvements are planned on this property */}
@@ -596,7 +667,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           <div className="flex items-center justify-between gap-2">
                             <div className="text-sm font-medium truncate">{t.name}</div>
                             <div className="flex items-center gap-2">
-                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage (+$${mv})`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
+                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage $${mv}`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
                             </div>
                           </div>
                           
@@ -624,15 +695,17 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           <div className="text-xs font-medium truncate mb-2">{t.name}</div>
                           <div className="flex items-center gap-2">
                             {!desiredDepotInstalled[t.id] && (
-                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage (+$${mv})`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
+                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage $${mv}`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
                             )}
-                            <button
-                              type="button"
-                              className={`rounded-md border px-2 py-0.5 text-xs ${desiredDepotInstalled[t.id] ? 'border-emerald-500 text-emerald-600' : 'border-zinc-300 text-zinc-700 dark:text-zinc-300'}`}
-                              onClick={() => setDesiredDepotInstalled((m) => ({ ...m, [t.id]: !m[t.id] }))}
-                            >
-                              {desiredDepotInstalled[t.id] ? 'Remove Depot' : 'Install Depot (+$100)'}
-                            </button>
+                            {!isLiquidationMode && (
+                              <button
+                                type="button"
+                                className={`rounded-md border px-2 py-0.5 text-xs ${desiredDepotInstalled[t.id] ? 'border-emerald-500 text-emerald-600' : 'border-zinc-300 text-zinc-700 dark:text-zinc-300'}`}
+                                onClick={() => setDesiredDepotInstalled((m) => ({ ...m, [t.id]: !m[t.id] }))}
+                              >
+                                {desiredDepotInstalled[t.id] ? 'Remove Depot' : 'Install Depot (+$100)'}
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -649,8 +722,6 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                 const tile = BOARD_TILES.find((t) => t.id === detailsTileId);
                 if (!tile || tile.type !== 'property' || !tile.property) return null;
                 const tar = getLevelForTile(detailsTileId, targets, tileLevels);
-                const mort = !!desiredMortgaged[detailsTileId];
-                const mv = tile.property.mortgageValue ?? 0;
 
                 const rentRows: Array<{ key: string; level: number; value: number | null }> = (() => {
                   const entry = (rentState as any)?.properties?.byTileId?.[detailsTileId];
@@ -734,11 +805,11 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                     aria-label="Property details"
                   >
                     <div className="w-full max-w-md rounded-xl bg-surface-2 shadow-2xl border border-surface ">
-                      <div className="flex bg-surface-1 pl-3 pr-1 py-2 rounded-t-md items-center justify-between gap-3 ">
-                        <div className="text-sm font-semibold">{tile.name}
-                        </div>
-                        <CloseIconButton onClick={() => setDetailsTileId(null)} />
-                      </div>
+                      <OverlayHeader
+                        title={tile.name}
+                        onClose={() => setDetailsTileId(null)}
+                        className="bg-surface-1 pl-3 pr-1 py-2 rounded-t-md"
+                      />
 
                       <div className="space-y-1">
                         <div className="rounded-lg ">
@@ -786,18 +857,7 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
                           </div>
                         </div>
 
-                        <div className="bg-surface-0 rounded-b-xl py-3 px-2 pb-3 flex items-center justify-end">
-                          <Tooltip content={tar > 0 ? 'Sell all improvements before mortgaging.' : 'Mortgage / Unmortgage'}>
-                            <span>
-                              <MortgageButton
-                                label={mort ? 'Unmortgage' : `Mortgage +$${mv}`}
-                                danger={mort}
-                                disabled={tar > 0}
-                                onClick={() => setDesiredMortgaged((m) => ({ ...m, [detailsTileId]: !mort }))}
-                              />
-                            </span>
-                          </Tooltip>
-                        </div>
+                        <div className="bg-surface-0 rounded-b-xl py-2" />
                       </div>
                     </div>
                   </motion.div>
@@ -806,16 +866,22 @@ export default function BuildSellOverlay({ open, onClose, playerId, playerMoney,
             </AnimatePresence>
 
             <div className=" bg-surface-0 p-3 mt-1 flex items-center justify-end gap-2 rounded-b-xl">
+              <button type="button" onClick={resetPlan} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">
+                Reset Plan
+              </button>
               <button type="button" onClick={onClose} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Cancel</button>
               <button
                 type="button"
-                disabled={!hasChange || !bankOk || !moneyOk}
+                disabled={!hasChange || !bankOk || !moneyOk || !liquidationReady}
                 onClick={() => onConfirm({ targets, desiredMortgaged, desiredDepotInstalled })}
-                className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${!hasChange || !bankOk || !moneyOk ? 'bg-emerald-600/40 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold text-white ${!hasChange || !bankOk || !moneyOk || !liquidationReady ? 'bg-emerald-600/40 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               >
-                Confirm
+                {isLiquidationMode ? `Liquidate & Pay $${rentDue}` : 'Confirm'}
               </button>
             </div>
+            {isLiquidationMode && liquidationShortfall > 0 && (
+              <div className="px-3 pb-3 text-xs text-rose-600">Need ${liquidationShortfall} more to cover rent.</div>
+            )}
           </div>
         </motion.div>
       )}

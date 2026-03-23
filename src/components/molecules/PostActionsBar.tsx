@@ -3,7 +3,7 @@ import TogglePillButton from '@/components/atoms/TogglePillButton';
 
 export interface PostActionsBarProps {
   children?: React.ReactNode;
-  rentLabel?: string | null;
+  rentLabel?: React.ReactNode;
   rentSelected?: boolean;
   onToggleRent?: () => void;
   rentShake?: boolean;

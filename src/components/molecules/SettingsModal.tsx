@@ -1,11 +1,12 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getThemeMode, setThemeMode, subscribeThemeMode, type ThemeMode } from '@/lib/theme';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 
 export interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
+  extraContent?: React.ReactNode;
 }
 
 function SegmentButton({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }): JSX.Element {
@@ -24,7 +25,7 @@ function SegmentButton({ active, children, onClick }: { active: boolean; childre
   );
 }
 
-export default function SettingsModal({ open, onClose }: SettingsModalProps): JSX.Element | null {
+export default function SettingsModal({ open, onClose, extraContent }: SettingsModalProps): JSX.Element | null {
   const [mode, setMode] = React.useState<ThemeMode>(() => getThemeMode());
 
   React.useEffect(() => {
@@ -70,11 +71,10 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
           aria-modal="true"
           aria-label="Settings"
         >
-          <div className="w-full max-w-md rounded-xl bg-surface-2 text-fg p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="text-sm font-semibold">Settings</div>
-              <CloseIconButton onClick={onClose} />
-            </div>
+          <div className={`w-full rounded-xl bg-surface-2 text-fg p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700 max-h-[85vh] overflow-y-auto ${
+            extraContent ? 'max-w-3xl' : 'max-w-md'
+          }`}>
+            <OverlayHeader title="Settings" onClose={onClose} className="mb-3" />
 
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-wide text-subtle">Theme</div>
@@ -91,6 +91,11 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps): JS
               </div>
               <div className="text-xs text-subtle">System follows your device appearance.</div>
             </div>
+            {extraContent ? (
+              <div className="mt-4 border-t border-neutral-200 dark:border-neutral-700 pt-4">
+                {extraContent}
+              </div>
+            ) : null}
           </div>
         </motion.div>
       )}

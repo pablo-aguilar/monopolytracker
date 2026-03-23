@@ -26,6 +26,8 @@
   --fg: theme(colors.neutral.900);
   --fg-muted: theme(colors.neutral.700);
   --fg-subtle: theme(colors.neutral.500);
+  --fg-faint: theme(colors.neutral.300);
+
 }
 
 .dark {
@@ -48,6 +50,7 @@
   --fg: theme(colors.neutral.50);
   --fg-muted: theme(colors.neutral.300);
   --fg-subtle: theme(colors.neutral.400);
+  --fg-faint: theme(colors.neutral.600);
 }
 
 @layer utilities {
@@ -61,6 +64,7 @@
   .text-fg { color: var(--fg); }
   .text-muted { color: var(--fg-muted); }
   .text-subtle { color: var(--fg-subtle); }
+  .text-faint { color: var(--fg-faint); }
 
   .border-surface { border-color: var(--border); }
   .border-surface-strong { border-color: var(--border-strong); }

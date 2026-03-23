@@ -5,6 +5,8 @@ import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
 import HudBadge from '@/components/atoms/HudBadge';
 import Tooltip from '@/components/atoms/Tooltip';
+import { BsCashStack } from 'react-icons/bs';
+import { TbBuildings } from 'react-icons/tb';
 
 export type PlayerTurnCardsPlayer = {
   id: string;
@@ -13,6 +15,7 @@ export type PlayerTurnCardsPlayer = {
   color: string;
   positionIndex: number;
   money: number;
+  liquidationPotential?: number;
   busTickets?: number;
   gojfChance?: number;
   gojfCommunity?: number;
@@ -55,6 +58,7 @@ export default function PlayerTurnCards({
       {players.map((p, idx) => {
         const isActive = idx === activePlayerIndex;
         const emoji = AVATARS.find((a) => a.key === p.avatarKey)?.emoji ?? '🙂';
+        const liquidationPotential = Number(p.liquidationPotential ?? 0);
         const loc = getTileByIndex(p.positionIndex);
         const locLabel = (() => {
           if (p.positionIndex !== JAIL_INDEX) return loc.name;
@@ -81,8 +85,16 @@ export default function PlayerTurnCards({
                     {locLabel} <span className=" text-subtle">{p.positionIndex}</span>
                   </span>
                 </div>
-                <div className="ml-auto text-lg font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-1">
-                  <AnimatedNumber value={p.money} prefix="$" />
+                <div className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-1">
+                  <span className="inline-flex items-center gap-1">
+                    <BsCashStack className="h-4 w-4 text-emerald-600" aria-hidden />
+                    <AnimatedNumber value={p.money} prefix="$" />
+                  </span>
+                  <span className="text-subtle">/</span>
+                  <span className="inline-flex items-center gap-1">
+                    <TbBuildings className="h-4 w-4 text-sky-600" aria-hidden />
+                    <AnimatedNumber value={liquidationPotential} prefix="$" />
+                  </span>
                 </div>
               </div>
               {/* inventory HUD */}

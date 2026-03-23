@@ -1,7 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RULES, type Rule, type RuleSource, type RuleSection } from '@/data/rules';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
 
 export interface RulesModalProps {
   open: boolean;
@@ -107,10 +107,7 @@ export default function RulesModal({ open, onClose }: RulesModalProps): JSX.Elem
           aria-label="Rules"
         >
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <div className="text-sm font-semibold">Rules</div>
-              <CloseIconButton onClick={onClose} />
-            </div>
+            <OverlayHeader title="Rules" onClose={onClose} className="mb-2" />
 
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="inline-flex items-center gap-2">

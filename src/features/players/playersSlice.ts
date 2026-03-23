@@ -100,6 +100,28 @@ const playersSlice = createSlice({
       if (action.payload.deck === 'chance') p.gojfChance = Math.max(0, (p.gojfChance ?? 0) - n);
       else p.gojfCommunity = Math.max(0, (p.gojfCommunity ?? 0) - n);
     },
+    transferPlayerSpecialAssets(state, action: PayloadAction<{ fromId: string; toId: string }>) {
+      const { fromId, toId } = action.payload;
+      if (!fromId || !toId || fromId === toId) return;
+      const from = state.players.find((x) => x.id === fromId);
+      const to = state.players.find((x) => x.id === toId);
+      if (!from || !to) return;
+      const bus = Math.max(0, from.busTickets ?? 0);
+      const gojfChance = Math.max(0, from.gojfChance ?? 0);
+      const gojfCommunity = Math.max(0, from.gojfCommunity ?? 0);
+      if (bus > 0) {
+        to.busTickets = Math.max(0, (to.busTickets ?? 0) + bus);
+        from.busTickets = 0;
+      }
+      if (gojfChance > 0) {
+        to.gojfChance = Math.max(0, (to.gojfChance ?? 0) + gojfChance);
+        from.gojfChance = 0;
+      }
+      if (gojfCommunity > 0) {
+        to.gojfCommunity = Math.max(0, (to.gojfCommunity ?? 0) + gojfCommunity);
+        from.gojfCommunity = 0;
+      }
+    },
     setInJail(state, action: PayloadAction<{ id: string; value: boolean }>) {
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p) p.inJail = action.payload.value;
@@ -115,5 +137,5 @@ const playersSlice = createSlice({
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, setPlayerPosition, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn, grantBusTicket, clearBusTicketsExcept, consumeBusTicket, grantGetOutOfJail, consumeGetOutOfJail, setInJail, setJailAttempts, incrementJailAttempts } = playersSlice.actions;
+export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, setPlayerPosition, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn, grantBusTicket, clearBusTicketsExcept, consumeBusTicket, grantGetOutOfJail, consumeGetOutOfJail, transferPlayerSpecialAssets, setInJail, setJailAttempts, incrementJailAttempts } = playersSlice.actions;
 export default playersSlice.reducer; 
