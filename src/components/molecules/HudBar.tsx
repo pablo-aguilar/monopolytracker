@@ -181,7 +181,7 @@ export default function HudBar({
   };
 
   return (
-    <div data-qa="hud-bank" data-cmp="m/HudBar" className={`flex flex-wrap items-center gap-3 text-sm ${className ?? ''}`}>
+    <div data-qa="hud-bank" data-cmp="m/HudBar" className={`contents ${className ?? ''}`}>
       <StatPill
         label={
           <img

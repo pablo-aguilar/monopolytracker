@@ -2141,7 +2141,7 @@ export default function PlayConsole(): JSX.Element {
           )}
         </h1>
         {/* HUD summary */}
-        <div className="mt-2 sm:mt-0 flex w-full sm:w-auto items-center justify-end gap-2">
+        <div className="mt-2 sm:mt-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 text-sm">
           <HudBar
             housesRemaining={propsState.housesRemaining}
             hotelsRemaining={propsState.hotelsRemaining}
