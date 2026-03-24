@@ -1,6 +1,8 @@
 import React from 'react';
 import StatPill from '@/components/atoms/StatPill';
 import { FaChevronDown } from 'react-icons/fa';
+import { PiBuildingsBold, PiCardsThree } from 'react-icons/pi';
+import { LuLandPlot } from 'react-icons/lu';
 import type { ColorGroup } from '@/data/board';
 
 export interface HudBarProps {
@@ -73,7 +75,17 @@ export default function HudBar({
     </div>
   );
 
-  const GroupPanel = ({ title, children }: { title: React.ReactNode; children: React.ReactNode }): JSX.Element => {
+  const GroupPanel = ({
+    icon,
+    label,
+    ariaLabel,
+    children,
+  }: {
+    icon: React.ReactNode;
+    label: React.ReactNode;
+    ariaLabel: string;
+    children: React.ReactNode;
+  }): JSX.Element => {
     const [open, setOpen] = React.useState(false);
     const panelRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -99,11 +111,15 @@ export default function HudBar({
           type="button"
           aria-expanded={open}
           aria-haspopup="menu"
-          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-3 pr-2 py-2 text-sm font-normal text-fg"
+          aria-label={ariaLabel}
+          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2 pr-2 py-2 text-sm font-normal text-fg sm:pl-3"
           onClick={() => setOpen((prev) => !prev)}
         >
-          <span>{title}</span>
-          <FaChevronDown className={`h-3 w-3 transition-transform text-faint ${open ? 'rotate-180' : ''}`} aria-hidden />
+          <span className="inline-flex shrink-0 text-fg [&>svg]:h-4 [&>svg]:w-4" aria-hidden>
+            {icon}
+          </span>
+          <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">{label}</span>
+          <FaChevronDown className={`h-3 w-3 shrink-0 transition-transform text-faint ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
         {open ? (
           <div className="absolute right-0 top-full z-30 mt-2 min-w-[220px] space-y-1 rounded-[14px] border border-surface bg-surface-0 p-2 shadow-lg">
@@ -126,13 +142,21 @@ export default function HudBar({
        />
         } value={`$${freeParkingPot}`} />
 
-      <GroupPanel title="Cards">
+      <GroupPanel
+        icon={<PiCardsThree />}
+        label="Cards"
+        ariaLabel="Cards"
+      >
         <StatRow iconSrc="/icons/bus.webp" alt="Bus" label="Bus" value={busLeft} />
         <StatRow iconSrc="/icons/chance.webp" alt="Chance cards" label="Chance" value={chanceLeft} />
         <StatRow iconSrc="/icons/community.webp" alt="Community cards" label="Community Chest" value={communityLeft} />
       </GroupPanel>
 
-      <GroupPanel title="Buildings">
+      <GroupPanel
+        icon={<PiBuildingsBold />}
+        label="Buildings"
+        ariaLabel="Buildings"
+      >
         <StatRow iconSrc="/icons/house.webp" alt="House" label="House" value={housesRemaining} />
         <StatRow iconSrc="/icons/hotel.webp" alt="Hotel" label="Hotel" value={hotelsRemaining} />
         <StatRow iconSrc="/icons/skyscraper.webp" alt="Skyscraper" label="Skyscraper" value={skyscrapersRemaining} />
@@ -140,14 +164,16 @@ export default function HudBar({
       </GroupPanel>
 
       <GroupPanel
-        title={(
-          <span className="inline-flex items-center gap-1.5">
+        icon={<LuLandPlot />}
+        label={(
+          <>
             <span>Lots</span>
             <span className="rounded-full bg-surface-1 px-1.5 py-0.5 text-xs font-semibold text-muted">
               {bankUnownedLots.length}
             </span>
-          </span>
+          </>
         )}
+        ariaLabel={`Lots, ${bankUnownedLots.length} unowned`}
       >
         {COLOR_GROUP_ORDER.map((group) => {
           const lots = lotsByGroup.get(group) ?? [];
