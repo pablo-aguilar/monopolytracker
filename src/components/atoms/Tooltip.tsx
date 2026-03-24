@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { autoUpdate, flip, FloatingPortal, offset, shift, useFloating } from '@floating-ui/react';
 
 export interface TooltipProps {
   content: React.ReactNode;
@@ -15,6 +16,13 @@ export default function Tooltip({ content, children, className, offsetPx = 8, ta
   const hide = (): void => setOpen(false);
   const tapTimerRef = React.useRef<number | null>(null);
 
+  const { refs, floatingStyles } = useFloating({
+    open,
+    placement: 'top',
+    middleware: [offset(offsetPx), flip({ padding: 8 }), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+
   React.useEffect(() => {
     return () => {
       if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current);
@@ -25,6 +33,7 @@ export default function Tooltip({ content, children, className, offsetPx = 8, ta
   return (
     <span
       data-cmp="a/Tooltip"
+      ref={refs.setReference}
       className={`relative inline-flex ${className ?? ''}`}
       onMouseEnter={show}
       onMouseLeave={hide}
@@ -44,23 +53,23 @@ export default function Tooltip({ content, children, className, offsetPx = 8, ta
       {children}
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-            className="pointer-events-none absolute left-1/2 z-50 -translate-x-1/2"
-            style={{ bottom: `calc(100% + ${offsetPx}px)` }}
-          >
-            <div className="rounded-md bg-neutral-900 text-white text-[11px] px-2 py-1 shadow-lg whitespace-pre" role="tooltip">
-              {content}
+          <FloatingPortal>
+            <div ref={refs.setFloating} style={floatingStyles} className="pointer-events-none z-[100]">
+              <motion.div
+                key="tooltip-bubble"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+              >
+                <div className="rounded-md bg-neutral-900 text-white text-[11px] px-2 py-1 shadow-lg whitespace-pre" role="tooltip">
+                  {content}
+                </div>
+              </motion.div>
             </div>
-            <div className="mx-auto h-2 w-2 rotate-45 bg-neutral-900" />
-          </motion.div>
+          </FloatingPortal>
         )}
       </AnimatePresence>
     </span>
   );
 }
-
-

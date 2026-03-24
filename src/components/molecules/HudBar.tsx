@@ -1,9 +1,23 @@
 import React from 'react';
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  size,
+  useClick,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from '@floating-ui/react';
 import StatPill from '@/components/atoms/StatPill';
 import { FaChevronDown } from 'react-icons/fa';
 import { PiBuildingsBold, PiCardsThree } from 'react-icons/pi';
 import { LuLandPlot } from 'react-icons/lu';
 import type { ColorGroup } from '@/data/board';
+import { formatAbbreviatedDollars } from '@/utils/moneyFormat';
 
 export interface HudBarProps {
   housesRemaining: number;
@@ -65,6 +79,15 @@ export default function HudBar({
     return grouped;
   }, [bankUnownedLots]);
 
+  const freeParkingShort = formatAbbreviatedDollars(freeParkingPot);
+  const freeParkingFull = `$${freeParkingPot}`;
+  const freeParkingTooltip = freeParkingShort !== freeParkingFull ? freeParkingFull : undefined;
+
+  const unownedLotsCount = bankUnownedLots.length;
+  const lotsCountBadge = (
+    <span className="rounded-full bg-surface-1 px-1.5 py-0.5 text-xs font-semibold text-muted">{unownedLotsCount}</span>
+  );
+
   const StatRow = ({ iconSrc, alt, label, value }: { iconSrc: string; alt: string; label: string; value: number }): JSX.Element => (
     <div className="flex items-center justify-between gap-3 rounded-md bg-surface-1 px-2 py-1 text-xs">
       <span className="inline-flex items-center gap-1.5">
@@ -78,53 +101,80 @@ export default function HudBar({
   const GroupPanel = ({
     icon,
     label,
+    mobileLabel,
     ariaLabel,
     children,
   }: {
     icon: React.ReactNode;
     label: React.ReactNode;
+    /** Shown below `sm` when set; default hides the label on small screens. */
+    mobileLabel?: React.ReactNode;
     ariaLabel: string;
     children: React.ReactNode;
   }): JSX.Element => {
     const [open, setOpen] = React.useState(false);
-    const panelRef = React.useRef<HTMLDivElement | null>(null);
 
-    React.useEffect(() => {
-      if (!open) return;
-      const onPointerDown = (event: MouseEvent): void => {
-        if (panelRef.current && !panelRef.current.contains(event.target as Node)) setOpen(false);
-      };
-      const onKeyDown = (event: KeyboardEvent): void => {
-        if (event.key === 'Escape') setOpen(false);
-      };
-      document.addEventListener('mousedown', onPointerDown);
-      document.addEventListener('keydown', onKeyDown);
-      return () => {
-        document.removeEventListener('mousedown', onPointerDown);
-        document.removeEventListener('keydown', onKeyDown);
-      };
-    }, [open]);
+    const { refs, floatingStyles, context } = useFloating({
+      open,
+      onOpenChange: setOpen,
+      placement: 'bottom-end',
+      middleware: [
+        offset(8),
+        flip({ padding: 8 }),
+        shift({ padding: 8 }),
+        size({
+          padding: 8,
+          apply({ availableHeight, elements }) {
+            Object.assign(elements.floating.style, {
+              maxHeight: `${Math.max(0, availableHeight)}px`,
+              overflowY: 'auto',
+            });
+          },
+        }),
+      ],
+      whileElementsMounted: autoUpdate,
+    });
+
+    const click = useClick(context);
+    const dismiss = useDismiss(context);
+    const role = useRole(context, { role: 'menu' });
+
+    const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role]);
 
     return (
-      <div ref={panelRef} className="relative">
+      <div className="relative">
         <button
           type="button"
+          ref={refs.setReference}
           aria-expanded={open}
           aria-haspopup="menu"
           aria-label={ariaLabel}
           className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2 pr-2 py-2 text-sm font-normal text-fg sm:pl-3"
-          onClick={() => setOpen((prev) => !prev)}
+          {...getReferenceProps()}
         >
           <span className="inline-flex shrink-0 text-fg [&>svg]:h-4 [&>svg]:w-4" aria-hidden>
             {icon}
           </span>
-          <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">{label}</span>
+          {mobileLabel != null ? (
+            <>
+              <span className="inline-flex min-w-0 items-center gap-1.5 sm:hidden">{mobileLabel}</span>
+              <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">{label}</span>
+            </>
+          ) : (
+            <span className="hidden min-w-0 items-center gap-1.5 sm:inline-flex">{label}</span>
+          )}
           <FaChevronDown className={`h-3 w-3 shrink-0 transition-transform text-faint ${open ? 'rotate-180' : ''}`} aria-hidden />
         </button>
         {open ? (
-          <div className="absolute right-0 top-full z-30 mt-2 min-w-[220px] space-y-1 rounded-[14px] border border-surface bg-surface-0 p-2 shadow-lg">
-            {children}
-          </div>
+          <FloatingPortal>
+            <div
+              style={floatingStyles}
+              className="z-[100] min-w-[min(220px,calc(100vw-16px))] space-y-1 rounded-[14px] border border-surface bg-surface-0 p-2 shadow-lg outline-none"
+              {...getFloatingProps()}
+            >
+              {children}
+            </div>
+          </FloatingPortal>
         ) : null}
       </div>
     );
@@ -132,15 +182,19 @@ export default function HudBar({
 
   return (
     <div data-qa="hud-bank" data-cmp="m/HudBar" className={`flex flex-wrap items-center gap-3 text-sm ${className ?? ''}`}>
-      <StatPill label={
-         <img
-         src="/icons/freeparking.webp"
-         alt="Free Parking"
-         className="h-7 w-7 inline-block align-middle"
-         loading="lazy"
-         decoding="async"
-       />
-        } value={`$${freeParkingPot}`} />
+      <StatPill
+        label={
+          <img
+            src="/icons/freeparking.webp"
+            alt="Free Parking"
+            className="h-5 w-5 inline-block align-middle"
+            loading="lazy"
+            decoding="async"
+          />
+        }
+        value={freeParkingShort}
+        valueTooltip={freeParkingTooltip}
+      />
 
       <GroupPanel
         icon={<PiCardsThree />}
@@ -165,15 +219,14 @@ export default function HudBar({
 
       <GroupPanel
         icon={<LuLandPlot />}
+        mobileLabel={lotsCountBadge}
         label={(
           <>
             <span>Lots</span>
-            <span className="rounded-full bg-surface-1 px-1.5 py-0.5 text-xs font-semibold text-muted">
-              {bankUnownedLots.length}
-            </span>
+            {lotsCountBadge}
           </>
         )}
-        ariaLabel={`Lots, ${bankUnownedLots.length} unowned`}
+        ariaLabel={`Lots, ${unownedLotsCount} unowned`}
       >
         {COLOR_GROUP_ORDER.map((group) => {
           const lots = lotsByGroup.get(group) ?? [];

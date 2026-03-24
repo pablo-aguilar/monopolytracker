@@ -90,7 +90,6 @@ export default function PlayerTurnCards({
                     <BsCashStack className="h-4 w-4 text-emerald-600" aria-hidden />
                     <AnimatedNumber value={p.money} prefix="$" />
                   </span>
-                  <span className="text-subtle">/</span>
                   <span className="inline-flex items-center gap-1">
                     <TbBuildings className="h-4 w-4 text-sky-600" aria-hidden />
                     <AnimatedNumber value={liquidationPotential} prefix="$" />
