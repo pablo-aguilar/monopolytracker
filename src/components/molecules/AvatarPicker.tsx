@@ -91,12 +91,12 @@ export default function AvatarPicker({
   }, [isPopoverOpen, value]);
 
   return (
-    <div data-cmp="m/AvatarPicker" className="grid grid-cols-6 gap-2">
+    <div data-cmp="m/AvatarPicker" className="flex w-full gap-1 sm:gap-2">
       {options.map((a) => {
         const taken = used.has(a.key);
         const selected = value === a.key;
         return (
-          <div key={a.key} className="relative">
+          <div key={a.key} className="relative min-w-0 flex-1">
             <button
               type="button"
               data-qa={selected ? 'avatar-selected' : `avatar-${a.key}`}
@@ -114,7 +114,7 @@ export default function AvatarPicker({
                   ? ({ backgroundColor: tintColor(selectedColor), ['--sel-color' as any]: selectedColor } as React.CSSProperties)
                   : undefined
               }
-              className={`rounded-md border px-3 py-2 flex items-center justify-center ${
+              className={`w-full rounded-md border px-3 py-2 flex items-center justify-center ${
                 selected
                   ? 'border-[color:var(--sel-color)] ring-2 ring-[color:var(--sel-color)]'
                   : 'border-neutral-300 dark:border-neutral-700'

@@ -28,6 +28,7 @@ import { AVATARS } from '@/data/avatars';
 import TogglePillButton from '@/components/atoms/TogglePillButton';
 import StatPill from '@/components/atoms/StatPill';
 import HudBar from '@/components/molecules/HudBar';
+import RacePotBadge from '@/components/molecules/RacePotBadge';
 import BuyButton from '@/components/atoms/BuyButton';
 import IconLabelButton from '@/components/atoms/IconLabelButton';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -2128,20 +2129,17 @@ export default function PlayConsole(): JSX.Element {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex items-center flex-col sm:flex-row sm:items-start justify-between">
-        <h1 className="text-2xl font-semibold flex items-center gap-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <h1 className="text-2xl font-semibold flex flex-wrap items-center gap-3 self-start">
           <button type="button" onClick={() => setBoardOverlayOpen(true)} className="hover:underline">
             GM Console
           </button>
           {racePot.active && (
-            <span data-qa="badge-race-pot" className="inline-flex items-center gap-2 rounded-full bg-emerald-600 text-white text-xs font-semibold px-3 py-1">
-              <span role="img" aria-label="Race pot">🏃‍➡️💰</span>
-              ${racePot.amount} · {racePot.participants.length} players
-            </span>
+            <RacePotBadge amount={racePot.amount} participantIds={racePot.participants} players={players} />
           )}
         </h1>
-        {/* HUD summary */}
-        <div className="mt-2 sm:mt-0 flex w-full sm:w-auto flex-wrap items-center justify-end gap-1.5 sm:gap-2.5 text-sm">
+        {/* HUD summary — centered when stacked; end-aligned on wide screens */}
+        <div className="flex w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-sm lg:w-auto lg:justify-end">
           <HudBar
             housesRemaining={propsState.housesRemaining}
             hotelsRemaining={propsState.hotelsRemaining}

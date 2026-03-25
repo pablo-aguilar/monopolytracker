@@ -2,6 +2,7 @@
 // - //#component: player card with avatar token and actions
 
 import React from 'react';
+import { IoTrashOutline } from 'react-icons/io5';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import { AVATARS } from '@/data/avatars';
 
@@ -26,8 +27,14 @@ export default function PlayerCard({ id, nickname, color, avatarKey, onRemove }:
         </div>
       </div>
       {onRemove && (
-        <button data-qa={`btn-remove-${id}`} onClick={() => onRemove(id)} className="inline-flex items-center justify-center rounded-md px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400">
-          Remove
+        <button
+          type="button"
+          data-qa={`btn-remove-${id}`}
+          aria-label={`Remove ${nickname}`}
+          onClick={() => onRemove(id)}
+          className="inline-flex items-center justify-center rounded-md p-1.5 bg-rose-600 text-white shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400"
+        >
+          <IoTrashOutline className="h-4 w-4 shrink-0" aria-hidden />
         </button>
       )}
     </div>

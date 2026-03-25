@@ -134,8 +134,37 @@ const playersSlice = createSlice({
       const p = state.players.find((x) => x.id === action.payload.id);
       if (p) p.jailAttempts = Math.min(3, (p.jailAttempts ?? 0) + 1);
     },
+    setPlayerNickname(state, action: PayloadAction<{ id: string; nickname: string }>) {
+      const p = state.players.find((x) => x.id === action.payload.id);
+      if (!p) return;
+      const n = action.payload.nickname.trim();
+      if (n.length === 0) return;
+      p.nickname = n;
+    },
   },
 });
 
-export const { addPlayer, removePlayer, resetPlayers, setPlayerMoney, adjustPlayerMoney, setPlayerPosition, assignProperty, unassignProperty, reorderPlayers, setRacePotOptIn, grantBusTicket, clearBusTicketsExcept, consumeBusTicket, grantGetOutOfJail, consumeGetOutOfJail, transferPlayerSpecialAssets, setInJail, setJailAttempts, incrementJailAttempts } = playersSlice.actions;
+export const {
+  addPlayer,
+  removePlayer,
+  resetPlayers,
+  setPlayerMoney,
+  adjustPlayerMoney,
+  setPlayerPosition,
+  setHasPassedGo,
+  assignProperty,
+  unassignProperty,
+  reorderPlayers,
+  setRacePotOptIn,
+  grantBusTicket,
+  clearBusTicketsExcept,
+  consumeBusTicket,
+  grantGetOutOfJail,
+  consumeGetOutOfJail,
+  transferPlayerSpecialAssets,
+  setInJail,
+  setJailAttempts,
+  incrementJailAttempts,
+  setPlayerNickname,
+} = playersSlice.actions;
 export default playersSlice.reducer; 
