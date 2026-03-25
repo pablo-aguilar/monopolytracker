@@ -20,7 +20,7 @@ export default function MoneyInput({
   min = 0,
   max = Number.MAX_SAFE_INTEGER,
   quickSteps = [5, 25, 100],
-  inputClassName = 'w-24 border-0 bg-transparent text-sm px-2 py-1 focus:outline-none',
+  inputClassName = 'min-w-0 flex-1 border-0 bg-transparent text-sm px-2 py-1 focus:outline-none',
 }: MoneyInputProps): JSX.Element {
   const [menu, setMenu] = React.useState<null | 'minus' | 'plus'>(null);
   const minusButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -58,7 +58,7 @@ export default function MoneyInput({
   const plusEnabled = value < max;
 
   return (
-    <div className="inline-flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-visible relative">
+    <div className="flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-visible relative">
       <div className="relative">
         <button
           ref={minusButtonRef}
@@ -100,7 +100,7 @@ export default function MoneyInput({
         onFocus={(e) => e.currentTarget.select()}
         onClick={(e) => e.currentTarget.select()}
         onChange={(e) => onChange(clampInt(Number(e.target.value || 0), min, max))}
-        className={inputClassName}
+        className={`flex w-full text-center ${inputClassName}`}
       />
 
       <div className="relative">

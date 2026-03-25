@@ -240,6 +240,16 @@ export default function TradeModal({
     setOffer2(EMPTY_OFFER);
   }, [open, initiatorPlayerId]);
 
+  // Two-player game: only one possible counterparty — select them automatically (runs after reset above).
+  React.useEffect(() => {
+    if (!open) return;
+    const p1 = initiatorPlayerId ?? null;
+    if (p1 == null) return;
+    const tradePartners = players.filter((p) => p.id !== p1);
+    if (tradePartners.length !== 1) return;
+    setPlayer2Id(tradePartners[0].id);
+  }, [open, initiatorPlayerId, players]);
+
   React.useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -526,11 +536,9 @@ export default function TradeModal({
         >
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
             <OverlayHeader title={title} onClose={onClose} className="bg-surface-1 px-4 py-1" />
-
-            <div className="p-4">
-              <div className="space-y-2">
-                {step === 1 && <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3">
+            <div className="sm:p-4 p-2">
+                {step === 1 && <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="rounded-lg border border-surface bg-surface-1 p-1 sm:p-3 space-y-2 sm:space-y-3">
                     <div className="flex items-center gap-2">
                       <div style={{ ['--player-color' as any]: player1Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
                         <AvatarToken
@@ -720,7 +728,7 @@ export default function TradeModal({
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-surface bg-surface-1 p-3 space-y-3">
+                  <div className="rounded-lg border border-surface bg-surface-1 p-1 sm:p-3 space-y-2 sm:space-y-3">
                     {!player2Id ? (
                       <div className="rounded-lg border border-surface bg-white/70 dark:bg-neutral-900/50 p-2">
                         <PlayerPickerRow
@@ -979,11 +987,7 @@ export default function TradeModal({
                           </div>
                         </div>
                       </>
-                    ) : (
-                      <div className="rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 bg-white/70 dark:bg-neutral-900/50 p-3 text-xs text-subtle">
-                        Select a player in `Trade With` to configure their offer.
-                      </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>}
                 {step === 2 && <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
@@ -1052,7 +1056,6 @@ export default function TradeModal({
                     </div>
                   )}
                 </div>}
-              </div>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-surface-1 border-t border-surface">
