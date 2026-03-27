@@ -88,6 +88,7 @@ export default function RacePotBadge({ amount, participantIds, players, classNam
       {open ? (
         <FloatingPortal>
           <div
+            ref={refs.setFloating}
             style={floatingStyles}
             className="z-[100] min-w-[min(220px,calc(100vw-16px))] space-y-1 rounded-[14px] border border-surface bg-surface-0 p-2 shadow-lg outline-none"
             {...getFloatingProps()}

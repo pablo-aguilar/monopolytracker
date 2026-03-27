@@ -149,7 +149,7 @@ export default function HudBar({
           aria-expanded={open}
           aria-haspopup="menu"
           aria-label={ariaLabel}
-          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2 pr-2 py-2 text-sm font-normal text-fg sm:pl-3"
+          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2.5 pr-2.5 py-2 text-sm font-normal text-fg sm:pl-3"
           {...getReferenceProps()}
         >
           <span className="inline-flex shrink-0 text-fg [&>svg]:h-4 [&>svg]:w-4" aria-hidden>
@@ -168,6 +168,7 @@ export default function HudBar({
         {open ? (
           <FloatingPortal>
             <div
+              ref={refs.setFloating}
               style={floatingStyles}
               className="z-[100] min-w-[min(220px,calc(100vw-16px))] space-y-1 rounded-[14px] border border-surface bg-surface-0 p-2 shadow-lg outline-none"
               {...getFloatingProps()}

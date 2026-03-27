@@ -17,7 +17,7 @@ export type PlayerLite = {
   jailAttempts?: number; // 0..3
 };
 
-type PlayersState = {
+export type PlayersState = {
   players: PlayerLite[];
 };
 
@@ -141,6 +141,9 @@ const playersSlice = createSlice({
       if (n.length === 0) return;
       p.nickname = n;
     },
+    hydrateFromTimeline(_state, action: PayloadAction<PlayersState>) {
+      return action.payload;
+    },
   },
 });
 
@@ -166,5 +169,6 @@ export const {
   setJailAttempts,
   incrementJailAttempts,
   setPlayerNickname,
+  hydrateFromTimeline,
 } = playersSlice.actions;
 export default playersSlice.reducer; 

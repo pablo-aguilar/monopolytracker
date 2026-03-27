@@ -18,7 +18,7 @@ import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHo
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
-import { persistor, type RootState } from '@/app/store';
+import { persistor, type AppDispatch, type RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
@@ -44,14 +44,20 @@ import OverlayHeader from '@/components/molecules/OverlayHeader';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
 import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
+import VictoryModal from '@/components/molecules/VictoryModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
 import SettingsGear from '@/components/molecules/SettingsGear';
 import { FaHandshake } from 'react-icons/fa';
 import { MdReceiptLong } from 'react-icons/md';
 import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
+import { restoreToEventId } from '@/features/timeline/timelineThunks';
 
-export default function PlayConsole(): JSX.Element {
-  const dispatch = useDispatch();
+export type PlayConsoleProps = {
+  onTimelineRestored?: () => void;
+};
+
+export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {}): JSX.Element {
+  const dispatch = useDispatch<AppDispatch>();
   const store = useStore<RootState>();
   const players = useSelector((s: RootState) => s.players.players);
   const cardsState = useSelector((s: RootState) => s.cards);
@@ -61,6 +67,11 @@ export default function PlayConsole(): JSX.Element {
   const freeParkingPot = useSelector((s: RootState) => (s as any).session?.freeParkingPot ?? 0);
   const turnIndexRaw = useSelector((s: RootState) => (s as any).session?.turnIndex);
   const turnIndex: number = typeof turnIndexRaw === 'number' && turnIndexRaw >= 0 ? turnIndexRaw : 0;
+  const timelineSnapshots = useSelector((s: RootState) => s.timeline.snapshots);
+  const restorableEventIds = useMemo(
+    () => new Set(timelineSnapshots.map((sn) => sn.afterEventId)),
+    [timelineSnapshots]
+  );
 
   // //#local-state
   type MoveSource =
@@ -156,8 +167,13 @@ export default function PlayConsole(): JSX.Element {
   const [stagedBigBus, setStagedBigBus] = useState<boolean>(false);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
   const [eventLogOpen, setEventLogOpen] = useState<boolean>(false);
+  const [restoreConfirmEventId, setRestoreConfirmEventId] = useState<string | null>(null);
+  const [restorePending, setRestorePending] = useState<boolean>(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const [gmToolsOpen, setGmToolsOpen] = useState<boolean>(false);
   const [newGameConfirmOpen, setNewGameConfirmOpen] = useState<boolean>(false);
+  const [victoryModalOpen, setVictoryModalOpen] = useState<boolean>(false);
+  const [victoryWinnerId, setVictoryWinnerId] = useState<string | null>(null);
   const [rollCount, setRollCount] = useState<number>(1);
   const [turnSegments, setTurnSegments] = useState<TurnSegment[]>([]);
   // Post-action queue for chained movements from Chance/Community cards
@@ -1046,6 +1062,11 @@ export default function PlayConsole(): JSX.Element {
         // #region agent log
         postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H3',location:'PlayConsole.tsx:finalizeTurn:after-remove',message:'post-removal state snapshot',data:{loserId,nextIndex,nextPlayerCount,playersAfterRemoval},timestamp:Date.now()});
         // #endregion
+
+        if (playersAfterRemoval.length === 1) {
+          setVictoryWinnerId(playersAfterRemoval[0]!);
+          setVictoryModalOpen(true);
+        }
 
         setPostAction('Insolvency');
         setPendingLiquidation(null);
@@ -2347,7 +2368,7 @@ export default function PlayConsole(): JSX.Element {
                 <div className="flex justify-left p-4 pt-1">
                   <IconLabelButton
                     icon={<FaHandshake />}
-                    iconClassName="text-xl"
+                    iconClassName="text-[28px]"
                     label="Trade"
                     className="border border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                     onClick={() => setTradeModalOpen(true)}
@@ -2675,7 +2696,12 @@ export default function PlayConsole(): JSX.Element {
                               >
                                 {usablePassForPost && !isInsolventForRent && (
                                   <TogglePillButton
-                                    label={<span>Use Pass ({usablePassForPost.remaining})</span>}
+                                    label={(
+                                      <span className="inline-flex items-center gap-1.5 text-[rgb(142,197,255)]">
+                                        Use Pass
+                                        <span className="rounded-full bg-surface-1 px-1.5 py-0.5 text-sm font-semibold text-[var(--color-blue-300)]">{usablePassForPost.remaining}</span>
+                                      </span>
+                                    )}
                                     active={useRentPassSelected}
                                     onToggle={() => {
                                       setUseRentPassSelected((v) => !v);
@@ -2699,7 +2725,7 @@ export default function PlayConsole(): JSX.Element {
                                     <button
                                       type="button"
                                       disabled={!canLiquidateForRent}
-                                      className={`rounded-md border px-2 py-1 font-semibold ${
+                                      className={`rounded-md border px-2.5 py-2 text-sm font-semibold ${
                                         canLiquidateForRent
                                           ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
                                           : 'border-neutral-300 text-neutral-400 dark:border-neutral-700 dark:text-neutral-500 cursor-not-allowed'
@@ -2716,7 +2742,7 @@ export default function PlayConsole(): JSX.Element {
                                         setBuildOverlayOpen(true);
                                       }}
                                     >
-                                      {pendingForThisRent ? 'Edit Liquidation' : 'Liquidate &amp; Pay'}
+                                      {pendingForThisRent ? 'Edit Liquidation' : 'Liquidate & Pay'}
                                     </button>
                                     {pendingForThisRent && pendingLiquidation ? (
                                       <span className="text-amber-700 dark:text-amber-300">
@@ -2820,7 +2846,7 @@ export default function PlayConsole(): JSX.Element {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div data-qa="play-console-footer" className="flex items-center justify-between gap-0 py-3 px-3 bg-surface-0 rounded-b-3xl">
+            <div data-qa="play-console-footer" className="flex items-center justify-between gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl">
               <div className="flex items-center gap-2">
                 {activeStep === 1 && isTriple && (
                   tripleTeleportTo != null ? (
@@ -2966,16 +2992,14 @@ export default function PlayConsole(): JSX.Element {
       <AnimatePresence>
         {overlay.deck && (
           <>
-          {(overlay.deck === 'chance' || overlay.deck === 'community') && (
-            <motion.div
-              key="overlay-backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 modal-backdrop"
-              onClick={() => setOverlay({ deck: null })}
-            />
-          )}
+          <motion.div
+            key="overlay-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 modal-backdrop"
+            onMouseDown={() => setOverlay({ deck: null })}
+          />
           <motion.div
             key="overlay"
             initial={{ y: '100%' }}
@@ -3107,9 +3131,93 @@ export default function PlayConsole(): JSX.Element {
               if (e.target === e.currentTarget) setEventLogOpen(false);
             }}
           >
-            <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700 max-h-[85vh] overflow-y-auto">
-              <OverlayHeader title="Event Logs" onClose={() => setEventLogOpen(false)} className="mb-3" />
-              <EventLog />
+            <div className="flex w-full max-w-3xl max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+              <div className="p-2 bg-surface-1 rounded-t-xl">
+                <OverlayHeader title="Event Logs" onClose={() => setEventLogOpen(false)} className="pl-2"     />
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <EventLog
+                  useFlexibleHeight
+                  restorableEventIds={restorableEventIds}
+                  onRequestRestore={(eventId) => {
+                    setRestoreError(null);
+                    setRestoreConfirmEventId(eventId);
+                  }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {restoreConfirmEventId && (
+          <motion.div
+            key="restore-confirm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[55] flex items-center justify-center modal-backdrop p-4"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !restorePending) {
+                setRestoreConfirmEventId(null);
+                setRestoreError(null);
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <OverlayHeader
+                title="Restore timeline?"
+                onClose={() => {
+                  if (!restorePending) {
+                    setRestoreConfirmEventId(null);
+                    setRestoreError(null);
+                  }
+                }}
+                className="mb-1"
+              />
+              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                Game state will match the moment after this log entry. All later events and snapshots are removed. This cannot be undone except by restoring again from an earlier snapshot, if one still exists.
+              </div>
+              {restoreError && <div className="mt-2 text-sm text-rose-600 dark:text-rose-400">{restoreError}</div>}
+              <div className="mt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={restorePending}
+                  onClick={() => setRestoreConfirmEventId(null)}
+                  className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={restorePending}
+                  onClick={() => {
+                    if (!restoreConfirmEventId) return;
+                    const id = restoreConfirmEventId;
+                    setRestorePending(true);
+                    void dispatch(restoreToEventId(id))
+                      .unwrap()
+                      .then(() => {
+                        setRestoreConfirmEventId(null);
+                        setEventLogOpen(false);
+                        onTimelineRestored?.();
+                      })
+                      .catch(() => {
+                        setRestoreError(
+                          'No snapshot available for this moment (it may have been trimmed). Play a bit longer from an earlier point or pick a more recent log line.'
+                        );
+                      })
+                      .finally(() => setRestorePending(false));
+                  }}
+                  className="rounded-md bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                >
+                  {restorePending ? 'Restoring…' : 'Restore'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -3118,7 +3226,16 @@ export default function PlayConsole(): JSX.Element {
       {/* Summary overlay */}
       <AnimatePresence>
         {summaryOpen && (
-          <motion.div key="summary" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+          <motion.div
+            key="summary"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setSummaryOpen(false);
+            }}
+          >
             <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <OverlayHeader title="Turn Summary" onClose={() => setSummaryOpen(false)} className="mb-2" />
               <div className="space-y-2 text-sm">
@@ -3242,6 +3359,20 @@ export default function PlayConsole(): JSX.Element {
         )}
       </AnimatePresence>
 
+      {(() => {
+        const victoryPlayer = victoryWinnerId ? players.find((p) => p.id === victoryWinnerId) : undefined;
+        if (!victoryPlayer) return null;
+        return (
+          <VictoryModal
+            open={victoryModalOpen}
+            onClose={() => setVictoryModalOpen(false)}
+            winnerNickname={victoryPlayer.nickname}
+            winnerEmoji={AVATARS.find((a) => a.key === victoryPlayer.avatarKey)?.emoji ?? '🙂'}
+            accentColor={victoryPlayer.color}
+          />
+        );
+      })()}
+
       {/* New Game confirmation */}
       <AnimatePresence>
         {newGameConfirmOpen && (
@@ -3251,12 +3382,11 @@ export default function PlayConsole(): JSX.Element {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
-            onClick={() => setNewGameConfirmOpen(false)}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setNewGameConfirmOpen(false);
+            }}
           >
-            <div
-              className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <OverlayHeader title="Start a new game?" onClose={() => setNewGameConfirmOpen(false)} className="mb-1" />
               <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                 This will clear players, properties, decks, and the event log saved on this device and return you to Setup.
@@ -3285,7 +3415,16 @@ export default function PlayConsole(): JSX.Element {
       {/* Centered board picker for teleports */}
       <AnimatePresence>
         {centerOverlay.type && (
-          <motion.div key="center-bus" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+          <motion.div
+            key="center-bus"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) setCenterOverlay({ type: null });
+            }}
+          >
             <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <OverlayHeader
                 title={centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}

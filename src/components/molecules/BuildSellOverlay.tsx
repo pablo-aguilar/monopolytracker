@@ -6,6 +6,7 @@ import OverlayHeader from '@/components/molecules/OverlayHeader';
 import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
 import { computeRent, countGroupOwned } from '@/features/selectors/rent';
 import type { RootState } from '@/app/store';
+import { BsCashStack } from 'react-icons/bs';
 import { MdOutlineMoreHoriz } from 'react-icons/md';
 import { TiPlus } from 'react-icons/ti';
 import { FaMinus } from 'react-icons/fa';
@@ -445,7 +446,17 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
   return (
     <AnimatePresence>
       {open && (
-        <motion.div data-cmp="m/BuildSellOverlay" key="build-sell-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+        <motion.div
+          data-cmp="m/BuildSellOverlay"
+          key="build-sell-ov"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <div className="p-1 bg-surface-1 rounded-t-xl">
               <OverlayHeader
@@ -474,8 +485,14 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span>Available: <strong>${availableNow}</strong></span>
-                  <span>Spending: <strong className={moneyOk ? 'text-emerald-700' : 'text-rose-600'}>${spendNow}</strong></span>
+                  <span
+                    className="inline-flex items-center gap-1"
+                    aria-label={`Available: $${availableNow}`}
+                  >
+                    <BsCashStack className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                    <strong aria-hidden>${availableNow}</strong>
+                  </span>
+                  <span>Cost: <strong className={moneyOk ? 'text-emerald-700' : 'text-rose-600'}>${spendNow}</strong></span>
                   {mortgageCreditNextTurn > 0 && (
                     <span>Mortgage credit: <strong className="text-emerald-700">${mortgageCreditNextTurn}</strong></span>
                   )}
@@ -518,7 +535,7 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                               const body = (
                                 <div className="flex items-center gap-2">
                                   <img src="/icons/skyscraper.webp" alt="Skyscraper" className="h-8 w-8" loading="lazy" decoding="async" />
-                                  <span className="text-xs opacity-80">Skyscraper</span>
+                                  <span className="text-base text-fg font-bold">Skyscraper</span>
                                 </div>
                               );
                               return showHouseBuildControls ? (
@@ -865,11 +882,19 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
               })()}
             </AnimatePresence>
 
-            <div className=" bg-surface-0 p-3 mt-1 flex items-center justify-end gap-2 rounded-b-xl">
-              <button type="button" onClick={resetPlan} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">
-                Reset Plan
+            <div className=" bg-surface-1 p-3 mt-1 flex items-center justify-end gap-2 rounded-b-xl">
+              <button
+                type="button"
+                disabled={!hasChange}
+                onClick={resetPlan}
+                className={`rounded-md border px-3 py-1.5 text-sm ${
+                  !hasChange
+                    ? 'border-neutral-200 dark:border-neutral-800 text-muted opacity-50 cursor-not-allowed'
+                    : 'border-neutral-300 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800/60'
+                }`}
+              >
+                Reset
               </button>
-              <button type="button" onClick={onClose} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Cancel</button>
               <button
                 type="button"
                 disabled={!hasChange || !bankOk || !moneyOk || !liquidationReady}

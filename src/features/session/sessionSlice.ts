@@ -7,10 +7,12 @@ type RacePotState = {
   winnerId: string | null;
 };
 
-type SessionState = {
+export type SessionState = {
   currentGameId: string | null;
   racePot: RacePotState;
   turnIndex: number; // index into players array
+  /** Aligns with GameEvent.turnSeq; increments only in advanceTurn. */
+  turnSeq: number;
   freeParkingPot: number;
   pendingMortgageCreditByPlayerId: Record<string, number>;
 };
@@ -21,6 +23,7 @@ const initialState: SessionState = {
   currentGameId: null,
   racePot: defaultRacePot(),
   turnIndex: 0,
+  turnSeq: 0,
   freeParkingPot: 1000,
   pendingMortgageCreditByPlayerId: {},
 };
@@ -60,6 +63,7 @@ const sessionSlice = createSlice({
       } else {
         state.turnIndex = (state.turnIndex + 1) % n;
       }
+      state.turnSeq = (state.turnSeq ?? 0) + 1;
     },
     addToFreeParking(state, action: PayloadAction<number>) {
       state.freeParkingPot += action.payload;
@@ -79,6 +83,10 @@ const sessionSlice = createSlice({
       if (!playerId) return;
       delete state.pendingMortgageCreditByPlayerId[playerId];
     },
+    hydrateFromTimeline(_state, action: PayloadAction<SessionState>) {
+      const s = action.payload;
+      return { ...s, turnSeq: s.turnSeq ?? 0 };
+    },
   },
 });
 
@@ -93,5 +101,6 @@ export const {
   resetFreeParking,
   addPendingMortgageCredit,
   consumePendingMortgageCredit,
+  hydrateFromTimeline,
 } = sessionSlice.actions;
 export default sessionSlice.reducer; 

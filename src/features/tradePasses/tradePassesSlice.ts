@@ -10,7 +10,7 @@ export interface TradePassEntry {
   remaining: number; // 0..2
 }
 
-type TradePassesState = {
+export type TradePassesState = {
   entries: TradePassEntry[];
 };
 
@@ -66,8 +66,11 @@ const tradePassesSlice = createSlice({
     resetTradePasses(state) {
       state.entries = [];
     },
+    hydrateFromTimeline(_state, action: PayloadAction<TradePassesState>) {
+      return action.payload;
+    },
   },
 });
 
-export const { grantTradePass, consumeTradePass, setTradePasses, resetTradePasses } = tradePassesSlice.actions;
+export const { grantTradePass, consumeTradePass, setTradePasses, resetTradePasses, hydrateFromTimeline } = tradePassesSlice.actions;
 export default tradePassesSlice.reducer;

@@ -51,6 +51,10 @@ export interface GameEvent {
   gameId: string;
   type: EventType;
   actorPlayerId?: string; // player who initiated the event (if applicable)
+  /** Monotonic per game; constant for all events in one player's turn; increments on advanceTurn. */
+  turnSeq?: number;
+  /** Player whose turn it was when this event was logged (session.turnIndex at append time). */
+  turnPlayerId?: string;
   payload: Record<string, any>; // structured per event type
   moneyDelta?: number; // positive for income, negative for payouts
   createdAt: string; // ISO string

@@ -177,8 +177,11 @@ const propertiesSlice = createSlice({
       if (!tile || tile.type !== 'railroad') return;
       ps.depotInstalled = action.payload.installed;
     },
+    hydrateFromTimeline(_state, action: PayloadAction<PropertiesState>) {
+      return action.payload;
+    },
   },
 });
 
-export const { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } = propertiesSlice.actions;
+export const { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled, hydrateFromTimeline } = propertiesSlice.actions;
 export default propertiesSlice.reducer;

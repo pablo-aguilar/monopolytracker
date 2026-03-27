@@ -33,7 +33,7 @@ export default function IconLabelButton({
     <button
       data-cmp="a/IconLabelButton"
       type={type ?? 'button'}
-      className={`inline-flex items-center justify-center gap-1 rounded-md pl-1 pr-2.5 py-1 text-sm font-semibold ${className ?? ''}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md pl-2 pr-2.5 py-1 text-sm font-semibold ${className ?? ''}`}
       {...rest}
     >
       {iconSrc ? (

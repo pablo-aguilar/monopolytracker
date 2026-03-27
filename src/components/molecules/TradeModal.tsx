@@ -532,10 +532,15 @@ export default function TradeModal({
           }}
           role="dialog"
           aria-modal="true"
-          aria-label={title}
+          aria-label={step === 2 ? 'Trade:Summary' : title}
         >
           <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
-            <OverlayHeader title={title} onClose={onClose} className="bg-surface-1 px-4 py-1" />
+            <OverlayHeader
+              title={step === 2 ? 'Trade:Summary' : title}
+              onClose={onClose}
+              className="bg-surface-1 px-1 py-1"
+              titleClassName="text-sm font-semibold pl-2.5"
+            />
             <div className="sm:p-4 p-2">
                 {step === 1 && <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div className="rounded-lg border border-surface bg-surface-1 p-1 sm:p-3 space-y-2 sm:space-y-3">
@@ -990,14 +995,27 @@ export default function TradeModal({
                     ) : null}
                   </div>
                 </div>}
-                {step === 2 && <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Trade Summary</div>
+                {step === 2 && (
+                  <>
                   {!tradeSummary.hasAnything ? (
                     <div className="mt-2 text-xs text-subtle">No assets selected yet.</div>
                   ) : (
                     <div className="mt-2 grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
                       <div className="rounded-md border border-surface bg-surface-1 p-2">
-                        <div className="font-semibold">You gain</div>
+                        <div className="flex items-center gap-2 font-semibold">
+                          <div style={{ ['--player-color' as any]: player1Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
+                            <AvatarToken
+                              emoji={player1Emoji}
+                              size={28}
+                              borderColorClass="border-[color:var(--player-color)]"
+                              ring
+                              ringColorClass="ring-[color:var(--player-color)]"
+                            />
+                          </div>
+                          <span>
+                            {player1Name} gains
+                          </span>
+                        </div>
                         {(tradeSummary.to.properties.length === 0 &&
                           tradeSummary.to.cash <= 0 &&
                           tradeSummary.to.busTickets <= 0 &&
@@ -1023,7 +1041,20 @@ export default function TradeModal({
                         )}
                       </div>
                       <div className="rounded-md border border-surface bg-surface-1 p-2">
-                        <div className="font-semibold">{player2Name} gains</div>
+                        <div className="flex items-center gap-2 font-semibold">
+                          <div style={{ ['--player-color' as any]: player2Board?.color ?? '#a1a1aa' } as React.CSSProperties}>
+                            <AvatarToken
+                              emoji={player2Emoji}
+                              size={28}
+                              borderColorClass="border-[color:var(--player-color)]"
+                              ring
+                              ringColorClass="ring-[color:var(--player-color)]"
+                            />
+                          </div>
+                          <span>
+                            {player2Name} gains
+                          </span>
+                        </div>
                         {(tradeSummary.from.properties.length === 0 &&
                           tradeSummary.from.cash <= 0 &&
                           tradeSummary.from.busTickets <= 0 &&
@@ -1055,7 +1086,8 @@ export default function TradeModal({
                       Net cash to {player1Name}: ${tradeSummary.netCashToPlayer1}
                     </div>
                   )}
-                </div>}
+                  </>
+                )}
             </div>
 
             <div className="flex items-center justify-between p-3 bg-surface-1 border-t border-surface">

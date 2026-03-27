@@ -19,8 +19,11 @@ const eventsSlice = createSlice({
     resetEvents(state) {
       state.events = [];
     },
+    hydrateFromTimeline(_state, action: PayloadAction<{ events: GameEvent[] }>) {
+      return action.payload;
+    },
   },
 });
 
-export const { appendEvent, resetEvents } = eventsSlice.actions;
+export const { appendEvent, resetEvents, hydrateFromTimeline } = eventsSlice.actions;
 export default eventsSlice.reducer; 

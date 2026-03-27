@@ -89,6 +89,9 @@ const cardsSlice = createSlice({
       const card = deck.drawPile.shift();
       if (card) deck.discardPile.unshift(card);
     },
+    hydrateFromTimeline(_state, action: PayloadAction<CardsState>) {
+      return action.payload;
+    },
   },
 });
 
@@ -97,5 +100,5 @@ export const selectLastDrawnCard = (state: CardsState, deck: CardDeck): CardDefi
   return d.discardPile.length > 0 ? d.discardPile[0] : null;
 };
 
-export const { setSeed, drawCard, putCardOnBottom, reshuffleIfEmpty, drawBusCardByType } = cardsSlice.actions;
+export const { setSeed, drawCard, putCardOnBottom, reshuffleIfEmpty, drawBusCardByType, hydrateFromTimeline } = cardsSlice.actions;
 export default cardsSlice.reducer;

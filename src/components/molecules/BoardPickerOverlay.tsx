@@ -25,7 +25,17 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
   return (
     <AnimatePresence>
       {open && (
-        <motion.div data-cmp="m/BoardPickerOverlay" key="board-picker-ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+        <motion.div
+          data-cmp="m/BoardPickerOverlay"
+          key="board-picker-ov"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
           <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
             <OverlayHeader title={title} onClose={onClose} className="mb-2" />
             <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 max-h-[70vh] overflow-auto">
@@ -58,9 +68,9 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
                     >
                       <div className={`h-2 rounded-t-xl ${getTileHeaderBg(t)}`} />
                       <div className="p-2 space-y-1">
-                        <div className="font-semibold text-[12px] truncate">{t.name}</div>
+                        <div className="font-semibold text-xs truncate">{t.name} </div>
                       </div>
-                      <div className="px-2 pb-2 flex items-center justify-between text-[10px] opacity-80">
+                      <div className="px-2 pb-1.5 flex items-center justify-between text-xs opacity-80">
                         <div>#{t.index}</div>
                         <div className="flex items-center gap-1">{tileFooterIcon ? tileFooterIcon(t.id) : null}</div>
                       </div>

@@ -8,6 +8,10 @@ import Tooltip from '@/components/atoms/Tooltip';
 import { BsCashStack } from 'react-icons/bs';
 import { TbBuildings } from 'react-icons/tb';
 
+function abbreviateTileNameForHud(name: string): string {
+  return name.replace(/\bAvenue\b/g, 'Ave.');
+}
+
 export type PlayerTurnCardsPlayer = {
   id: string;
   nickname: string;
@@ -61,7 +65,7 @@ export default function PlayerTurnCards({
         const liquidationPotential = Number(p.liquidationPotential ?? 0);
         const loc = getTileByIndex(p.positionIndex);
         const locLabel = (() => {
-          if (p.positionIndex !== JAIL_INDEX) return loc.name;
+          if (p.positionIndex !== JAIL_INDEX) return abbreviateTileNameForHud(loc.name);
           const inJail = Boolean((p as any).inJail);
           if (!inJail) return 'Jail: Just Visiting';
           const attempts = Number((p as any).jailAttempts ?? 0);
@@ -85,15 +89,17 @@ export default function PlayerTurnCards({
                     {locLabel} <span className=" text-subtle">{p.positionIndex}</span>
                   </span>
                 </div>
-                <div className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-1">
+                <div className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-2">
                   <span className="inline-flex items-center gap-1">
                     <BsCashStack className="h-4 w-4 text-emerald-600" aria-hidden />
                     <AnimatedNumber value={p.money} prefix="$" />
                   </span>
-                  <span className="inline-flex items-center gap-1">
-                    <TbBuildings className="h-4 w-4 text-sky-600" aria-hidden />
-                    <AnimatedNumber value={liquidationPotential} prefix="$" />
-                  </span>
+                  {liquidationPotential !== 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <TbBuildings className="h-4 w-4 text-sky-600" aria-hidden />
+                      <AnimatedNumber value={liquidationPotential} prefix="$" />
+                    </span>
+                  )}
                 </div>
               </div>
               {/* inventory HUD */}
