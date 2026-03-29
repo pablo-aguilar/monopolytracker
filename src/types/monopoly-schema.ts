@@ -15,6 +15,20 @@ export interface DieRoll {
   isTripleOnes: boolean; // convenience flag for 1-1-1
 }
 
+/** Payload for `GameEvent` type `ROLL` (one per finalized roll, including each doubles chain segment). */
+export interface RollEventPayload {
+  d6A: number;
+  d6B: number;
+  special: SpecialDieFace | null;
+  total: number;
+  isDouble: boolean;
+  isTriple: boolean;
+  isTripleOnes: boolean;
+  /** 1-based roll segment within the turn (doubles chain). */
+  rollIndex: number;
+  message?: string;
+}
+
 // Specific reasons for JAIL events to make rule precedence explicit
 export type JailReason =
   | 'THREE_DOUBLES'

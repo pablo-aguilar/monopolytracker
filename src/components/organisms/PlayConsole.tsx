@@ -7,8 +7,10 @@
 
 // //#imports
 import React, { useMemo, useState, useRef } from 'react';
-import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
+import type { SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
 import EventLog from '@/components/molecules/EventLog';
+import GameStatsPanel from '@/components/molecules/GameStatsPanel';
+import SegmentedControl from '@/components/molecules/SegmentedControl';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
@@ -181,6 +183,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [stagedBusPicks, setStagedBusPicks] = useState<StagedBusPick[]>([]);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
   const [eventLogOpen, setEventLogOpen] = useState<boolean>(false);
+  const [eventLogPanelTab, setEventLogPanelTab] = useState<'log' | 'stats'>('log');
   const [restoreConfirmEventId, setRestoreConfirmEventId] = useState<string | null>(null);
   const [restorePending, setRestorePending] = useState<boolean>(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -844,6 +847,32 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
         at: new Date().toISOString(),
       };
       appendUniqueTurnSegment(seg);
+      if (d6A != null && d6B != null) {
+        const totalRoll = d6A + d6B + specialNumeric;
+        const isDoubleRoll = d6A === d6B;
+        const isTripleRoll = d6A === d6B && typeof special === 'number' && special === d6A;
+        const isTripleOnesRoll = isTripleRoll && d6A === 1;
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'ROLL',
+            actorPlayerId: pid,
+            payload: {
+              d6A,
+              d6B,
+              special: special as SpecialDieFace | null,
+              total: totalRoll,
+              isDouble: isDoubleRoll,
+              isTriple: isTripleRoll,
+              isTripleOnes: isTripleOnesRoll,
+              rollIndex: rollCount,
+              message: `Rolled ${totalRoll}`,
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
     } catch {}
     // Commit staged Bus effects now (skip if third doubles sends to jail)
     if (!thirdDoubles && stagedBusPicks.length > 0) {
@@ -3401,17 +3430,32 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
           >
             <div className="flex w-full max-w-3xl max-h-[calc(100dvh-2rem)] min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
               <div className="p-2 bg-surface-1 rounded-t-xl">
-                <OverlayHeader title="Event Logs" onClose={() => setEventLogOpen(false)} className="pl-2"     />
+                <OverlayHeader title="Game log & stats" onClose={() => setEventLogOpen(false)} className="pl-2" />
+                <div className="mt-2 flex justify-center px-1 sm:justify-start">
+                  <SegmentedControl
+                    dense
+                    value={eventLogPanelTab}
+                    onChange={setEventLogPanelTab}
+                    options={[
+                      { value: 'log', label: 'Game log' },
+                      { value: 'stats', label: 'Game stats' },
+                    ]}
+                  />
+                </div>
               </div>
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <EventLog
-                  useFlexibleHeight
-                  restorableEventIds={restorableEventIds}
-                  onRequestRestore={(eventId) => {
-                    setRestoreError(null);
-                    setRestoreConfirmEventId(eventId);
-                  }}
-                />
+                {eventLogPanelTab === 'log' ? (
+                  <EventLog
+                    useFlexibleHeight
+                    restorableEventIds={restorableEventIds}
+                    onRequestRestore={(eventId) => {
+                      setRestoreError(null);
+                      setRestoreConfirmEventId(eventId);
+                    }}
+                  />
+                ) : (
+                  <GameStatsPanel events={events as GameEvent[]} players={players} useFlexibleHeight />
+                )}
               </div>
             </div>
           </motion.div>
@@ -3732,7 +3776,19 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                             setCenterOverlay({ type: null });
                             // Consume one ticket now; actual move happens on End Turn via onApplyMove logic using predictedTo
                             const pid = players[turnIndex]?.id || players[0]?.id;
-                            if (pid) dispatch(consumeBusTicket({ id: pid, count: 1 }));
+                            if (pid) {
+                              dispatch(consumeBusTicket({ id: pid, count: 1 }));
+                              dispatch(
+                                appendEvent({
+                                  id: crypto.randomUUID(),
+                                  gameId: 'local',
+                                  type: 'BUS_PASS_USED',
+                                  actorPlayerId: pid,
+                                  payload: { playerId: pid, message: 'Bus ticket used (teleport)' },
+                                  createdAt: new Date().toISOString(),
+                                })
+                              );
+                            }
                             setPredictedTo(t.index);
                             setBusTicketsAvailableThisTurn((n) => Math.max(0, n - 1));
                             return;
