@@ -1692,11 +1692,9 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const rollSummaryRow = (a: number, b: number, sp: SpecialDieFace | null, total: number): JSX.Element => (
     <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 gap-y-0.5 text-center">
       {rollFace(a, rollDiceIconCls)}
-      <span aria-hidden>+</span>
       {rollFace(b, rollDiceIconCls)}
       {sp != null && (
         <>
-          <span aria-hidden>+</span>
           {sp === 'Bus' ? (
             <FaBusAlt className="inline-block align-middle mb-0.5 h-[14px] w-[14px] shrink-0 text-fg" aria-hidden />
           ) : (
@@ -1723,17 +1721,17 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
           )
         : hasRoll && d6A != null && d6B != null
           ? rollSummaryRow(d6A, d6B, special, rollTotal)
-          : d6A !== null && d6B === null
+            : d6A !== null && d6B === null
             ? (
                 <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 text-center">
                   {rollFace(d6A, rollDiceIconCls)}
-                  <span aria-hidden>+…</span>
+                  <span aria-hidden>…</span>
                 </span>
               )
             : d6A === null && d6B !== null
               ? (
                   <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 text-center">
-                    <span aria-hidden>…+</span>
+                    <span aria-hidden>…</span>
                     {rollFace(d6B, rollDiceIconCls)}
                   </span>
                 )
