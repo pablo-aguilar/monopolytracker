@@ -152,9 +152,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [taxSelected, setTaxSelected] = useState<boolean>(false);
   const [diceBusSelectedCardId, setDiceBusSelectedCardId] = useState<string | null>(null);
   const [tileBusSelectedCardId, setTileBusSelectedCardId] = useState<string | null>(null);
-  const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null; busSlot?: 'dice' | 'tile' }>(() => ({
+  const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null; busSlot?: 'dice' | 'tile' | 'birthday' }>(() => ({
     deck: null,
   }));
+  const [birthdayGiftCashSelected, setBirthdayGiftCashSelected] = useState<boolean>(false);
+  const [birthdayGiftBusCardId, setBirthdayGiftBusCardId] = useState<string | null>(null);
   const [cardSearch, setCardSearch] = useState<string>('');
   const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | 'tripleTeleport' | null }>(() => ({ type: null }));
   const [busTeleportTo, setBusTeleportTo] = useState<number | null>(null);
@@ -497,6 +499,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     setTaxSelected(false);
     setDiceBusSelectedCardId(null);
     setTileBusSelectedCardId(null);
+    setBirthdayGiftCashSelected(false);
+    setBirthdayGiftBusCardId(null);
     setAuctionCompleted(false);
     setAuctionItSelected(false);
     setStagedAuction(null);
@@ -1267,6 +1271,26 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       }
     }
 
+    // Birthday Gift: $100 when player chose cash (not first-round gated; skip on third doubles).
+    if (!thirdDoubles && birthdayGiftCashSelected) {
+      const idxBg = predictedTo ?? currentIndex;
+      const tBg = getTileByIndex(idxBg);
+      if (tBg.id === 'birthday-gift') {
+        dispatch(adjustPlayerMoney({ id: pid, delta: 100 }));
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'MONEY_ADJUST',
+            actorPlayerId: pid,
+            payload: { playerId: pid, amount: 100, message: 'Birthday Gift: $100 from bank' },
+            moneyDelta: 100,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
+    }
+
     // If we are resolving a queued Post (predictedTo set from queue), apply now but do not advance turn.
     if (queuedPostPending && queuedPostActive && predictedTo != null) {
       const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? 0;
@@ -1487,6 +1511,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       setSpecial(null);
       setDiceBusSelectedCardId(null);
       setTileBusSelectedCardId(null);
+      setBirthdayGiftCashSelected(false);
+      setBirthdayGiftBusCardId(null);
       setRollConfirmed(false);
       setPredictedTo(null);
       setTripleTeleportTo(null);
@@ -1514,6 +1540,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     if (taxRequiredButNotSelected()) return;
     // Block hold if a mandatory draw hasn't been selected yet
     if (cardDrawRequiredButNotSelected()) return;
+    if (birthdayGiftRequiredButNotResolved()) return;
+    if (purchaseOrAuctionRequiredButNotResolved()) return;
     setHoldProgress(0);
     const start = Date.now();
     const duration = 3000;
@@ -1811,6 +1839,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     } else if (activeStep === 1 && canGoNext(1)) {
       // Confirm roll or bus teleport and prepare post actions
       setRollConfirmed(true);
+      setBirthdayGiftCashSelected(false);
+      setBirthdayGiftBusCardId(null);
       const pid = players[turnIndex]?.id || players[0]?.id;
       const fromIndex = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
       // Jail attempt resolution
@@ -1856,6 +1886,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
         suggested = 'Pay Tax';
       } else if (t.type === 'chance' || t.type === 'community') {
         suggested = 'Draw Card';
+      } else if (t.id === 'birthday-gift') {
+        suggested = 'Birthday Gift';
       }
       setPredictedTo(toIndex);
       setPostAction(suggested);
@@ -2231,6 +2263,18 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     if (requiresBusCard && !diceBusSelectedCardId) return true;
     if (t.type === 'busStop' && !tileBusSelectedCardId) return true;
     return false;
+  };
+
+  const birthdayGiftRequiredButNotResolved = (): boolean => {
+    const idx = predictedTo ?? currentIndex;
+    const t = getTileByIndex(idx);
+    if (t.id !== 'birthday-gift') return false;
+    const busDraw = cardsState.decks.bus.drawPile;
+    const reg = busDraw.filter((c) => !c.id.startsWith('bb')).length;
+    const big = busDraw.filter((c) => c.id.startsWith('bb')).length;
+    const canBus = reg > 0 || big > 0;
+    if (!canBus) return !birthdayGiftCashSelected;
+    return !(birthdayGiftCashSelected || birthdayGiftBusCardId != null);
   };
 
   const doQuickBuy = (pid: string): void => {
@@ -2815,13 +2859,19 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const tileBusNeedsCard = t.type === 'busStop';
                     const postLandingLocked = requiresBusCard && !diceBusSelectedCardId;
                     const landingSectionClass = postLandingLocked ? 'opacity-50 pointer-events-none' : '';
+                    const birthdayGiftVisible = t.id === 'birthday-gift';
+                    const busDrawPileBg = cardsState.decks.bus.drawPile;
+                    const birthdayBusRegularLeft = busDrawPileBg.filter((c) => !c.id.startsWith('bb')).length;
+                    const birthdayBusBigLeft = busDrawPileBg.filter((c) => c.id.startsWith('bb')).length;
+                    const canDrawBirthdayBus = birthdayBusRegularLeft > 0 || birthdayBusBigLeft > 0;
                     const hasLandingPostCards =
                       isUnownedBuyable ||
                       !!(rentLabel || taxLabel) ||
                       chanceVisible ||
                       communityVisible ||
                       tileBusNeedsCard ||
-                      isAuctionTile;
+                      isAuctionTile ||
+                      birthdayGiftVisible;
 
                     const pl = players.find((x) => x.id === pid);
                     const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
@@ -3107,6 +3157,71 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           </SectionCard>
                         )}
 
+                        {/* Birthday Gift — $100 or bus ticket (any round) */}
+                        {birthdayGiftVisible && (
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title="Birthday Gift"
+                            status={birthdayGiftBusCardId ? 'Ticket drawn' : undefined}
+                            headerTrailing={
+                              birthdayGiftBusCardId ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo Birthday Gift bus ticket; return card to deck"
+                                  onClick={() => {
+                                    if (!birthdayGiftBusCardId) return;
+                                    dispatch(putCardOnBottom({ deck: 'bus', cardId: birthdayGiftBusCardId }));
+                                    setBirthdayGiftBusCardId(null);
+                                    setStagedBusPicks((picks) => (picks.length === 0 ? picks : picks.slice(0, -1)));
+                                  }}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1 space-y-1">
+                              {birthdayGiftBusCardId ? (
+                                <p className="text-sm font-medium text-fg">{getBusCardShortTitle(birthdayGiftBusCardId)}</p>
+                              ) : canDrawBirthdayBus ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <TogglePillButton
+                                    label="Draw bus ticket"
+                                    active={false}
+                                    onToggle={() => setOverlay({ deck: 'bus', busSlot: 'birthday' })}
+                                    variant="bus"
+                                  />
+                                  <span className="font-bold text-sm text-subtle">OR</span>
+                                  <TogglePillButton
+                                    label="Receive $100"
+                                    active={birthdayGiftCashSelected}
+                                    onToggle={() => {
+                                      if (birthdayGiftCashSelected) {
+                                        setBirthdayGiftCashSelected(false);
+                                        return;
+                                      }
+                                      if (birthdayGiftBusCardId) {
+                                        dispatch(putCardOnBottom({ deck: 'bus', cardId: birthdayGiftBusCardId }));
+                                        setBirthdayGiftBusCardId(null);
+                                        setStagedBusPicks((picks) => (picks.length === 0 ? picks : picks.slice(0, -1)));
+                                      }
+                                      setBirthdayGiftCashSelected(true);
+                                    }}
+                                    variant="emerald"
+                                  />
+                                </div>
+                              ) : (
+                                <>
+                                  <TogglePillButton
+                                    label="Receive $100"
+                                    active={birthdayGiftCashSelected}
+                                    onToggle={() => setBirthdayGiftCashSelected((v) => !v)}
+                                    variant="emerald"
+                                  />
+                                  <p className="text-[11px] opacity-70">No bus tickets in the draw pile; collect $100 from the bank.</p>
+                                </>
+                              )}
+                            </div>
+                          </SectionCard>
+                        )}
+
                         {/* Draw Bus (tile — bus stop) */}
                         {tileBusNeedsCard && (
                           <SectionCard
@@ -3197,9 +3312,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
                   // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
                   const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                  const birthdayBlocked = birthdayGiftRequiredButNotResolved();
                   const blocked = isQueuedFlowActive
-                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
-                    : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
+                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked)
+                    : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked);
                   if (isQueuedFlowActive) {
                     return (
                       <button
@@ -3326,6 +3442,9 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const slot = overlay.busSlot ?? 'dice';
                     if (slot === 'dice') {
                       setDiceBusSelectedCardId(cardId);
+                    } else if (slot === 'birthday') {
+                      setBirthdayGiftBusCardId(cardId);
+                      setBirthdayGiftCashSelected(false);
                     } else {
                       setTileBusSelectedCardId(cardId);
                     }
@@ -3648,8 +3767,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 {(() => {
                   const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
                   const blocked = isQueuedFlowActive
-                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
-                    : (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected());
+                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayGiftRequiredButNotResolved())
+                    : (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayGiftRequiredButNotResolved());
                   const label = isQueuedFlowActive ? 'Next' : 'End Turn';
                   return (
                     <button
