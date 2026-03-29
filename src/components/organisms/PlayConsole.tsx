@@ -3749,7 +3749,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 onClose={() => setCenterOverlay({ type: null })}
                 className="p-1 pl-3 bg-surface-1 rounded-t-xl"
               />
-              <div className="grid grid-cols-8 gap-2 max-h-[70vh] overflow-auto p-4 pt-2">
+              <div className="grid grid-cols-5 sm:grid-cols-8 sm:gap-2 gap-1  max-h-[70vh] overflow-auto px-2 pt-2 pb-4 sm:px-4">
                 {BOARD_TILES.map((t) => {
                   const onTile = players.filter((pl) => pl.positionIndex === t.index);
                   const ownerIdForTile = (propsState.byTileId[t.id]?.ownerId as string | null) || null;
