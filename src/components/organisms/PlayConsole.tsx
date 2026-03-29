@@ -49,6 +49,7 @@ import VictoryModal from '@/components/molecules/VictoryModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
 import SectionCard from '@/components/molecules/SectionCard';
 import SettingsGear from '@/components/molecules/SettingsGear';
+import { BsDice1Fill, BsDice2Fill, BsDice3Fill, BsDice4Fill, BsDice5Fill, BsDice6Fill } from 'react-icons/bs';
 import { FaBusAlt, FaHandshake } from 'react-icons/fa';
 import { GiDiceFire, GiTeleport } from 'react-icons/gi';
 import { IoClose } from 'react-icons/io5';
@@ -1667,39 +1668,78 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     exit: { opacity: 0, x: -20 },
   };
 
+  const rollDiceIconCls = 'inline-block align-middle size-[1.1em] shrink-0 text-fg';
+  const rollDiceNegCls = 'inline-block align-middle size-[1.1em] shrink-0 text-red-600 dark:text-red-400';
+  const rollDiceIcons = [BsDice1Fill, BsDice2Fill, BsDice3Fill, BsDice4Fill, BsDice5Fill, BsDice6Fill] as const;
+  const rollFace = (n: number, cls: string): JSX.Element => {
+    const Icon = rollDiceIcons[n - 1];
+    return Icon ? <Icon className={cls} aria-hidden /> : <span className={cls}>{n}</span>;
+  };
+  const rollSpecialThird = (sp: Exclude<SpecialDieFace, 'Bus'>): React.ReactNode => {
+    if (sp === '-1') return rollFace(1, rollDiceNegCls);
+    if (sp === '-2') return rollFace(2, rollDiceNegCls);
+    if (typeof sp === 'number') return rollFace(sp, rollDiceIconCls);
+    if (sp === '+1') {
+      return (
+        <>
+          <span aria-hidden>+</span>
+          {rollFace(1, rollDiceIconCls)}
+        </>
+      );
+    }
+    return String(sp);
+  };
+  const rollSummaryRow = (a: number, b: number, sp: SpecialDieFace | null, total: number): JSX.Element => (
+    <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 gap-y-0.5 text-center">
+      {rollFace(a, rollDiceIconCls)}
+      <span aria-hidden>+</span>
+      {rollFace(b, rollDiceIconCls)}
+      {sp != null && (
+        <>
+          <span aria-hidden>+</span>
+          {sp === 'Bus' ? (
+            <FaBusAlt className="inline-block align-middle mb-0.5 h-[14px] w-[14px] shrink-0 text-fg" aria-hidden />
+          ) : (
+            rollSpecialThird(sp)
+          )}
+        </>
+      )}
+      <span aria-hidden>{` = ${total}`}</span>
+    </span>
+  );
+
   const rollSummary: React.ReactNode =
     busTeleportTo != null
-    ? `Bus → ${abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}`
-    : tripleTeleportTo != null
-      ? (
-          <span
-            className="inline text-center"
-            title={`Teleport → ${getTileByIndex(tripleTeleportTo).name}${isTripleOnes ? ' +1k' : ''}`}
-          >
-            <GiTeleport className="inline-block align-middle mr-1 size-[1.1em] shrink-0" aria-hidden />
-            {abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}
-          </span>
-        )
-      : hasRoll
-        ? special === 'Bus'
-          ? (
-              <span className="inline text-center">
-                {d6A}+{d6B} +{' '}
-                <FaBusAlt
-                  className="inline-block align-middle mb-0.5 h-[14px] w-[14px] shrink-0 text-fg"
-                  aria-hidden
-                />
-                {` = ${rollTotal}`}
-              </span>
-            )
-          : `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}`
-        : d6A !== null && d6B === null
-          ? `${d6A}+…`
-          : d6A === null && d6B !== null
-            ? `…+${d6B}`
-            : highestStep === 0
-              ? ''
-              : '...';
+      ? `Bus → ${abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}`
+      : tripleTeleportTo != null
+        ? (
+            <span
+              className="inline text-center"
+              title={`Teleport → ${getTileByIndex(tripleTeleportTo).name}${isTripleOnes ? ' +1k' : ''}`}
+            >
+              <GiTeleport className="inline-block align-middle mr-1 size-[1.1em] shrink-0" aria-hidden />
+              {abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}
+            </span>
+          )
+        : hasRoll && d6A != null && d6B != null
+          ? rollSummaryRow(d6A, d6B, special, rollTotal)
+          : d6A !== null && d6B === null
+            ? (
+                <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 text-center">
+                  {rollFace(d6A, rollDiceIconCls)}
+                  <span aria-hidden>+…</span>
+                </span>
+              )
+            : d6A === null && d6B !== null
+              ? (
+                  <span className="inline-flex flex-wrap items-center justify-center gap-x-0.5 text-center">
+                    <span aria-hidden>…+</span>
+                    {rollFace(d6B, rollDiceIconCls)}
+                  </span>
+                )
+              : highestStep === 0
+                ? ''
+                : '...';
 
   const canGoNext = (step: 0 | 1 | 2): boolean => {
     if (step === 0) return true;
