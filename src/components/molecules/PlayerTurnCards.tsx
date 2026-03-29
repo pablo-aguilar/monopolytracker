@@ -6,10 +6,11 @@ import AnimatedNumber from '@/components/atoms/AnimatedNumber';
 import HudBadge from '@/components/atoms/HudBadge';
 import Tooltip from '@/components/atoms/Tooltip';
 import { BsCashStack } from 'react-icons/bs';
+import { FaBusAlt } from 'react-icons/fa';
 import { TbBuildings } from 'react-icons/tb';
 
 function abbreviateTileNameForHud(name: string): string {
-  return name.replace(/\bAvenue\b/g, 'Ave.');
+  return name.replace(/\bAvenue\b/g, 'Ave');
 }
 
 export type PlayerTurnCardsPlayer = {
@@ -104,7 +105,13 @@ export default function PlayerTurnCards({
               </div>
               {/* inventory HUD */}
               <div className="flex items-center gap-3 px-1 pb-1 text-sm text-muted">
-                {(Number(p.busTickets ?? 0) > 0) && (<HudBadge title="Bus tickets" icon={<span>🚌</span>} count={Number(p.busTickets ?? 0)} />)}
+                {(Number(p.busTickets ?? 0) > 0) && (
+                  <HudBadge
+                    title="Bus tickets"
+                    icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />}
+                    count={Number(p.busTickets ?? 0)}
+                  />
+                )}
                 {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
                 {(() => {
                   const badges = tradePassBadgesForPlayer(p.id);

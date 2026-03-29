@@ -28,6 +28,9 @@
   --fg-subtle: theme(colors.neutral.500);
   --fg-faint: theme(colors.neutral.300);
 
+  /* Game affordances (bus ticket / teleport-by-bus) */
+  --game-bus: theme(colors.violet.600);
+  --game-bus-muted: theme(colors.violet.700);
 }
 
 .dark {
@@ -51,6 +54,9 @@
   --fg-muted: theme(colors.neutral.300);
   --fg-subtle: theme(colors.neutral.400);
   --fg-faint: theme(colors.neutral.600);
+
+  --game-bus: theme(colors.violet.400);
+  --game-bus-muted: theme(colors.violet.300);
 }
 
 @layer utilities {
@@ -69,6 +75,12 @@
   .border-surface { border-color: var(--border); }
   .border-surface-strong { border-color: var(--border-strong); }
   .border-tint { border-color: var(--border-tint); }
+
+  .bg-game-bus { background-color: var(--game-bus); }
+  .text-game-bus { color: var(--game-bus); }
+  .text-game-bus-muted { color: var(--game-bus-muted); }
+  .border-game-bus { border-color: var(--game-bus); }
+  .border-game-bus-muted { border-color: var(--game-bus-muted); }
 
   /* Divider helpers (use with divide-y / divide-x) */
   .divide-y.divide-surface > :not([hidden]) { border-color: var(--divider); }

@@ -3,7 +3,7 @@ import React from 'react';
 export interface StepItem {
   id: 0 | 1 | 2;
   title: string;
-  desc: string;
+  desc: React.ReactNode;
 }
 
 export interface StepNavigatorProps {
@@ -28,8 +28,8 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
           const midRight = isLast ? 'right-[16px]' : 'right-1/2';
           return (
             <div key={s.id} className={`flex-1 flex flex-col ${align}`}>
-              <div className="text-xs w-[32px] text-center font-medium mb-1 text-fg">{s.title}</div>
-              <div className={`relative w-full h-8 flex items-center ${justify}`}>
+              <div className="text-sm text-subtle w-[32px] text-center font-medium mb-1.5 ">{s.title}</div>
+              <div className={`relative w-full h-8 flex items-center text-lg ${justify}`}>
                 {/* Baseline connectors (neutral) */}
                 {i > 0 && (
                   <div className={`absolute left-0 ${midRight} h-1 bg-surface-1`} aria-hidden />
@@ -59,7 +59,7 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
                   {status === 'done' ? '✓' : s.id + 1}
                 </button>
               </div>
-              <div className="text-[11px] opacity-70 mt-2 min-h-4 px-1">{s.desc}</div>
+              <div className="text-base text-muted mt-2 min-h-4 px-1">{s.desc}</div>
             </div>
           );
         })}

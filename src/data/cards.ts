@@ -47,7 +47,7 @@ export const COMMUNITY_CHEST: CardDefinition[] = [
 
 export const CHANCE: CardDefinition[] = [
   { id: 'h1', deck: 'chance', text: 'Advance to GO (Collect $200)', effect: { type: 'moveTo', tileId: 'go', awardGoIfPassed: true } },
-  { id: 'h2', deck: 'chance', text: 'Advance to Illinois Avenue', effect: { type: 'moveTo', tileId: 'illinois-ave', awardGoIfPassed: true } },
+  { id: 'h2', deck: 'chance', text: 'Advance to Illinois Ave', effect: { type: 'moveTo', tileId: 'illinois-ave', awardGoIfPassed: true } },
   { id: 'h3', deck: 'chance', text: 'Advance to St. Charles Place', effect: { type: 'moveTo', tileId: 'st-charles-place', awardGoIfPassed: true } },
   { id: 'h4', deck: 'chance', text: 'Go to Jail. Do not pass GO', effect: { type: 'goToJail' } },
   { id: 'h5', deck: 'chance', text: 'Bank pays you dividend of $50', effect: { type: 'receiveBank', amount: 50 } },
@@ -84,6 +84,14 @@ export const BUS: CardDefinition[] = [
   { id: 'bb2', deck: 'bus', text: 'Big Bus: All other players lose all Bus tickets', effect: { type: 'busTicket' } },
   { id: 'bb3', deck: 'bus', text: 'Big Bus: All other players lose all Bus tickets', effect: { type: 'busTicket' } },
 ];
+
+/** Short label for staged/drawn bus cards in the UI (vs full card body text). */
+export function getBusCardShortTitle(cardId: string): string {
+  if (cardId.startsWith('bb')) return 'Big Bus';
+  if (/^b\d+$/.test(cardId)) return 'Little Bus';
+  const def = BUS.find((c) => c.id === cardId);
+  return def?.text.split(':')[0]?.trim() ?? cardId;
+}
 
 //#helpers
 import { seededShuffle } from '@/lib/rng';

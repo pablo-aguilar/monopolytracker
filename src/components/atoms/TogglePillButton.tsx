@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-type Variant = 'rose' | 'orange' | 'emerald' | 'blue' | 'slate';
+type Variant = 'rose' | 'orange' | 'emerald' | 'blue' | 'bus' | 'slate';
 
 export interface TogglePillButtonProps {
   label: React.ReactNode;
@@ -24,6 +24,8 @@ function classesFor(variant: Variant, active: boolean): string {
         return `${base} bg-emerald-600 text-white`;
       case 'blue':
         return `${base} bg-blue-600 text-white`;
+      case 'bus':
+        return `${base} bg-game-bus text-white`;
       default:
         return `${base} bg-slate-700 text-white`;
     }
@@ -37,6 +39,8 @@ function classesFor(variant: Variant, active: boolean): string {
       return `${base} bg-transparent border border-emerald-500 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30`;
     case 'blue':
       return `${base} bg-transparent border border-blue-500 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30`;
+    case 'bus':
+      return `${base} bg-transparent border border-game-bus text-game-bus hover:bg-violet-50 dark:hover:bg-violet-950/40`;
     default:
       return `${base} bg-transparent border border-slate-500 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/30`;
   }

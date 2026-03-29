@@ -13,10 +13,10 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
 import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
-import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
+import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle } from '@/data/cards';
 import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
-import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
+import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearAllBusTickets, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
 import { persistor, type AppDispatch, type RootState } from '@/app/store';
 import { computeRent } from '@/features/selectors/rent';
@@ -25,6 +25,7 @@ import AnimatedNumber from '@/components/atoms/AnimatedNumber';
 import HudBadge from '@/components/atoms/HudBadge';
 import Tooltip from '@/components/atoms/Tooltip';
 import { AVATARS } from '@/data/avatars';
+import DrawnUndoButton from '@/components/atoms/DrawnUndoButton';
 import TogglePillButton from '@/components/atoms/TogglePillButton';
 import StatPill from '@/components/atoms/StatPill';
 import HudBar from '@/components/molecules/HudBar';
@@ -46,15 +47,25 @@ import AuctionOverlay from '@/components/molecules/AuctionOverlay';
 import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
 import VictoryModal from '@/components/molecules/VictoryModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
+import SectionCard from '@/components/molecules/SectionCard';
 import SettingsGear from '@/components/molecules/SettingsGear';
-import { FaHandshake } from 'react-icons/fa';
+import { FaBusAlt, FaHandshake } from 'react-icons/fa';
+import { GiDiceFire, GiTeleport } from 'react-icons/gi';
+import { IoClose } from 'react-icons/io5';
 import { MdReceiptLong } from 'react-icons/md';
 import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 import { restoreToEventId } from '@/features/timeline/timelineThunks';
 
+function abbreviateAvenueInTileName(name: string): string {
+  return name.replace(/\bAvenue\b/g, 'Ave');
+}
+
 export type PlayConsoleProps = {
   onTimelineRestored?: () => void;
 };
+
+/** Staged bus deck picks in chronological order (Regular = +1; Big = clear all players then +1 to drawer). */
+type StagedBusPick = 'regular' | 'big';
 
 export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {}): JSX.Element {
   const dispatch = useDispatch<AppDispatch>();
@@ -136,8 +147,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [rentSelected, setRentSelected] = useState<boolean>(false);
   const [useRentPassSelected, setUseRentPassSelected] = useState<boolean>(false);
   const [taxSelected, setTaxSelected] = useState<boolean>(false);
-  const [busSelectedCardId, setBusSelectedCardId] = useState<string | null>(null);
-  const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null }>(() => ({ deck: null }));
+  const [diceBusSelectedCardId, setDiceBusSelectedCardId] = useState<string | null>(null);
+  const [tileBusSelectedCardId, setTileBusSelectedCardId] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<{ deck: 'chance' | 'community' | 'bus' | null; busSlot?: 'dice' | 'tile' }>(() => ({
+    deck: null,
+  }));
   const [cardSearch, setCardSearch] = useState<string>('');
   const [centerOverlay, setCenterOverlay] = useState<{ type: 'busTeleport' | 'tripleTeleport' | null }>(() => ({ type: null }));
   const [busTeleportTo, setBusTeleportTo] = useState<number | null>(null);
@@ -162,9 +176,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [jailChoice, setJailChoice] = useState<'pay' | 'gojf' | 'roll' | null>(null);
   const [stagedChanceCardId, setStagedChanceCardId] = useState<string | null>(null);
   const [stagedCommunityCardId, setStagedCommunityCardId] = useState<string | null>(null);
-  // Staging for Bus flow and Summary overlay
-  const [stagedBusTickets, setStagedBusTickets] = useState<number>(0);
-  const [stagedBigBus, setStagedBigBus] = useState<boolean>(false);
+  // Staging for Bus flow and Summary overlay (order matters: Regular vs Big Bus)
+  const [stagedBusPicks, setStagedBusPicks] = useState<StagedBusPick[]>([]);
   const [summaryOpen, setSummaryOpen] = useState<boolean>(false);
   const [eventLogOpen, setEventLogOpen] = useState<boolean>(false);
   const [restoreConfirmEventId, setRestoreConfirmEventId] = useState<string | null>(null);
@@ -310,6 +323,15 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const addPreAction = React.useCallback((label: string) => {
     setPreActions((prev) => (prev.includes(label) ? prev : [...prev, label]));
   }, []);
+
+  const cancelBusTeleportSelection = React.useCallback(() => {
+    if (busTeleportTo == null) return;
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
+    setBusTicketsAvailableThisTurn((n) => n + 1);
+    setBusTeleportTo(null);
+    setPredictedTo(null);
+  }, [busTeleportTo, players, turnIndex, dispatch]);
 
   const filteredOverlayCards = useMemo(() => {
     if (!overlay.deck || overlay.deck === 'bus') return [];
@@ -469,7 +491,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     setPendingLiquidation(null);
     setUseRentPassSelected(false);
     setTaxSelected(false);
-    setBusSelectedCardId(null);
+    setDiceBusSelectedCardId(null);
+    setTileBusSelectedCardId(null);
     setAuctionCompleted(false);
     setAuctionItSelected(false);
     setStagedAuction(null);
@@ -498,8 +521,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     const startCount = pid ? (players.find((x) => x.id === pid)?.busTickets ?? 0) : 0;
     setBusTicketsAvailableThisTurn(startCount);
     // reset staging
-    setStagedBusTickets(0);
-    setStagedBigBus(false);
+    setStagedBusPicks([]);
     setSummaryOpen(false);
     setRollCount(1);
     setTurnSegments([]);
@@ -535,6 +557,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const specialNumeric: number = useMemo(() => {
     if (special === '+1') return 1;
     if (special === '-1') return -1;
+    if (special === '-2') return -2;
     if (typeof special === 'number') return special;
     // Treat Bus (string) as 0 steps
     return 0;
@@ -542,7 +565,14 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
 
   const hasRoll = d6A !== null && d6B !== null; 
   const hasFullNumericRoll = d6A !== null && d6B !== null && typeof special === 'number';
-  const hasRollWithSpecialSelected = d6A !== null && d6B !== null && (special !== null && (special === 'Bus' || special === '+1' || special === '-1' || typeof special === 'number'));
+  /** True when dice/teleport state matches a completed Roll step (aligns Summary / Next with `canGoNext(1)`). */
+  const postStepRollComplete =
+    rollConfirmed &&
+    (busTeleportTo != null ||
+      tripleTeleportTo != null ||
+      (d6A !== null && d6B !== null));
+  /** Alias for `postStepRollComplete` — keeps `hasRollWithSpecialSelected` defined for stale bundles or partial edits. */
+  const hasRollWithSpecialSelected = postStepRollComplete;
   const requiresBusCard = special === 'Bus';
   const rollTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
   const isTriple = d6A !== null && d6B !== null && d6A === d6B && typeof special === 'number' && special === d6A;
@@ -815,18 +845,30 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       appendUniqueTurnSegment(seg);
     } catch {}
     // Commit staged Bus effects now (skip if third doubles sends to jail)
-    if (!thirdDoubles) {
-      if (stagedBusTickets > 0) {
-        dispatch(grantBusTicket({ id: pid, count: stagedBusTickets }));
-        setStagedBusTickets(0);
+    if (!thirdDoubles && stagedBusPicks.length > 0) {
+      for (const pick of stagedBusPicks) {
+        if (pick === 'regular') {
+          dispatch(grantBusTicket({ id: pid, count: 1 }));
+        } else {
+          dispatch(clearAllBusTickets());
+          dispatch(grantBusTicket({ id: pid, count: 1 }));
+          dispatch(
+            appendEvent({
+              id: crypto.randomUUID(),
+              gameId: 'local',
+              type: 'CARD',
+              actorPlayerId: pid,
+              payload: {
+                deck: 'bus',
+                cardId: 'bb-*',
+                message: "Big Bus: all players' bus tickets cleared; drawer gains 1",
+              },
+              createdAt: new Date().toISOString(),
+            })
+          );
+        }
       }
-      if (stagedBigBus) {
-        dispatch(clearBusTicketsExcept({ winnerId: pid }));
-        dispatch(
-          appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck: 'bus', cardId: 'bb-*', message: "Big Bus: cleared other players' tickets" }, createdAt: new Date().toISOString() })
-        );
-        setStagedBigBus(false);
-      }
+      setStagedBusPicks([]);
     }
 
     // If Buy was toggled, execute purchase before movement effects (skip on third doubles)
@@ -1413,6 +1455,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       setD6A(null);
       setD6B(null);
       setSpecial(null);
+      setDiceBusSelectedCardId(null);
+      setTileBusSelectedCardId(null);
       setRollConfirmed(false);
       setPredictedTo(null);
       setTripleTeleportTo(null);
@@ -1434,8 +1478,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     // Require confirmation; allow either a numeric roll or a bus teleport
     if (!rollConfirmed) return;
     if (!hasRoll && busTeleportTo == null && tripleTeleportTo == null) return;
-    // Block hold if Bus was rolled but no Bus card has been selected yet
-    if (requiresBusCard && !busSelectedCardId) return;
     // Block hold if rent is required but not selected
     if (rentRequiredButNotSelected()) return;
     // Block hold if tax is required but not selected
@@ -1483,8 +1525,15 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   };
 
   const onDrawCard = (deck: 'chance' | 'community' | 'bus'): void => {
-    // Open overlay for all supported decks to allow IRL selection
-    setOverlay({ deck: deck === 'bus' ? 'bus' : deck });
+    if (deck === 'bus') {
+      const idx = predictedTo ?? currentIndex;
+      const t = getTileByIndex(idx);
+      const slot: 'dice' | 'tile' =
+        requiresBusCard && !diceBusSelectedCardId ? 'dice' : t.type === 'busStop' && !tileBusSelectedCardId ? 'tile' : 'dice';
+      setOverlay({ deck: 'bus', busSlot: slot });
+    } else {
+      setOverlay({ deck });
+    }
   };
 
   const onPayRent = (): void => {
@@ -1618,11 +1667,39 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     exit: { opacity: 0, x: -20 },
   };
 
-  const rollSummary = busTeleportTo != null
-    ? `Bus → ${getTileByIndex(busTeleportTo).name}`
+  const rollSummary: React.ReactNode =
+    busTeleportTo != null
+    ? `Bus → ${abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}`
     : tripleTeleportTo != null
-      ? `Teleport → ${getTileByIndex(tripleTeleportTo).name}${isTripleOnes ? ' (+$1000)' : ''}`
-      : (hasRoll ? `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}` : '—');
+      ? (
+          <span
+            className="inline text-center"
+            title={`Teleport → ${getTileByIndex(tripleTeleportTo).name}${isTripleOnes ? ' +1k' : ''}`}
+          >
+            <GiTeleport className="inline-block align-middle mr-1 size-[1.1em] shrink-0" aria-hidden />
+            {abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}
+          </span>
+        )
+      : hasRoll
+        ? special === 'Bus'
+          ? (
+              <span className="inline text-center">
+                {d6A}+{d6B} +{' '}
+                <FaBusAlt
+                  className="inline-block align-middle mb-0.5 h-[14px] w-[14px] shrink-0 text-fg"
+                  aria-hidden
+                />
+                {` = ${rollTotal}`}
+              </span>
+            )
+          : `${d6A}+${d6B}${special ? ` + ${String(special)}` : ''} = ${rollTotal}`
+        : d6A !== null && d6B === null
+          ? `${d6A}+…`
+          : d6A === null && d6B !== null
+            ? `…+${d6B}`
+            : highestStep === 0
+              ? ''
+              : '...';
 
   const canGoNext = (step: 0 | 1 | 2): boolean => {
     if (step === 0) return true;
@@ -1866,7 +1943,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   }
 
   function abbreviateTooltipPropertyName(name: string): string {
-    return name.replace(/\bAvenue\b/g, 'Ave.');
+    return name.replace(/\bAvenue\b/g, 'Ave');
   }
 
   function groupTooltipForPlayer(playerId: string, group: ColorGroup): React.ReactNode {
@@ -1997,11 +2074,19 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     return null;
   };
 
-  const preDesc = preActions.length > 0 ? preActions.join(', ') : (highestStep === 0 ? '—' : 'None');
+  const preDesc =
+    preActions.length > 0
+      ? abbreviateAvenueInTileName(preActions.join(', '))
+      : highestStep === 0
+        ? ''
+        : 'None';
+  const postDescRaw =
+    highestStep < 2 ? '' : postAction === 'Buy Property' ? 'Buy' : postAction;
+  const postDesc = postDescRaw === '' ? '' : abbreviateAvenueInTileName(postDescRaw);
   const stepItems = [
     { id: 0 as const, title: 'Pre', desc: preDesc },
     { id: 1 as const, title: 'Roll', desc: rollSummary },
-    { id: 2 as const, title: 'Post', desc: postAction || 'None' },
+    { id: 2 as const, title: 'Post', desc: postDesc },
   ];
 
   const getActiveRentContext = React.useCallback(() => {
@@ -2074,10 +2159,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     const t = getTileByIndex(idx);
     const chanceRequired = t.type === 'chance';
     const communityRequired = t.type === 'community';
-    const busRequired = t.type === 'busStop' || requiresBusCard;
     if (chanceRequired && !stagedChanceCardId) return true;
     if (communityRequired && !stagedCommunityCardId) return true;
-    if (busRequired && !busSelectedCardId) return true;
+    if (requiresBusCard && !diceBusSelectedCardId) return true;
+    if (t.type === 'busStop' && !tileBusSelectedCardId) return true;
     return false;
   };
 
@@ -2332,47 +2417,52 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
             {/* Stepper navigation */}
             <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
 
-            {/* Property management quick access (pre-roll only) */}
+            {/* Build/sell & trade quick access (pre-roll only) */}
             {(() => {
               if (activeStep !== 0) return null;
               const pid = players[turnIndex]?.id || players[0]?.id;
               if (!pid) return null;
               const pl = players.find((x) => x.id === pid);
-              if (pl?.inJail) return null;
-              const ownsAnyMortgageable = BOARD_TILES.some((t) => {
-                if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
-                return propsState.byTileId[t.id]?.ownerId === pid;
-              });
-              if (!ownsAnyMortgageable) return null;
+              const showManage =
+                !pl?.inJail &&
+                BOARD_TILES.some((t) => {
+                  if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
+                  return propsState.byTileId[t.id]?.ownerId === pid;
+                });
+              const showTrade = (players?.length ?? 0) >= 2;
+              if (!showManage && !showTrade) return null;
               return (
-                <div className="flex justify-left p-4 pt-1">
-                  <IconLabelButton
-                    iconSrc="/icons/house.webp"
-                    label="Manage"
-                    className="border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
-                    onClick={() => {
-                      setBuildOverlayMode('manage');
-                      setLiquidationContext(null);
-                      setBuildOverlayOpen(true);
-                    }}
-                  />
-                </div>
-              );
-            })()}
-
-            {/* Trade quick access (pre-roll only) */}
-            {(() => {
-              if (activeStep !== 0) return null;
-              if ((players?.length ?? 0) < 2) return null;
-              return (
-                <div className="flex justify-left p-4 pt-1">
-                  <IconLabelButton
-                    icon={<FaHandshake />}
-                    iconClassName="text-[28px]"
-                    label="Trade"
-                    className="border border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                    onClick={() => setTradeModalOpen(true)}
-                  />
+                <div className="flex items-stretch gap-2 px-4 pb-4">
+                  {showManage && (
+                    <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Build & Sell">
+                      <div className="px-2 pt-2 pb-2">
+                        <IconLabelButton
+                          iconSrc="/icons/house.webp"
+                          iconClassName="h-[30px] w-[30px] object-contain"
+                          label="Manage"
+                          className="w-full border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                          onClick={() => {
+                            setBuildOverlayMode('manage');
+                            setLiquidationContext(null);
+                            setBuildOverlayOpen(true);
+                          }}
+                        />
+                      </div>
+                    </SectionCard>
+                  )}
+                  {showTrade && (
+                    <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Trade with a players">
+                      <div className="px-2 pt-2 pb-2">
+                        <IconLabelButton
+                          icon={<FaHandshake className="h-[30px] w-[30px]" aria-hidden />}
+                          iconClassName="inline-flex items-center justify-center text-current"
+                          label="Trade"
+                          className="border flex w-full border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                          onClick={() => setTradeModalOpen(true)}
+                        />
+                      </div>
+                    </SectionCard>
+                  )}
                 </div>
               );
             })()}
@@ -2410,54 +2500,56 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const busChosen = busTeleportTo != null;
                     const diceChosen = inJailRolling ? (d6A !== null && d6B !== null) : (d6A !== null && d6B !== null && special !== null);
 
-                    const availableTickets = busTicketsAvailableThisTurn; // inventory only (no staged tickets)
-                    const prevSeg = rollCount > 1 ? turnSegments.find((s) => s.roll === rollCount - 1) : null;
-                    const prevIsDoubles = !!prevSeg && prevSeg.d6A != null && prevSeg.d6B != null && prevSeg.d6A === prevSeg.d6B;
-                    const prevIsTriple = prevIsDoubles && typeof (prevSeg as any).special === 'number' && (prevSeg as any).special === prevSeg.d6A;
-                    const canUseBusInsteadOfRoll = availableTickets > 0 && rollCount > 1 && prevIsDoubles && !prevIsTriple;
-
-                    const cancelBusSelection = () => {
-                      if (busTeleportTo == null) return;
-                      if (pid) dispatch(grantBusTicket({ id: pid, count: 1 }));
-                      setBusTicketsAvailableThisTurn((n) => n + 1);
-                      setBusTeleportTo(null);
-                      setPredictedTo(null);
-                    };
+                    /** Roll step only: use bus instead of dice when tickets are available or teleport is staged (not in jail). */
+                    const showBusTicketSection =
+                      !pl?.inJail && (busTicketsAvailableThisTurn > 0 || busTeleportTo != null);
 
                     const onSelectD6A = (v: number) => {
-                      if (busTeleportTo != null) cancelBusSelection();
+                      if (busTeleportTo != null) cancelBusTeleportSelection();
                       setD6A(v);
                     };
                     const onSelectD6B = (v: number) => {
-                      if (busTeleportTo != null) cancelBusSelection();
+                      if (busTeleportTo != null) cancelBusTeleportSelection();
                       setD6B(v);
                     };
                     const onSelectSpecial = (v: unknown) => {
-                      if (busTeleportTo != null) cancelBusSelection();
+                      if (busTeleportTo != null) cancelBusTeleportSelection();
                       setSpecial(v as SpecialDieFace);
                     };
 
+                    const rollBannerDoubles =
+                      !isTriple && d6A !== null && d6B !== null && d6A === d6B;
+                    const rollBannerCenterLabel = isTripleOnes ? '🐍🐍🐍' : isTriple ? 'Triples' : rollBannerDoubles ? 'Doubles' : '';
+                    const rollBannerClass = isTripleOnes
+                      ? 'bg-amber-300 text-neutral-900 dark:bg-amber-400 dark:text-neutral-950'
+                      : isTriple
+                        ? 'bg-indigo-600 text-white'
+                        : rollBannerDoubles
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-surface-1 text-subtle';
+
                     return (
-                      <div data-ql="roll-container" className="px-4 pt-1 ">
-                        <div className={`rounded-lg border border-surface bg-surface-2 ${busChosen ? 'opacity-50 pointer-events-none' : ''}`}>
-                          <div className="text-sm bg-surface-1 font-semibold uppercase tracking-wide text-subtle flex items-center gap-2 px-2 py-1">
-                            <div>Roll</div>
-                            <div className="text-xs font-medium flex items-center gap-2">
-                              {!isTriple && (d6A !== null && d6B !== null && d6A === d6B) && (
-                                <span className="inline-flex items-center rounded bg-emerald-600 text-white px-2 py-0.5 text-xs">Doubles ✓</span>
-                              )}
-                              {isTriple && (
-                                <span
-                                  className={`inline-flex items-center rounded px-2 py-0.5 text-[11px] text-white ${
-                                    isTripleOnes ? 'bg-amber-300 text-neutral-900' : 'bg-indigo-600'
-                                  }`}
-                                >
-                                  {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
-                                </span>
-                              )}
+                      <div data-ql="roll-container" className="px-4 pb-2">
+                        <SectionCard
+                          className={busChosen ? 'opacity-50 pointer-events-none' : ''}
+                          header={
+                            <div
+                              className={`rounded-t-lg grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2 text-sm font-semibold uppercase tracking-wide ${rollBannerClass}`}
+                              aria-label={
+                                rollBannerCenterLabel
+                                  ? `Roll: ${rollBannerCenterLabel === '🐍🐍🐍' ? 'triple ones' : rollBannerCenterLabel}`
+                                  : 'Roll'
+                              }
+                            >
+                              <span className="justify-self-start">Roll</span>
+                              <span className="justify-self-center text-center text-xs font-bold tracking-wide sm:text-sm">
+                                {rollBannerCenterLabel}
+                              </span>
+                              <span className="justify-self-end" aria-hidden />
                             </div>
-                            </div>
-                          <div className="mt-2 p-3">
+                          }
+                        >
+                          <div className="mt-2 px-3 pb-3">
                             {/* Render D6 selector; hide Special row if in-jail trying doubles */}
                             <DiceSelector
                               d6A={d6A}
@@ -2468,49 +2560,96 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                               onSelectSpecial={onSelectSpecial as any}
                               showSpecial={!inJailRolling}
                             />
-
+                            {isTriple && (
+                              tripleTeleportTo != null ? (
+                                <button
+                                  type="button"
+                                  aria-label="Clear teleport selection"
+                                  className={`mt-3 grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1 rounded-full border px-3 py-2 text-sm ${
+                                    isTripleOnes
+                                      ? 'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                                      : 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                                  }`}
+                                  onClick={() => {
+                                    setTripleTeleportTo(null);
+                                    setPredictedTo(null);
+                                  }}
+                                >
+                                  <span aria-hidden className="min-w-0" />
+                                  <span className="flex min-w-0 items-center justify-center gap-2">
+                                    <GiTeleport className="shrink-0 text-lg" aria-hidden />
+                                    <span className="text-center">
+                                      to {abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}
+                                      {isTripleOnes ? ' +1k' : ''}
+                                    </span>
+                                  </span>
+                                  <span className="flex justify-end text-current" aria-hidden>
+                                    <IoClose className="h-5 w-5 shrink-0 opacity-90" />
+                                  </span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={busTeleportTo != null}
+                                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-md px-3 py-1.5 text-base font-bold border disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    isTripleOnes
+                                      ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
+                                      : 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                                  }`}
+                                  onClick={() => {
+                                    setBusTeleportTo(null);
+                                    setCenterOverlay({ type: 'tripleTeleport' });
+                                  }}
+                                >
+                                  <GiTeleport className="shrink-0 text-2xl" aria-hidden />
+                                  Teleport
+                                </button>
+                              )
+                            )}
                           </div>
 
-                        </div>
+                        </SectionCard>
 
-                        {canUseBusInsteadOfRoll && (
-                          <>
-                            <div className="flex items-center gap-3">
-                              <div className="h-px flex-1 bg-surface-1" />
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-subtle">OR</div>
-                              <div className="h-px flex-1 bg-surface-1" />
+                        {showBusTicketSection && (
+                          <SectionCard
+                            className={`mt-3 p-0 overflow-hidden ${diceChosen ? 'opacity-50 pointer-events-none' : ''}`}
+                            title="Ticket"
+                            status={busTeleportTo != null ? 'Ticket Used' : undefined}
+                            headerTrailing={
+                              busTeleportTo != null ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo bus destination; return ticket and show Use Ticket"
+                                  onClick={cancelBusTeleportSelection}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1">
+                              {busTeleportTo != null ? (
+                                <p className="text-sm text-fg flex flex-wrap items-center gap-1.5">
+                                  <FaBusAlt className="h-4 w-4 shrink-0 text-fg" aria-hidden />
+                                  <span className="text-muted">to</span>
+                                  <span className="font-medium text-fg">
+                                    {abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}
+                                  </span>
+                                </p>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold border border-game-bus text-game-bus hover:text-game-bus-muted hover:border-game-bus-muted hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                                  onClick={() => {
+                                    setD6A(null);
+                                    setD6B(null);
+                                    setSpecial(null);
+                                    setCenterOverlay({ type: 'busTeleport' });
+                                  }}
+                                >
+                                  <FaBusAlt className="h-4 w-4 shrink-0" aria-hidden />
+                                  Use Ticket
+                                </button>
+                              )}
                             </div>
-
-                            <div className={`rounded-lg border border-surface bg-surface-2 p-3 ${diceChosen ? 'opacity-50 pointer-events-none' : ''}`}>
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-subtle">Use Bus</div>
-                              <div className="mt-2">
-                                {busTeleportTo != null ? (
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center gap-2 rounded-full border border-emerald-500 text-emerald-700 dark:text-emerald-300 px-3 py-1 text-sm bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                                    onClick={cancelBusSelection}
-                                  >
-                                    <span>✓</span>
-                                    🚐 to {getTileByIndex(busTeleportTo).name}
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                                    onClick={() => {
-                                      // Choose Bus destination instead of rolling (allowed only on subsequent roll after doubles)
-                                      setD6A(null);
-                                      setD6B(null);
-                                      setSpecial(null);
-                                      setCenterOverlay({ type: 'busTeleport' });
-                                    }}
-                                  >
-                                    Use Bus Ticket
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </>
+                          </SectionCard>
                         )}
                       </div>
                     );
@@ -2605,11 +2744,17 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const canLiquidateForRent = !!rentInfo && rentShortfall > 0 && liquidationPotential >= rentShortfall;
                     const hidePayRentToggle = canLiquidateForRent || pendingForThisRent || isInsolventForRent;
 
-                    const busVisible = (() => {
-                      const bySpecial = special === 'Bus' ? 1 : 0;
-                      const byTile = t.type === 'busStop' ? 1 : 0;
-                      return bySpecial + byTile > 0;
-                    })();
+                    const diceBusNeedsCard = requiresBusCard;
+                    const tileBusNeedsCard = t.type === 'busStop';
+                    const postLandingLocked = requiresBusCard && !diceBusSelectedCardId;
+                    const landingSectionClass = postLandingLocked ? 'opacity-50 pointer-events-none' : '';
+                    const hasLandingPostCards =
+                      isUnownedBuyable ||
+                      !!(rentLabel || taxLabel) ||
+                      chanceVisible ||
+                      communityVisible ||
+                      tileBusNeedsCard ||
+                      isAuctionTile;
 
                     const pl = players.find((x) => x.id === pid);
                     const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
@@ -2629,11 +2774,59 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
 
                     return (
                       <div className="space-y-3">
+                        {diceBusNeedsCard && (
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title={
+                              <span className="inline-flex items-center gap-1.5">
+                                <GiDiceFire className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                                <span>Bus</span>
+                              </span>
+                            }
+                            status={diceBusSelectedCardId ? 'Ticket Drawn' : undefined}
+                            headerTrailing={
+                              diceBusSelectedCardId ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo dice bus ticket; return card to deck"
+                                  onClick={() => {
+                                    if (!diceBusSelectedCardId) return;
+                                    dispatch(putCardOnBottom({ deck: 'bus', cardId: diceBusSelectedCardId }));
+                                    setDiceBusSelectedCardId(null);
+                                    setStagedBusPicks((picks) => (picks.length === 0 ? picks : picks.slice(1)));
+                                  }}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1">
+                              {diceBusSelectedCardId ? (
+                                <p className="text-sm font-medium text-fg">{getBusCardShortTitle(diceBusSelectedCardId)}</p>
+                              ) : (
+                                <PostActionsBar
+                                  busVisible={true}
+                                  busActive={false}
+                                  onDrawBus={() => setOverlay({ deck: 'bus', busSlot: 'dice' })}
+                                  busShake={shakeBus}
+                                />
+                              )}
+                            </div>
+                          </SectionCard>
+                        )}
+
+                        {diceBusNeedsCard && hasLandingPostCards && (
+                          <div className="relative flex items-center gap-2 py-1" role="separator" aria-orientation="horizontal">
+                            <div className="h-px flex-1 bg-neutral-300 dark:bg-neutral-600" />
+                            <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted">Then</span>
+                            <div className="h-px flex-1 bg-neutral-300 dark:bg-neutral-600" />
+                          </div>
+                        )}
+
+                        <div className={landingSectionClass}>
+                          <div className="space-y-3">
                         {/* Property (buy/auction it) */}
                         {isUnownedBuyable && (
-                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Property</div>
-                            <div className="mt-2">
+                          <SectionCard className="p-0 overflow-hidden" title="Property">
+                            <div className="p-3 pt-1">
                               <PurchaseActionsRow
                                 tileName={t.name}
                                 price={price}
@@ -2666,20 +2859,28 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                                 }}
                               />
                             </div>
-                          </div>
+                          </SectionCard>
                         )}
 
                         {/* Payments */}
                         {(rentLabel || taxLabel) && (
-                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div
-                              className={rentDueLabel
-                                ? 'text-xs font-medium text-neutral-600 dark:text-neutral-300'
-                                : 'text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400'}
-                            >
-                              {paymentsHeader}
-                            </div>
-                            <div className="mt-2">
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            header={
+                              <div className="border-b border-surface px-3 pt-3 pb-2">
+                                <div
+                                  className={
+                                    rentDueLabel
+                                      ? 'text-xs font-medium text-muted'
+                                      : 'text-[11px] font-semibold uppercase tracking-wide text-subtle'
+                                  }
+                                >
+                                  {paymentsHeader}
+                                </div>
+                              </div>
+                            }
+                          >
+                            <div className="p-3 pt-1">
                               <PostActionsBar
                                 rentLabel={hidePayRentToggle ? undefined : rentLabel}
                                 rentSelected={rentSelected}
@@ -2770,59 +2971,119 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </SectionCard>
                         )}
 
-                        {/* Draw Bus */}
-                        {busVisible && (
-                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Draw a Bus</div>
-                            <div className="mt-2">
-                              <PostActionsBar
-                                busVisible={true}
-                                busActive={!!busSelectedCardId}
-                                onDrawBus={() => {
-                                  if (busSelectedCardId) {
-                                    dispatch(putCardOnBottom({ deck: 'bus', cardId: busSelectedCardId }));
-                                    setBusSelectedCardId(null);
-                                  } else {
-                                    setOverlay({ deck: 'bus' });
-                                  }
-                                }}
-                                busShake={shakeBus}
-                              />
+                        {/* Draw Chance */}
+                        {chanceVisible && (
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title="Chance"
+                            status={stagedChanceCardId ? 'Drawn' : undefined}
+                            headerTrailing={
+                              stagedChanceCardId ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo Chance card selection; return to draw pile"
+                                  onClick={() => setStagedChanceCardId(null)}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1">
+                              {stagedChanceCardId ? (
+                                <p className="text-sm text-fg whitespace-pre-wrap">
+                                  {CHANCE.find((c) => c.id === stagedChanceCardId)?.text ?? stagedChanceCardId}
+                                </p>
+                              ) : (
+                                <PostActionsBar
+                                  chanceVisible={true}
+                                  chanceActive={false}
+                                  onToggleChance={() => {
+                                    setOverlay({ deck: 'chance' });
+                                  }}
+                                />
+                              )}
                             </div>
-                          </div>
+                          </SectionCard>
                         )}
 
-                        {/* Draw cards */}
-                        {(chanceVisible || communityVisible) && (
-                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Draw cards</div>
-                            <div className="mt-2">
-                              <PostActionsBar
-                                chanceVisible={chanceVisible}
-                                chanceActive={!!stagedChanceCardId}
-                                onToggleChance={() => {
-                                  if (!chanceVisible) return;
-                                  setOverlay({ deck: 'chance' });
-                                }}
-                                communityVisible={communityVisible}
-                                communityActive={!!stagedCommunityCardId}
-                                onToggleCommunity={() => {
-                                  if (!communityVisible) return;
-                                  setOverlay({ deck: 'community' });
-                                }}
-                              />
+                        {/* Draw Community */}
+                        {communityVisible && (
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title="Community"
+                            status={stagedCommunityCardId ? 'Drawn' : undefined}
+                            headerTrailing={
+                              stagedCommunityCardId ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo Community Chest card selection; return to draw pile"
+                                  onClick={() => setStagedCommunityCardId(null)}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1">
+                              {stagedCommunityCardId ? (
+                                <p className="text-sm text-fg whitespace-pre-wrap">
+                                  {COMMUNITY_CHEST.find((c) => c.id === stagedCommunityCardId)?.text ?? stagedCommunityCardId}
+                                </p>
+                              ) : (
+                                <PostActionsBar
+                                  communityVisible={true}
+                                  communityActive={false}
+                                  onToggleCommunity={() => {
+                                    setOverlay({ deck: 'community' });
+                                  }}
+                                />
+                              )}
                             </div>
-                          </div>
+                          </SectionCard>
+                        )}
+
+                        {/* Draw Bus (tile — bus stop) */}
+                        {tileBusNeedsCard && (
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title={
+                              <span className="inline-flex items-center gap-1.5">
+                                <FaBusAlt className="h-4 w-4 shrink-0 text-game-bus" aria-hidden />
+                                <span>Bus</span>
+                              </span>
+                            }
+                            status={tileBusSelectedCardId ? 'Ticket Drawn' : undefined}
+                            headerTrailing={
+                              tileBusSelectedCardId ? (
+                                <DrawnUndoButton
+                                  aria-label="Undo bus stop ticket; return card to deck"
+                                  onClick={() => {
+                                    if (!tileBusSelectedCardId) return;
+                                    dispatch(putCardOnBottom({ deck: 'bus', cardId: tileBusSelectedCardId }));
+                                    setTileBusSelectedCardId(null);
+                                    setStagedBusPicks((picks) => (picks.length === 0 ? picks : picks.slice(0, -1)));
+                                  }}
+                                />
+                              ) : undefined
+                            }
+                          >
+                            <div className="p-3 pt-1">
+                              {tileBusSelectedCardId ? (
+                                <p className="text-sm font-medium text-fg">{getBusCardShortTitle(tileBusSelectedCardId)}</p>
+                              ) : (
+                                <PostActionsBar
+                                  busVisible={true}
+                                  busActive={false}
+                                  onDrawBus={() => setOverlay({ deck: 'bus', busSlot: 'tile' })}
+                                  busShake={shakeBus}
+                                />
+                              )}
+                            </div>
+                          </SectionCard>
                         )}
 
                         {/* Auction tile */}
                         {isAuctionTile && (
-                          <div className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Auction</div>
-                            <div className="mt-2">
+                          <SectionCard className="p-0 overflow-hidden" title="Auction">
+                            <div className="p-3 pt-1">
                               <PostActionsBar
                                 auctionVisible={true}
                                 auctionActive={auctionCompleted}
@@ -2836,8 +3097,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                                 }}
                               />
                             </div>
-                          </div>
+                          </SectionCard>
                         )}
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
@@ -2846,48 +3109,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div data-qa="play-console-footer" className="flex items-center justify-between gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl">
-              <div className="flex items-center gap-2">
-                {activeStep === 1 && isTriple && (
-                  tripleTeleportTo != null ? (
-                    <button
-                      type="button"
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${
-                        isTripleOnes
-                          ? 'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
-                          : 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                      }`}
-                      onClick={() => {
-                        setTripleTeleportTo(null);
-                        setPredictedTo(null);
-                      }}
-                    >
-                      <span>✓</span>
-                      🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busTeleportTo != null}
-                      className={`inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${
-                        isTripleOnes
-                          ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                          : 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
-                      }`}
-                      onClick={() => {
-                        setBusTeleportTo(null);
-                        setCenterOverlay({ type: 'tripleTeleport' });
-                      }}
-                    >
-                      Teleport (3-of-a-kind)
-                    </button>
-                  )
-                )}
-              </div>
+            <div data-qa="play-console-footer" className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl">
               {activeStep < 2 ? (
                 <button
                   type="button"
-                  className={`inline-flex touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${
+                  className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${
                     nextBtnDisabled()
                       ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700'
@@ -2906,12 +3132,12 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
                   const blocked = isQueuedFlowActive
                     ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved())
-                    : (!(((hasRollWithSpecialSelected && rollConfirmed) || (busTeleportTo != null && rollConfirmed))) || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
+                    : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved());
                   if (isQueuedFlowActive) {
                     return (
                       <button
                         type="button"
-                        className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                         disabled={blocked}
                         onClick={() => {
                           if (blocked) return;
@@ -2928,7 +3154,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     return (
                       <button
                         type="button"
-                        className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                         disabled={blocked}
                         onClick={() => {
                           if (blocked) return;
@@ -2959,7 +3185,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                             setShakeTax(true);
                             window.setTimeout(() => setShakeTax(false), 400);
                           }
-                          if (requiresBusCard && !busSelectedCardId) {
+                          if (
+                            (requiresBusCard && !diceBusSelectedCardId) ||
+                            (getTileByIndex(predictedTo ?? currentIndex).type === 'busStop' && !tileBusSelectedCardId)
+                          ) {
                             setShakeBus(true);
                             window.setTimeout(() => setShakeBus(false), 400);
                           }
@@ -3027,12 +3256,13 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     dispatch(
                       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck: 'bus', cardId, text: lastCard?.text ?? (type === 'regular' ? 'Bus Ticket' : 'Big Bus'), message: `Drew ${type === 'regular' ? 'Bus' : 'Big Bus'}` }, createdAt: new Date().toISOString() })
                     );
-                    setBusSelectedCardId(cardId);
-                    if (type === 'regular') {
-                      setStagedBusTickets((n) => n + 1);
+                    const slot = overlay.busSlot ?? 'dice';
+                    if (slot === 'dice') {
+                      setDiceBusSelectedCardId(cardId);
                     } else {
-                      setStagedBigBus(true);
+                      setTileBusSelectedCardId(cardId);
                     }
+                    setStagedBusPicks((picks) => [...picks, type === 'regular' ? 'regular' : 'big']);
                     setOverlay({ deck: null });
                   };
                   return (
@@ -3319,10 +3549,15 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   rentSelected ? 'Rent' : null,
                   taxSelected ? 'Tax' : null,
                 ].filter(Boolean).join(', ') || 'None'}</div>
-                {(stagedBusTickets > 0 || stagedBigBus) && (
+                {stagedBusPicks.length > 0 && (
                   <div className="opacity-80">
-                    Bus tickets: {stagedBusTickets}
-                    {stagedBigBus ? ' · Big Bus will clear others' : ''}
+                    Bus draws (order):{' '}
+                    {stagedBusPicks.map((p) => (p === 'regular' ? 'Regular' : 'Big Bus')).join(' → ')}
+                    {stagedBusPicks.some((p) => p === 'big') && (
+                      <span className="block text-[11px] mt-0.5">
+                        Big Bus clears every player&apos;s tickets (including yours), then you gain 1.
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

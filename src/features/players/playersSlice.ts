@@ -81,6 +81,12 @@ const playersSlice = createSlice({
         if (pl.id !== action.payload.winnerId) pl.busTickets = 0;
       });
     },
+    /** All players (including active) lose every bus ticket — used before granting Big Bus. */
+    clearAllBusTickets(state) {
+      state.players.forEach((pl) => {
+        pl.busTickets = 0;
+      });
+    },
     consumeBusTicket(state, action: PayloadAction<{ id: string; count?: number }>) {
       const p = state.players.find((x) => x.id === action.payload.id);
       const n = action.payload.count ?? 1;
@@ -161,6 +167,7 @@ export const {
   setRacePotOptIn,
   grantBusTicket,
   clearBusTicketsExcept,
+  clearAllBusTickets,
   consumeBusTicket,
   grantGetOutOfJail,
   consumeGetOutOfJail,

@@ -36,17 +36,17 @@ export default function PostActionsBar({ children, rentLabel, rentSelected, onTo
       {taxLabel && onToggleTax && (
         <TogglePillButton label={taxLabel} active={!!taxSelected} onToggle={onToggleTax} variant="orange" shake={!!taxShake} />
       )}
-      {busVisible && onDrawBus && (
-        <TogglePillButton label={busActive ? 'Bus ticket added' : 'Draw Bus'} active={!!busActive} onToggle={onDrawBus} variant="blue" shake={!!busShake} />
+      {busVisible && onDrawBus && !busActive && (
+        <TogglePillButton label="Draw Bus" active={false} onToggle={onDrawBus} variant="bus" shake={!!busShake} />
       )}
       {auctionVisible && onAuction && (
         <TogglePillButton label={auctionActive ? 'Auction done' : 'Auction'} active={!!auctionActive} onToggle={onAuction} variant="emerald" />
       )}
-      {chanceVisible && onToggleChance && (
-        <TogglePillButton label={chanceActive ? 'Chance drawn' : 'Draw Chance'} active={!!chanceActive} onToggle={onToggleChance} variant="slate" />
+      {chanceVisible && onToggleChance && !chanceActive && (
+        <TogglePillButton label="Draw Chance" active={false} onToggle={onToggleChance} variant="slate" />
       )}
-      {communityVisible && onToggleCommunity && (
-        <TogglePillButton label={communityActive ? 'Community drawn' : 'Draw Community'} active={!!communityActive} onToggle={onToggleCommunity} variant="slate" />
+      {communityVisible && onToggleCommunity && !communityActive && (
+        <TogglePillButton label="Draw Community" active={false} onToggle={onToggleCommunity} variant="slate" />
       )}
     </div>
   );
