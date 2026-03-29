@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue } from 'framer-motion';
 import { FaBusAlt } from 'react-icons/fa';
-import { GiDiceFire } from 'react-icons/gi';
+import { GiDiceFire, GiTeleport } from 'react-icons/gi';
+import { IoClose } from 'react-icons/io5';
 import { IoDiceSharp } from 'react-icons/io5';
 
 export interface DiceSelectorProps {
@@ -12,9 +13,18 @@ export interface DiceSelectorProps {
   onSelectB: (n: number) => void;
   onSelectSpecial: (v: string | number) => void;
   showSpecial?: boolean;
+  /** Fourth tab: triple teleport (parent derives from `isTriple`). */
+  showTeleportTab?: boolean;
+  tripleTeleportTo?: number | null;
+  /** Shown after a tile is chosen, e.g. abbreviated name + optional +1k. */
+  teleportDestinationLabel?: string;
+  onOpenTeleport?: () => void;
+  onClearTeleport?: () => void;
+  /** Styling for triple-ones jackpot path. */
+  isTripleOnesStyle?: boolean;
 }
 
-type TabId = 'a' | 'b' | 'special';
+type TabId = 'a' | 'b' | 'special' | 'teleport';
 
 function btnClass(active: boolean): string {
   return `inline-flex items-center justify-center h-10 min-w-8 rounded-md border px-2 text-base font-medium ${
@@ -33,19 +43,34 @@ function specialFaceActive(special: string | number | null, v: string | number):
   return special === v;
 }
 
-function tabIdsFor(showSpecial: boolean): TabId[] {
-  return showSpecial ? ['a', 'b', 'special'] : ['a', 'b'];
+function tabIdsFor(showSpecial: boolean, showTeleport: boolean): TabId[] {
+  const base: TabId[] = showSpecial ? ['a', 'b', 'special'] : ['a', 'b'];
+  return showTeleport ? [...base, 'teleport'] : base;
 }
 
 const PILL_SPRING = { type: 'spring' as const, stiffness: 380, damping: 36 };
-/** After drag release: ease-out only (no bounce) so the thumb “drops” in place from the finger position. */
 const DRAG_SETTLE_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const DRAG_SETTLE_TWEEN = { type: 'tween' as const, duration: 0.38, ease: DRAG_SETTLE_EASE };
 
-export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, onSelectSpecial, showSpecial = true }: DiceSelectorProps): JSX.Element {
+const TELEPORT_INTRO_MS = 420;
+
+export default function DiceSelector({
+  d6A,
+  d6B,
+  special,
+  onSelectA,
+  onSelectB,
+  onSelectSpecial,
+  showSpecial = true,
+  showTeleportTab = false,
+  tripleTeleportTo = null,
+  teleportDestinationLabel = '',
+  onOpenTeleport = () => {},
+  onClearTeleport = () => {},
+  isTripleOnesStyle = false,
+}: DiceSelectorProps): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('a');
   const [pill, setPill] = useState({ left: 0, width: 0 });
-  /** Framer `drag="x"` bounds: min/max translate from rest (`left` ≤ 0, `right` ≥ 0 relative to segment). */
   const [dragConstraintsPx, setDragConstraintsPx] = useState({ left: 0, right: 0 });
   const [pillLayoutTransition, setPillLayoutTransition] = useState<typeof PILL_SPRING | { duration: 0 }>(PILL_SPRING);
 
@@ -62,12 +87,17 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
   const dragJustEndedRef = useRef(false);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
   const settleAnimRef = useRef<ReturnType<typeof animate> | null>(null);
+  const teleportAutoNavTimerRef = useRef<number | null>(null);
+  const teleportIntroGenerationRef = useRef(0);
 
-  const tabToIndex = useCallback((t: TabId): number => {
-    const ids = tabIdsFor(showSpecial);
-    const i = ids.indexOf(t);
-    return i >= 0 ? i : 0;
-  }, [showSpecial]);
+  const tabToIndex = useCallback(
+    (t: TabId): number => {
+      const ids = tabIdsFor(showSpecial, showTeleportTab);
+      const i = ids.indexOf(t);
+      return i >= 0 ? i : 0;
+    },
+    [showSpecial, showTeleportTab]
+  );
 
   const measurePill = useCallback(() => {
     if (draggingRef.current) return;
@@ -82,7 +112,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
 
   useLayoutEffect(() => {
     measurePill();
-  }, [measurePill, showSpecial]);
+  }, [measurePill, showSpecial, showTeleportTab]);
 
   useLayoutEffect(() => {
     const strip = stripRef.current;
@@ -93,7 +123,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
     const S = strip.clientWidth;
     const { left: L, width: W } = pill;
     setDragConstraintsPx({ left: -L, right: Math.max(0, S - L - W) });
-  }, [pill, showSpecial]);
+  }, [pill, showSpecial, showTeleportTab]);
 
   useEffect(() => {
     const strip = stripRef.current;
@@ -108,13 +138,13 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
     if (!el || programmaticScrollRef.current) return;
     const w = el.clientWidth;
     if (w <= 0) return;
-    const ids = tabIdsFor(showSpecial);
+    const ids = tabIdsFor(showSpecial, showTeleportTab);
     const i = Math.min(ids.length - 1, Math.max(0, Math.round(el.scrollLeft / w)));
     const next = ids[i]!;
     if (next !== activeTabRef.current) {
       setActiveTab(next);
     }
-  }, [showSpecial]);
+  }, [showSpecial, showTeleportTab]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -151,7 +181,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
       programmaticScrollRef.current = false;
     }, 380);
     return () => window.clearTimeout(t);
-  }, [activeTab, showSpecial, tabToIndex]);
+  }, [activeTab, showSpecial, showTeleportTab, tabToIndex]);
 
   useEffect(() => {
     if (d6A === null && d6B === null && (!showSpecial || special === null)) {
@@ -165,9 +195,39 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
     }
   }, [showSpecial, activeTab]);
 
+  useEffect(() => {
+    if (!showTeleportTab && activeTab === 'teleport') {
+      setActiveTab(showSpecial ? 'special' : 'b');
+    }
+  }, [showTeleportTab, activeTab, showSpecial]);
+
+  /** When triple appears: show 4th tab, then auto-navigate to Teleport panel after a short beat. */
+  useEffect(() => {
+    if (teleportAutoNavTimerRef.current != null) {
+      window.clearTimeout(teleportAutoNavTimerRef.current);
+      teleportAutoNavTimerRef.current = null;
+    }
+    if (!showTeleportTab) {
+      teleportIntroGenerationRef.current += 1;
+      return;
+    }
+    const gen = ++teleportIntroGenerationRef.current;
+    teleportAutoNavTimerRef.current = window.setTimeout(() => {
+      teleportAutoNavTimerRef.current = null;
+      if (gen !== teleportIntroGenerationRef.current) return;
+      setActiveTab('teleport');
+    }, TELEPORT_INTRO_MS);
+    return () => {
+      if (teleportAutoNavTimerRef.current != null) {
+        window.clearTimeout(teleportAutoNavTimerRef.current);
+        teleportAutoNavTimerRef.current = null;
+      }
+    };
+  }, [showTeleportTab]);
+
   const hitTestTabIndex = useCallback(
     (clientX: number): number => {
-      const ids = tabIdsFor(showSpecial);
+      const ids = tabIdsFor(showSpecial, showTeleportTab);
       let best = 0;
       let bestDist = Number.POSITIVE_INFINITY;
       for (let i = 0; i < ids.length; i++) {
@@ -183,14 +243,14 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
       }
       return best;
     },
-    [showSpecial]
+    [showSpecial, showTeleportTab]
   );
 
   const snapPillAfterDrag = useCallback(() => {
     const strip = stripRef.current;
     if (!strip) return;
     const s = strip.getBoundingClientRect();
-    const ids = tabIdsFor(showSpecial);
+    const ids = tabIdsFor(showSpecial, showTeleportTab);
     const curIdx = tabToIndex(activeTabRef.current);
     const curBtn = tabBtnRefs.current[curIdx];
     const pillEl = pillRef.current;
@@ -232,7 +292,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
         setPillLayoutTransition(PILL_SPRING);
       });
     });
-  }, [dragX, showSpecial, tabToIndex]);
+  }, [dragX, showSpecial, showTeleportTab, tabToIndex]);
 
   const onStripPointerDown = (e: React.PointerEvent): void => {
     if ((e.target as HTMLElement).closest('[data-dice-pill]')) return;
@@ -255,13 +315,13 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
     if (Math.hypot(dx, dy) > 12) return;
-    const ids = tabIdsFor(showSpecial);
+    const ids = tabIdsFor(showSpecial, showTeleportTab);
     const idx = hitTestTabIndex(e.clientX);
     setActiveTab(ids[idx]!);
   };
 
   const onTabListKeyDown = (e: React.KeyboardEvent): void => {
-    const ids = tabIdsFor(showSpecial);
+    const ids = tabIdsFor(showSpecial, showTeleportTab);
     const cur = tabToIndex(activeTab);
     if (e.key === 'ArrowRight') {
       e.preventDefault();
@@ -292,9 +352,14 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
     onSelectSpecial(v);
   };
 
-  const setTabBtnRef = (i: number) => (el: HTMLButtonElement | null): void => {
-    tabBtnRefs.current[i] = el;
-  };
+  const setTabBtnRefFor = useCallback(
+    (id: TabId) => (el: HTMLButtonElement | null): void => {
+      const list = tabIdsFor(showSpecial, showTeleportTab);
+      const idx = list.indexOf(id);
+      if (idx >= 0) tabBtnRefs.current[idx] = el;
+    },
+    [showSpecial, showTeleportTab]
+  );
 
   const tabLabelClass = (id: TabId): string => {
     const on = activeTab === id;
@@ -302,6 +367,18 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
       on ? 'text-emerald-900 dark:text-emerald-100' : 'text-neutral-500 dark:text-neutral-400'
     }`;
   };
+
+  const teleportPanelClass = isTripleOnesStyle
+    ? 'border-amber-500/60 bg-amber-50/80 dark:bg-amber-950/30'
+    : 'border-indigo-500/60 bg-indigo-50/80 dark:bg-indigo-950/30';
+
+  const teleportBtnClass = isTripleOnesStyle
+    ? 'border-amber-500 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+    : 'border-indigo-500 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/40';
+
+  const teleportChosenClass = isTripleOnesStyle
+    ? 'border-amber-500 text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-900/40'
+    : 'border-indigo-500 text-indigo-800 dark:text-indigo-100 bg-indigo-50 dark:bg-indigo-900/40';
 
   return (
     <div data-cmp="m/DiceSelector" className="space-y-3">
@@ -341,7 +418,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
           whileTap={{ scale: 0.985 }}
         />
         <button
-          ref={setTabBtnRef(0)}
+          ref={setTabBtnRefFor('a')}
           type="button"
           role="tab"
           tabIndex={-1}
@@ -356,7 +433,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
           </span>
         </button>
         <button
-          ref={setTabBtnRef(1)}
+          ref={setTabBtnRefFor('b')}
           type="button"
           role="tab"
           tabIndex={-1}
@@ -372,7 +449,7 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
         </button>
         {showSpecial && (
           <button
-            ref={setTabBtnRef(2)}
+            ref={setTabBtnRefFor('special')}
             type="button"
             role="tab"
             tabIndex={-1}
@@ -386,6 +463,26 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
               <GiDiceFire className="h-6 w-6 shrink-0" aria-hidden />
             </span>
           </button>
+        )}
+        {showTeleportTab && (
+          <motion.button
+            ref={setTabBtnRefFor('teleport')}
+            type="button"
+            role="tab"
+            tabIndex={-1}
+            aria-selected={activeTab === 'teleport'}
+            aria-label="Teleport"
+            id="dice-tab-teleport"
+            aria-controls="dice-panels"
+            className={tabLabelClass('teleport')}
+            initial={{ opacity: 0, scale: 0.82 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          >
+            <span className="inline-flex items-center justify-center gap-1">
+              <GiTeleport className="h-6 w-6 shrink-0" aria-hidden />
+            </span>
+          </motion.button>
         )}
       </div>
 
@@ -453,6 +550,50 @@ export default function DiceSelector({ d6A, d6B, special, onSelectA, onSelectB, 
                     Bus
                   </span>
                 </button>
+              </div>
+            </section>
+          )}
+
+          {showTeleportTab && (
+            <section
+              id="dice-panel-teleport"
+              role="tabpanel"
+              aria-labelledby="dice-tab-teleport"
+              aria-hidden={activeTab !== 'teleport'}
+              className="w-full shrink-0 snap-start snap-always px-0.5"
+            >
+              <div className={`rounded-lg border p-3 ${teleportPanelClass}`}>
+                <p className="mb-3 text-center text-xs leading-snug text-neutral-700 dark:text-neutral-300 sm:text-sm">
+                  Triples — choose your space on the board.
+                </p>
+                {tripleTeleportTo == null ? (
+                  <button
+                    type="button"
+                    onClick={onOpenTeleport}
+                    className={`flex w-full items-center justify-center gap-2 rounded-md border-2 px-3 py-2.5 text-sm font-bold ${teleportBtnClass}`}
+                  >
+                    <GiTeleport className="shrink-0 text-xl" aria-hidden />
+                    Teleport
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="Clear teleport destination"
+                    className={`grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1 rounded-full border px-3 py-2 text-sm ${teleportChosenClass}`}
+                    onClick={onClearTeleport}
+                  >
+                    <span aria-hidden className="min-w-0" />
+                    <span className="flex min-w-0 items-center justify-center gap-2">
+                      <GiTeleport className="shrink-0 text-lg" aria-hidden />
+                      <span className="text-center">
+                        to {teleportDestinationLabel}
+                      </span>
+                    </span>
+                    <span className="flex justify-end text-current" aria-hidden>
+                      <IoClose className="h-5 w-5 shrink-0 opacity-90" />
+                    </span>
+                  </button>
+                )}
               </div>
             </section>
           )}

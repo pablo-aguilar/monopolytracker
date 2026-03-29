@@ -54,7 +54,6 @@ import SettingsGear from '@/components/molecules/SettingsGear';
 import { BsDice1Fill, BsDice2Fill, BsDice3Fill, BsDice4Fill, BsDice5Fill, BsDice6Fill } from 'react-icons/bs';
 import { FaBusAlt, FaHandshake } from 'react-icons/fa';
 import { GiDiceFire, GiTeleport } from 'react-icons/gi';
-import { IoClose } from 'react-icons/io5';
 import { MdReceiptLong } from 'react-icons/md';
 import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 import { restoreToEventId } from '@/features/timeline/timelineThunks';
@@ -338,6 +337,38 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     setBusTeleportTo(null);
     setPredictedTo(null);
   }, [busTeleportTo, players, turnIndex, dispatch]);
+
+  /** Re-tap Roll step (step id 1) while on Roll: clear dice / teleport preview / staged bus draws so player can switch to Bus or re-roll. */
+  const resetRollStepDraft = React.useCallback(() => {
+    cancelBusTeleportSelection();
+    setDiceBusSelectedCardId((id) => {
+      if (id) dispatch(putCardOnBottom({ deck: 'bus', cardId: id }));
+      return null;
+    });
+    setTileBusSelectedCardId((id) => {
+      if (id) dispatch(putCardOnBottom({ deck: 'bus', cardId: id }));
+      return null;
+    });
+    setBirthdayGiftBusCardId((busId) => {
+      if (busId) dispatch(putCardOnBottom({ deck: 'bus', cardId: busId }));
+      return null;
+    });
+    setStagedBusPicks([]);
+    setD6A(null);
+    setD6B(null);
+    setSpecial(null);
+    setRollConfirmed(false);
+    setTripleTeleportTo(null);
+    setPredictedTo(null);
+    setBirthdayGiftCashSelected(false);
+    setRollCount(1);
+    setTurnSegments([]);
+    setCenterOverlay({ type: null });
+    setOverlay({ deck: null });
+    setHoldProgress(0);
+    if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+    if (holdIntervalRef.current) window.clearInterval(holdIntervalRef.current);
+  }, [cancelBusTeleportSelection, dispatch]);
 
   const filteredOverlayCards = useMemo(() => {
     if (!overlay.deck || overlay.deck === 'bus') return [];
@@ -2526,7 +2557,18 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
             })()}
 
             {/* Stepper navigation */}
-            <StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) => setActiveStep(s)} />
+            <StepNavigator
+              items={stepItems}
+              activeStep={activeStep}
+              highestStep={highestStep}
+              onSelect={(s) => {
+                if (s === 1 && activeStep === 1) {
+                  resetRollStepDraft();
+                  return;
+                }
+                setActiveStep(s);
+              }}
+            />
 
             {/* Build/sell & trade quick access (pre-roll only) */}
             {(() => {
@@ -2611,9 +2653,15 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const busChosen = busTeleportTo != null;
                     const diceChosen = inJailRolling ? (d6A !== null && d6B !== null) : (d6A !== null && d6B !== null && special !== null);
 
+                    /** Any dice face chosen: hide Ticket card until Roll step reset (re-tap Roll in navigator). */
+                    const hasDiceInput = inJailRolling
+                      ? d6A !== null || d6B !== null
+                      : d6A !== null || d6B !== null || special !== null;
+
                     /** Roll step only: use bus instead of dice when tickets are available or teleport is staged (not in jail). */
                     const showBusTicketSection =
-                      !pl?.inJail && (busTicketsAvailableThisTurn > 0 || busTeleportTo != null);
+                      !pl?.inJail &&
+                      (busTeleportTo != null || (busTicketsAvailableThisTurn > 0 && !hasDiceInput));
 
                     const onSelectD6A = (v: number) => {
                       if (busTeleportTo != null) cancelBusTeleportSelection();
@@ -2670,53 +2718,23 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                               onSelectB={onSelectD6B}
                               onSelectSpecial={onSelectSpecial as any}
                               showSpecial={!inJailRolling}
+                              showTeleportTab={isTriple && !inJailRolling}
+                              tripleTeleportTo={tripleTeleportTo}
+                              teleportDestinationLabel={
+                                tripleTeleportTo != null
+                                  ? `${abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}${isTripleOnes ? ' +1k' : ''}`
+                                  : ''
+                              }
+                              onOpenTeleport={() => {
+                                setBusTeleportTo(null);
+                                setCenterOverlay({ type: 'tripleTeleport' });
+                              }}
+                              onClearTeleport={() => {
+                                setTripleTeleportTo(null);
+                                setPredictedTo(null);
+                              }}
+                              isTripleOnesStyle={isTripleOnes}
                             />
-                            {isTriple && (
-                              tripleTeleportTo != null ? (
-                                <button
-                                  type="button"
-                                  aria-label="Clear teleport selection"
-                                  className={`mt-3 grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-1 rounded-full border px-3 py-2 text-sm ${
-                                    isTripleOnes
-                                      ? 'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'
-                                      : 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                                  }`}
-                                  onClick={() => {
-                                    setTripleTeleportTo(null);
-                                    setPredictedTo(null);
-                                  }}
-                                >
-                                  <span aria-hidden className="min-w-0" />
-                                  <span className="flex min-w-0 items-center justify-center gap-2">
-                                    <GiTeleport className="shrink-0 text-lg" aria-hidden />
-                                    <span className="text-center">
-                                      to {abbreviateAvenueInTileName(getTileByIndex(tripleTeleportTo).name)}
-                                      {isTripleOnes ? ' +1k' : ''}
-                                    </span>
-                                  </span>
-                                  <span className="flex justify-end text-current" aria-hidden>
-                                    <IoClose className="h-5 w-5 shrink-0 opacity-90" />
-                                  </span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={busTeleportTo != null}
-                                  className={`mt-3 flex w-full items-center justify-center gap-2 rounded-md px-3 py-1.5 text-base font-bold border disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    isTripleOnes
-                                      ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'
-                                      : 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
-                                  }`}
-                                  onClick={() => {
-                                    setBusTeleportTo(null);
-                                    setCenterOverlay({ type: 'tripleTeleport' });
-                                  }}
-                                >
-                                  <GiTeleport className="shrink-0 text-2xl" aria-hidden />
-                                  Teleport
-                                </button>
-                              )
-                            )}
                           </div>
 
                         </SectionCard>
