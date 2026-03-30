@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaCheck } from 'react-icons/fa';
 
 export interface BuyButtonProps {
 	name: string;
@@ -27,7 +28,7 @@ export default function BuyButton({ name, price, canAfford, selected, onToggle, 
 				disabled={isDisabled}
 				onClick={onToggle}
 			>
-				{selected && <span>✓</span>}
+				{selected && <FaCheck className="h-3.5 w-3.5" aria-hidden />}
 				{label ?? <>Buy for ${price}</>}
 			</button>
 		</div>

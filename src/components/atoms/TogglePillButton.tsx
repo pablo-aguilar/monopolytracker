@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FaCheck } from 'react-icons/fa';
 
 type Variant = 'rose' | 'orange' | 'emerald' | 'blue' | 'bus' | 'slate';
 
@@ -13,7 +14,7 @@ export interface TogglePillButtonProps {
 }
 
 function classesFor(variant: Variant, active: boolean): string {
-  const base = 'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold shadow select-none';
+  const base = 'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold shadow select-none w-full';
   if (active) {
     switch (variant) {
       case 'rose':
@@ -57,7 +58,7 @@ export default function TogglePillButton({ label, active, onToggle, disabled, va
       animate={shake ? { x: [-4, 4, -3, 3, -2, 2, -1, 1, 0] } : undefined}
       transition={{ duration: 0.35 }}
     >
-      {active && <span className="mr-1">✓</span>}
+      {active && <FaCheck className="mr-1 h-3 w-3 shrink-0" aria-hidden />}
       {label}
     </motion.button>
   );

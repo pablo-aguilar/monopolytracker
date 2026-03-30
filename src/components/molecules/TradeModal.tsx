@@ -5,7 +5,7 @@ import MoneyInput from '@/components/atoms/MoneyInput';
 import { AVATARS } from '@/data/avatars';
 import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type ColorGroup } from '@/data/board';
 import type { TradePassEntry, TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
-import { FaChevronDown } from 'react-icons/fa';
+import { FaCheck, FaChevronDown } from 'react-icons/fa';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
 
 type TradeableProperty = {
@@ -104,7 +104,7 @@ function PlayerPickerRow({
               <div className="min-w-0">
                 <div className="font-semibold truncate">{p.nickname}</div>
               </div>
-              {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+              {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
             </button>
           );
         })}
@@ -185,7 +185,7 @@ function SelectableCardTile({
           <div className="text-sm font-semibold">{label}</div>
           {sublabel && <div className="text-xs opacity-70">{sublabel}</div>}
         </div>
-        {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+        {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
       </div>
     </button>
   );
@@ -578,7 +578,7 @@ export default function TradeModal({
                               >
                                 <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`}>
                                   <span className="truncate text-sm font-semibold">{prop.name}</span>
-                                  <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+                                  <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}><FaCheck className="h-3.5 w-3.5" aria-hidden /></span>
                                 </div>
                               </button>
                             );
@@ -697,7 +697,7 @@ export default function TradeModal({
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="text-sm font-semibold">{opt.label}</div>
-                                    {selected && !opt.disabled && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+                                    {selected && !opt.disabled && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
                                   </div>
                                   {selected && !opt.disabled && (
                                     <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-surface bg-surface-1 p-1">
@@ -805,7 +805,7 @@ export default function TradeModal({
                                     <div className="min-w-0">
                                       <div className="font-semibold truncate">{p.nickname}</div>
                                     </div>
-                                    {selected && <div className="ml-auto text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+                                    {selected && <div className="ml-auto text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
                                   </button>
                                 );
                               })}
@@ -838,7 +838,7 @@ export default function TradeModal({
                                   >
                                     <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`}>
                                       <span className="truncate text-sm font-semibold">{prop.name}</span>
-                                      <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}>✓</span>
+                                      <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}><FaCheck className="h-3.5 w-3.5" aria-hidden /></span>
                                     </div>
                                   </button>
                                 );
@@ -957,7 +957,7 @@ export default function TradeModal({
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <div className="text-sm font-semibold">{opt.label}</div>
-                                        {selected && !opt.disabled && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+                                        {selected && !opt.disabled && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
                                       </div>
                                       {selected && !opt.disabled && (
                                         <div className="mt-2 inline-flex items-center gap-1 rounded-md border border-surface bg-surface-1 p-1">

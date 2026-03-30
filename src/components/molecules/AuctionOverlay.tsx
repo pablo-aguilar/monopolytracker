@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { FaCheck } from 'react-icons/fa';
 import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type BoardTileData } from '@/data/board';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
@@ -156,7 +157,7 @@ export default function AuctionOverlay({ open, onClose, bankOwnedByTileId, playe
                             <div className="font-semibold truncate">{p.nickname}</div>
                             <div className="text-xs opacity-70 tabular-nums">${p.money}</div>
                           </div>
-                          {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">✓</div>}
+                          {selected && <div className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm"><FaCheck className="h-3.5 w-3.5" aria-hidden /></div>}
                         </button>
                       );
                     })}

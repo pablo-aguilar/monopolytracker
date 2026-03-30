@@ -52,7 +52,7 @@ import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
 import SectionCard from '@/components/molecules/SectionCard';
 import SettingsGear from '@/components/molecules/SettingsGear';
 import { BsDice1Fill, BsDice2Fill, BsDice3Fill, BsDice4Fill, BsDice5Fill, BsDice6Fill } from 'react-icons/bs';
-import { FaBusAlt, FaHandshake } from 'react-icons/fa';
+import { FaBusAlt, FaCheck, FaHandshake } from 'react-icons/fa';
 import { GiDiceFire, GiTeleport } from 'react-icons/gi';
 import { MdReceiptLong } from 'react-icons/md';
 import { consumeTradePass, grantTradePass, setTradePasses, type TradePassEntry, type TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
@@ -178,6 +178,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [stagedAuction, setStagedAuction] = useState<{ tileId: string; winnerId: string; amount: number } | null>(null);
   // jailChoice declared once
   const [jailChoice, setJailChoice] = useState<'pay' | 'gojf' | 'roll' | null>(null);
+  // Latches whether the current confirmed roll was a jail-release doubles roll.
+  const [jailReleaseDoublesRoll, setJailReleaseDoublesRoll] = useState<boolean>(false);
   const [stagedChanceCardId, setStagedChanceCardId] = useState<string | null>(null);
   const [stagedCommunityCardId, setStagedCommunityCardId] = useState<string | null>(null);
   // Staging for Bus flow and Summary overlay (order matters: Regular vs Big Bus)
@@ -536,6 +538,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     setAuctionItSelected(false);
     setStagedAuction(null);
     setJailChoice(null);
+    setJailReleaseDoublesRoll(false);
     setStagedChanceCardId(null);
     setStagedCommunityCardId(null);
     // Release deferred mortgage credit at start of this player's turn.
@@ -596,7 +599,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const specialNumeric: number = useMemo(() => {
     if (special === '+1') return 1;
     if (special === '-1') return -1;
-    if (special === '-2') return -2;
     if (typeof special === 'number') return special;
     // Treat Bus (string) as 0 steps
     return 0;
@@ -853,7 +855,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     // #region agent log
     postDebugLog({sessionId:'e6c2a6',runId:'insolvency-debug-1',hypothesisId:'H2',location:'PlayConsole.tsx:finalizeTurn:entry',message:'finalizeTurn called',data:{pid,turnIndex,activeStep,currentIndex,predictedTo,summaryOpen,playersCount:players.length},timestamp:Date.now()});
     // #endregion
-    const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
+    const isDoubles =
+      d6A !== null &&
+      d6B !== null &&
+      (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
     const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
     let resolvedQueuedThisCall = false;
     // Record this segment into the ribbon before applying stateful movement
@@ -884,7 +889,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       appendUniqueTurnSegment(seg);
       if (d6A != null && d6B != null) {
         const totalRoll = d6A + d6B + specialNumeric;
-        const isDoubleRoll = d6A === d6B;
+        const isDoubleRoll =
+          d6A !== null &&
+          d6B !== null &&
+          (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
         const isTripleRoll = d6A === d6B && typeof special === 'number' && special === d6A;
         const isTripleOnesRoll = isTripleRoll && d6A === 1;
         dispatch(
@@ -1513,7 +1521,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
         );
       }
       onApplyMove(pid, tripleTeleportTo, true, { source: 'teleport_triple', direction: 'forward' });
-    } else if (isDoubles) {
+    } else if (isDoubles && !jailReleaseDoublesRoll) {
       // Record this roll segment now (doubles can create multiple rolls per turn)
       try {
         const fromIndexSeg = players.find((p) => p.id === pid)?.positionIndex ?? 0;
@@ -1555,9 +1563,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       setUseRentPassSelected(false);
       setTaxSelected(false);
       setSummaryOpen(false);
+      setJailReleaseDoublesRoll(false);
     } else {
       // Apply movement normally and advance turn (only if no queued post is pending)
       onApplyMove(pid, undefined, true, { source: 'dice', direction: 'forward', rawSteps: (d6A as number) + (d6B as number) + specialNumeric });
+      setJailReleaseDoublesRoll(false);
     }
   };
 
@@ -1765,7 +1775,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   };
   const rollSpecialThird = (sp: Exclude<SpecialDieFace, 'Bus'>): React.ReactNode => {
     if (sp === '-1') return rollFace(1, rollDiceNegCls);
-    if (sp === '-2') return rollFace(2, rollDiceNegCls);
     if (typeof sp === 'number') return rollFace(sp, rollDiceIconCls);
     if (sp === '+1') {
       return (
@@ -1796,7 +1805,13 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
 
   const rollSummary: React.ReactNode =
     busTeleportTo != null
-      ? `Bus → ${abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}`
+      ? (
+          <span className="inline-flex items-center gap-1">
+            <FaBusAlt className="inline-block align-middle h-[14px] w-[14px] shrink-0 mb-0.5" aria-hidden />
+            <span aria-hidden>→</span>
+            {abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}
+          </span>
+        )
       : tripleTeleportTo != null
         ? (
             <span
@@ -1876,9 +1891,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       const fromIndex = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
       // Jail attempt resolution
       const pl = players.find((x) => x.id === pid);
+      setJailReleaseDoublesRoll(false);
       if (pl?.inJail && jailChoice === 'roll') {
         const isDbl = (d6A !== null && d6B !== null && d6A === d6B);
         if (isDbl) {
+          setJailReleaseDoublesRoll(true);
           // Exit jail and move by this roll immediately
           (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: false } });
           (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
@@ -2576,13 +2593,14 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
               const pid = players[turnIndex]?.id || players[0]?.id;
               if (!pid) return null;
               const pl = players.find((x) => x.id === pid);
+              const allowPreRollActions = !pl?.inJail || jailChoice === 'pay';
               const showManage =
-                !pl?.inJail &&
+                allowPreRollActions &&
                 BOARD_TILES.some((t) => {
                   if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
                   return propsState.byTileId[t.id]?.ownerId === pid;
                 });
-              const showTrade = (players?.length ?? 0) >= 2;
+              const showTrade = allowPreRollActions && (players?.length ?? 0) >= 2;
               if (!showManage && !showTrade) return null;
               return (
                 <div className="flex items-stretch gap-2 px-4 pb-4">
@@ -2677,14 +2695,17 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     };
 
                     const rollBannerDoubles =
-                      !isTriple && d6A !== null && d6B !== null && d6A === d6B;
+                      !isTriple &&
+                      d6A !== null &&
+                      d6B !== null &&
+                      (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
                     const rollBannerCenterLabel = isTripleOnes ? '🐍🐍🐍' : isTriple ? 'Triples' : rollBannerDoubles ? 'Doubles' : '';
                     const rollBannerClass = isTripleOnes
                       ? 'bg-amber-300 text-neutral-900 dark:bg-amber-400 dark:text-neutral-950'
                       : isTriple
                         ? 'bg-indigo-600 text-white'
                         : rollBannerDoubles
-                          ? 'bg-emerald-600 text-white'
+                          ? 'bg-game-doubles text-white'
                           : 'bg-surface-1 text-subtle';
 
                     return (
@@ -2765,7 +2786,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                               ) : (
                                 <button
                                   type="button"
-                                  className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-semibold border border-game-bus text-game-bus hover:text-game-bus-muted hover:border-game-bus-muted hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                                  className="inline-flex items-center justify-center gap-2 w-full rounded-md px-3 py-1.5 text-sm font-semibold border border-game-bus text-game-bus hover:text-game-bus-muted hover:border-game-bus-muted hover:bg-violet-50 dark:hover:bg-violet-950/30"
                                   onClick={() => {
                                     setD6A(null);
                                     setD6B(null);
@@ -3309,111 +3330,143 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
             </AnimatePresence>
 
             {/* Navigation */}
-            <div data-qa="play-console-footer" className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl">
+            <AnimatePresence mode="wait">
               {activeStep < 2 ? (
-                <button
-                  type="button"
-                  className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${
-                    nextBtnDisabled()
-                      ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  }`}
-                  disabled={nextBtnDisabled()}
-                  onClick={goNext}
-                >
-                  Next
-                </button>
-              ) : (
                 (() => {
-                  const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
-                  const isDoublesNow = d6A !== null && d6B !== null && d6A === d6B;
-                  const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
-                  // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
-                  const continueRoll = isDoublesNow && !isTriple && !thirdDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
-                  const birthdayBlocked = birthdayGiftRequiredButNotResolved();
-                  const blocked = isQueuedFlowActive
-                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked)
-                    : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked);
-                  if (isQueuedFlowActive) {
-                    return (
+                  const disabled = nextBtnDisabled();
+                  if (disabled) return null; // collapse footer when Next is inactive
+                  return (
+                    <motion.div
+                      key="nav-next"
+                      data-qa="play-console-footer"
+                      className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                    >
                       <button
                         type="button"
-                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                        disabled={blocked}
-                        onClick={() => {
-                          if (blocked) return;
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          if (!pid) return;
-                          finalizeTurn(pid);
-                        }}
+                        className="inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold bg-emerald-600 text-white hover:bg-emerald-700"
+                        onClick={goNext}
                       >
                         Next
                       </button>
-                    );
-                  }
-                  if (continueRoll) {
-                    return (
-                      <button
-                        type="button"
-                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                        disabled={blocked}
-                        onClick={() => {
-                          if (blocked) return;
-                          const pid = players[turnIndex]?.id || players[0]?.id;
-                          if (!pid) return;
-                          finalizeTurn(pid);
-                        }}
-                      >
-                        Next Roll
-                      </button>
-                    );
-                  }
-                  // End-of-turn: show Summary button with hold-to-end
-                  return (
-                    <motion.button
-                      type="button"
-                      className={`relative inline-flex touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
-                        blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white'
-                      }`}
-                      disabled={blocked}
-                      onMouseDown={() => {
-                        if (blocked) {
-                          if (rentRequiredButNotSelected()) {
-                            setShakeRent(true);
-                            window.setTimeout(() => setShakeRent(false), 400);
-                          }
-                          if (taxRequiredButNotSelected()) {
-                            setShakeTax(true);
-                            window.setTimeout(() => setShakeTax(false), 400);
-                          }
-                          if (
-                            (requiresBusCard && !diceBusSelectedCardId) ||
-                            (getTileByIndex(predictedTo ?? currentIndex).type === 'busStop' && !tileBusSelectedCardId)
-                          ) {
-                            setShakeBus(true);
-                            window.setTimeout(() => setShakeBus(false), 400);
-                          }
-                          return;
-                        }
-                        onEndTurnHoldStart(p.id);
-                      }}
-                      onClick={() => {
-                        if (blocked) return;
-                        setSummaryOpen(true);
-                      }}
-                      onMouseUp={onEndTurnHoldCancel}
-                      onMouseLeave={onEndTurnHoldCancel}
-                      onTouchStart={() => onEndTurnHoldStart(p.id)}
-                      onTouchEnd={onEndTurnHoldCancel}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Summary
-                      <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
-                    </motion.button>
+                    </motion.div>
                   );
                 })()
+              ) : (
+                <motion.div
+                  key="nav-summary"
+                  data-qa="play-console-footer"
+                  className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                >
+                  {(() => {
+                    const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
+                    const isDoublesNow =
+                      d6A !== null &&
+                      d6B !== null &&
+                      (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
+                    const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                    // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
+                    const continueRoll =
+                      isDoublesNow &&
+                      !isTriple &&
+                      !thirdDoublesNow &&
+                      !jailReleaseDoublesRoll &&
+                      (busTeleportTo == null) &&
+                      (tripleTeleportTo == null);
+                    const birthdayBlocked = birthdayGiftRequiredButNotResolved();
+                    const blocked = isQueuedFlowActive
+                      ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked)
+                      : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked);
+                    if (isQueuedFlowActive) {
+                      return (
+                        <button
+                          type="button"
+                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                          disabled={blocked}
+                          onClick={() => {
+                            if (blocked) return;
+                            const pid = players[turnIndex]?.id || players[0]?.id;
+                            if (!pid) return;
+                            finalizeTurn(pid);
+                          }}
+                        >
+                          Next
+                        </button>
+                      );
+                    }
+                    if (continueRoll) {
+                      // During Bus flow, hide "Next Roll" until the required bus ticket has been drawn.
+                      if (requiresBusCard && !diceBusSelectedCardId) return null;
+                      return (
+                        <button
+                          type="button"
+                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                          disabled={blocked}
+                          onClick={() => {
+                            if (blocked) return;
+                            const pid = players[turnIndex]?.id || players[0]?.id;
+                            if (!pid) return;
+                            finalizeTurn(pid);
+                          }}
+                        >
+                          Next Roll
+                        </button>
+                      );
+                    }
+                    // End-of-turn: show Summary button with hold-to-end
+                    return (
+                      <motion.button
+                        type="button"
+                        className={`relative inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
+                          blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white'
+                        }`}
+                        disabled={blocked}
+                        onMouseDown={() => {
+                          if (blocked) {
+                            if (rentRequiredButNotSelected()) {
+                              setShakeRent(true);
+                              window.setTimeout(() => setShakeRent(false), 400);
+                            }
+                            if (taxRequiredButNotSelected()) {
+                              setShakeTax(true);
+                              window.setTimeout(() => setShakeTax(false), 400);
+                            }
+                            if (
+                              (requiresBusCard && !diceBusSelectedCardId) ||
+                              (getTileByIndex(predictedTo ?? currentIndex).type === 'busStop' && !tileBusSelectedCardId)
+                            ) {
+                              setShakeBus(true);
+                              window.setTimeout(() => setShakeBus(false), 400);
+                            }
+                            return;
+                          }
+                          onEndTurnHoldStart(p.id);
+                        }}
+                        onClick={() => {
+                          if (blocked) return;
+                          setSummaryOpen(true);
+                        }}
+                        onMouseUp={onEndTurnHoldCancel}
+                        onMouseLeave={onEndTurnHoldCancel}
+                        onTouchStart={() => onEndTurnHoldStart(p.id)}
+                        onTouchEnd={onEndTurnHoldCancel}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Summary
+                        <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
+                      </motion.button>
+                    );
+                  })()}
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </>
         )}
       />
@@ -3737,7 +3790,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   );
                 })()}
                 {(() => {
-                  const isDoubles = d6A !== null && d6B !== null && d6A === d6B;
+                  const isDoubles =
+                    d6A !== null &&
+                    d6B !== null &&
+                    (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
                   const thirdDoubles = rollCount >= 3 && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
                   if (!thirdDoubles) return null;
                   return (
@@ -3747,8 +3803,13 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   );
                 })()}
                 <div className="flex items-center gap-2 text-xs">
-                  {!isTriple && (d6A === d6B) && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-600 text-white px-2 py-0.5">Doubles ✓</span>
+                  {!isTriple &&
+                    d6A !== null &&
+                    d6B !== null &&
+                    (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B))) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-game-doubles text-white px-2 py-0.5">
+                      Doubles <FaCheck className="h-3 w-3" aria-hidden />
+                    </span>
                   )}
                   {isTriple && (
                     <span
@@ -3756,7 +3817,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                         isTripleOnes ? 'bg-amber-400 text-neutral-900' : 'bg-indigo-600 text-white'
                       }`}
                     >
-                      {isTripleOnes ? '🐍🐍🐍' : 'Triples ✓'}
+                      {isTripleOnes ? '🐍🐍🐍' : (
+                        <span className="inline-flex items-center gap-1">
+                          Triples <FaCheck className="h-3 w-3" aria-hidden />
+                        </span>
+                      )}
                     </span>
                   )}
                   {busTeleportTo != null && <span className="inline-flex items-center rounded-full bg-sky-600 text-white px-2 py-0.5">Bus used</span>}

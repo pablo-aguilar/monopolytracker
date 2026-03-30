@@ -3,7 +3,7 @@
 // - //#types-events: Event types and event record for event-sourced modeling
 // - Existing interfaces kept for compatibility (Game, Player, Turn, Action)
 
-export type SpecialDieFace = 1 | 2 | 3 | '+1' | '-1' | '-2' | 'Bus';
+export type SpecialDieFace = 1 | 2 | 3 | '+1' | '-1' | 'Bus';
 
 // //#types-dice
 export interface DieRoll {

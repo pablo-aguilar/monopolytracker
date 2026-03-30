@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaCheck } from 'react-icons/fa';
 
 export interface StepItem {
   id: 0 | 1 | 2;
@@ -50,13 +51,13 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
                   onClick={() => clickable && onSelect(s.id)}
                   className={`relative z-10 inline-flex h-8 w-8 bg-surface-0 items-center font-bold justify-center rounded-full border-3 border-tint transition-colors ${
                     status === 'done'
-                      ? 'bg-emerald-600! border-emerald-600! text-white'
+                      ? 'bg-emerald-600! border-emerald-600! text-emerald-50'
                       : status === 'current'
-                      ? 'border-emerald-500! text-emerald-600! ring-1 ring-emerald-500 ring-offset-3 ring-offset-white dark:ring-offset-neutral-900'
+                      ? 'bg-emerald-600! border-emerald-600! text-white ring-1 ring-emerald-500 ring-offset-3 ring-offset-white dark:ring-offset-neutral-900'
                       : 'text-subtle'
                   } ${!clickable ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
-                  {status === 'done' ? '✓' : s.id + 1}
+                  {status === 'done' ? <FaCheck className="h-3.5 w-3.5" aria-hidden /> : s.id + 1}
                 </button>
               </div>
               <div className="text-base text-muted mt-2 min-h-4 px-1">{s.desc}</div>

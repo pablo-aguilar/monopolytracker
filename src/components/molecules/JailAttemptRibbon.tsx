@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaCheck } from 'react-icons/fa';
 
 export interface JailAttemptRibbonProps {
   attemptsCompleted: number; // 0..3
@@ -20,7 +21,7 @@ export default function JailAttemptRibbon({ attemptsCompleted, maxAttempts = 3 }
           <div className={`absolute left-0 right-1/2 h-1 ${status !== 'upcoming' ? 'bg-emerald-600' : 'bg-neutral-200 dark:bg-neutral-800'}`} aria-hidden />
         )}
         <div className={`relative z-10 inline-flex items-center justify-center h-7 rounded-full border px-2 ${cl}`}>
-          {status === 'done' ? '✓' : idx}
+          {status === 'done' ? <FaCheck className="h-3.5 w-3.5" aria-hidden /> : idx}
         </div>
         {idx < maxAttempts && (
           <div className={`absolute left-1/2 right-0 h-1 ${idx <= attemptsCompleted ? 'bg-emerald-600' : 'bg-neutral-200 dark:bg-neutral-800'}`} aria-hidden />

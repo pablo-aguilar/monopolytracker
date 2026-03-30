@@ -39,7 +39,7 @@ function formatSpecialShort(s: string | number | null): string {
 }
 
 function specialFaceActive(special: string | number | null, v: string | number): boolean {
-  if (v === '-1' || v === '-2') return String(special ?? '') === v;
+  if (v === '-1') return String(special ?? '') === v;
   return special === v;
 }
 
@@ -390,7 +390,7 @@ export default function DiceSelector({
         onKeyDown={onTabListKeyDown}
         onPointerDown={onStripPointerDown}
         onPointerUp={onStripPointerUp}
-        className="relative flex gap-0.5 border-b border-tint bg-surface-0 py-1 pl-1 pr-1 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-neutral-600 dark:focus-visible:ring-offset-neutral-900 rounded-full"
+        className="relative flex h-11 items-center gap-0.5 border-b border-tint bg-surface-0 py-0 pl-1 pr-1 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-neutral-600 dark:focus-visible:ring-offset-neutral-900 rounded-full"
       >
         <motion.div
           ref={pillRef}
@@ -541,8 +541,8 @@ export default function DiceSelector({
                 <button type="button" className={btnClass(specialFaceActive(special, '-1'))} onClick={() => handleSelectSpecial('-1')}>
                   -1
                 </button>
-                <button type="button" className={btnClass(specialFaceActive(special, '-2'))} onClick={() => handleSelectSpecial('-2')}>
-                  -2
+                <button type="button" className={btnClass(specialFaceActive(special, '+1'))} onClick={() => handleSelectSpecial('+1')}>
+                  <span aria-hidden>+</span>1
                 </button>
                 <button type="button" className={btnClass(specialFaceActive(special, 'Bus'))} onClick={() => handleSelectSpecial('Bus')}>
                   <span className="inline-flex items-center gap-1.5">
