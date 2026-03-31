@@ -34,6 +34,9 @@
 
   /* Game affordances (doubles header) */
   --game-doubles: theme(colors.blue.500);
+
+  /* Jail attempt tracker (filled chip + bars) */
+  --game-jail: theme(colors.slate.900);
 }
 
 .dark {
@@ -63,6 +66,8 @@
 
   /* Game affordances (doubles header) */
   --game-doubles: theme(colors.blue.600);
+
+  --game-jail: theme(colors.slate.50);
 }
 
 @layer utilities {
@@ -90,6 +95,10 @@
   .border-game-bus { border-color: var(--game-bus); }
   .border-game-bus-muted { border-color: var(--game-bus-muted); }
   .border-game-doubles { border-color: var(--game-doubles); }
+
+  .bg-game-jail { background-color: var(--game-jail); }
+  .text-game-jail { color: var(--game-jail); }
+  .border-game-jail { border-color: var(--game-jail); }
 
   /* Divider helpers (use with divide-y / divide-x) */
   .divide-y.divide-surface > :not([hidden]) { border-color: var(--divider); }

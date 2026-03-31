@@ -15,7 +15,7 @@ import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
 import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
-import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle } from '@/data/cards';
+import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle, type CardEffect } from '@/data/cards';
 import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearAllBusTickets, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
@@ -119,6 +119,8 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     direction: MoveDirection;
     rawSteps?: number;
     card?: { deck: 'chance' | 'community'; cardId: string; effectType: string; rawSteps?: number; awardGoIfPassed?: boolean };
+    /** Use Redux store position after a prior synchronous dispatch in the same tick. */
+    readPlayerPositionFromStore?: boolean;
   };
 
   type PendingLiquidationPlan = {
@@ -138,12 +140,12 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [d6B, setD6B] = useState<number | null>(null);
   const [special, setSpecial] = useState<SpecialDieFace | null>(null);
   const [rollConfirmed, setRollConfirmed] = useState<boolean>(false);
-  const [activeStep, setActiveStep] = useState<0 | 1 | 2>(0); // 0=pre,1=roll,2=post
+  const [activeStep, setActiveStep] = useState<0 | 1 | 2 | 3>(0); // 0=pre,1=roll,2=post,3=card destination
   const [moneyDelta, setMoneyDelta] = useState<number>(0);
   const [moneyPlayerId, setMoneyPlayerId] = useState<string>('');
   const [preActions, setPreActions] = useState<string[]>([]);
   const [postAction, setPostAction] = useState<string>('None');
-  const [highestStep, setHighestStep] = useState<0 | 1 | 2>(0);
+  const [highestStep, setHighestStep] = useState<0 | 1 | 2 | 3>(0);
   const [predictedTo, setPredictedTo] = useState<number | null>(null);
   const [buySelected, setBuySelected] = useState<boolean>(false);
   const [rentSelected, setRentSelected] = useState<boolean>(false);
@@ -678,12 +680,14 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     if (!hasRoll && toIndexOverride == null) return;
     const pid = playerId ?? (players[turnIndex]?.id || players[0]?.id);
     if (!pid) return;
-    const fromIndex = players.find((p) => p.id === pid)?.positionIndex ?? 0;
+    const resolvedMeta: ApplyMoveMeta = meta ?? { source: 'dice', direction: 'forward' };
+    const fromIndex =
+      (resolvedMeta.readPlayerPositionFromStore
+        ? (store.getState() as RootState).players.players.find((p) => p.id === pid)?.positionIndex
+        : players.find((p) => p.id === pid)?.positionIndex) ?? 0;
     const moveSteps = (d6A as number) + (d6B as number) + specialNumeric;
     const toIndex = toIndexOverride != null ? toIndexOverride : ((fromIndex + moveSteps) % BOARD_TILES.length);
     const tile = getTileByIndex(toIndex);
-
-    const resolvedMeta: ApplyMoveMeta = meta ?? { source: 'dice', direction: 'forward' };
 
     const isTeleportMove = resolvedMeta.source === 'teleport_bus' || resolvedMeta.source === 'teleport_triple';
 
@@ -861,62 +865,64 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
     const thirdDoubles = (rollCount >= 3) && isDoubles && (busTeleportTo == null) && (tripleTeleportTo == null);
     let resolvedQueuedThisCall = false;
-    // Record this segment into the ribbon before applying stateful movement
-    try {
-      const fromIndexSeg = players.find((p) => p.id === pid)?.positionIndex ?? 0;
-      const moveStepsSeg = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
-      let toIndexSeg = fromIndexSeg;
-      if (thirdDoubles) {
-        toIndexSeg = JAIL_INDEX;
-      } else if (busTeleportTo != null) {
-        toIndexSeg = busTeleportTo;
-      } else if (d6A != null && d6B != null) {
-        toIndexSeg = (fromIndexSeg + moveStepsSeg) % BOARD_TILES.length;
-      } else if (predictedTo != null) {
-        toIndexSeg = predictedTo;
-      }
-      const seg: TurnSegment = {
-        roll: rollCount,
-        d6A: d6A as number | null,
-        d6B: d6B as number | null,
-        special: special as any,
-        busUsed: busTeleportTo != null,
-        from: fromIndexSeg,
-        to: toIndexSeg,
-        tileName: getTileByIndex(toIndexSeg).name,
-        at: new Date().toISOString(),
-      };
-      appendUniqueTurnSegment(seg);
-      if (d6A != null && d6B != null) {
-        const totalRoll = d6A + d6B + specialNumeric;
-        const isDoubleRoll =
-          d6A !== null &&
-          d6B !== null &&
-          (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
-        const isTripleRoll = d6A === d6B && typeof special === 'number' && special === d6A;
-        const isTripleOnesRoll = isTripleRoll && d6A === 1;
-        dispatch(
-          appendEvent({
-            id: crypto.randomUUID(),
-            gameId: 'local',
-            type: 'ROLL',
-            actorPlayerId: pid,
-            payload: {
-              d6A,
-              d6B,
-              special: special as SpecialDieFace | null,
-              total: totalRoll,
-              isDouble: isDoubleRoll,
-              isTriple: isTripleRoll,
-              isTripleOnes: isTripleOnesRoll,
-              rollIndex: rollCount,
-              message: `Rolled ${totalRoll}`,
-            },
-            createdAt: new Date().toISOString(),
-          })
-        );
-      }
-    } catch {}
+    // Record this segment into the ribbon before applying stateful movement (skip when ending the Card step — dice segment already logged).
+    if (activeStep !== 3) {
+      try {
+        const fromIndexSeg = players.find((p) => p.id === pid)?.positionIndex ?? 0;
+        const moveStepsSeg = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
+        let toIndexSeg = fromIndexSeg;
+        if (thirdDoubles) {
+          toIndexSeg = JAIL_INDEX;
+        } else if (busTeleportTo != null) {
+          toIndexSeg = busTeleportTo;
+        } else if (d6A != null && d6B != null) {
+          toIndexSeg = (fromIndexSeg + moveStepsSeg) % BOARD_TILES.length;
+        } else if (predictedTo != null) {
+          toIndexSeg = predictedTo;
+        }
+        const seg: TurnSegment = {
+          roll: rollCount,
+          d6A: d6A as number | null,
+          d6B: d6B as number | null,
+          special: special as any,
+          busUsed: busTeleportTo != null,
+          from: fromIndexSeg,
+          to: toIndexSeg,
+          tileName: getTileByIndex(toIndexSeg).name,
+          at: new Date().toISOString(),
+        };
+        appendUniqueTurnSegment(seg);
+        if (d6A != null && d6B != null) {
+          const totalRoll = d6A + d6B + specialNumeric;
+          const isDoubleRoll =
+            d6A !== null &&
+            d6B !== null &&
+            (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
+          const isTripleRoll = d6A === d6B && typeof special === 'number' && special === d6A;
+          const isTripleOnesRoll = isTripleRoll && d6A === 1;
+          dispatch(
+            appendEvent({
+              id: crypto.randomUUID(),
+              gameId: 'local',
+              type: 'ROLL',
+              actorPlayerId: pid,
+              payload: {
+                d6A,
+                d6B,
+                special: special as SpecialDieFace | null,
+                total: totalRoll,
+                isDouble: isDoubleRoll,
+                isTriple: isTripleRoll,
+                isTripleOnes: isTripleOnesRoll,
+                rollIndex: rollCount,
+                message: `Rolled ${totalRoll}`,
+              },
+              createdAt: new Date().toISOString(),
+            })
+          );
+        }
+      } catch {}
+    }
     // Commit staged Bus effects now (skip if third doubles sends to jail)
     if (!thirdDoubles && stagedBusPicks.length > 0) {
       for (const pick of stagedBusPicks) {
@@ -1415,6 +1421,76 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       return;
     }
 
+    // Card step: token is already at the card destination; only finish the turn or continue a doubles chain.
+    if (activeStep === 3) {
+      if (thirdDoubles) {
+        const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+        dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+        (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });
+        (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'JAIL',
+            actorPlayerId: pid,
+            payload: { playerId: pid, reason: 'THREE_DOUBLES', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail (3rd doubles)' },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'MOVE',
+            actorPlayerId: pid,
+            payload: {
+              playerId: pid,
+              from: fromIdx,
+              to: JAIL_INDEX,
+              steps: 0,
+              distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),
+              direction: 'forward',
+              source: 'jail_three_doubles',
+              message: 'Moved to Jail (3rd doubles)',
+            },
+            createdAt: new Date().toISOString(),
+          })
+        );
+        dispatch(advanceTurn({ playerCount: players.length }));
+        return;
+      }
+      const inJailNow = players.find((p) => p.id === pid)?.inJail === true;
+      if (isDoubles && !inJailNow && !jailReleaseDoublesRoll && busTeleportTo == null && tripleTeleportTo == null && !isTriple) {
+        setRollCount((n) => n + 1);
+        setActiveStep(1);
+        setHighestStep(1);
+        setD6A(null);
+        setD6B(null);
+        setSpecial(null);
+        setDiceBusSelectedCardId(null);
+        setTileBusSelectedCardId(null);
+        setBirthdayGiftCashSelected(false);
+        setBirthdayGiftBusCardId(null);
+        setRollConfirmed(false);
+        setPredictedTo(null);
+        setTripleTeleportTo(null);
+        setPostAction('None');
+        setBuySelected(false);
+        setRentSelected(false);
+        setResolvedRentKey(null);
+        setPendingLiquidation(null);
+        setUseRentPassSelected(false);
+        setTaxSelected(false);
+        setSummaryOpen(false);
+        setJailReleaseDoublesRoll(false);
+        return;
+      }
+      dispatch(advanceTurn({ playerCount: players.length }));
+      setJailReleaseDoublesRoll(false);
+      return;
+    }
+
     if (thirdDoubles) {
       // Go directly to Jail on third doubles
       const fromIdx = players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
@@ -1572,9 +1648,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   };
 
   const onEndTurnHoldStart = (pid: string): void => {
-    // Require confirmation; allow either a numeric roll or a bus teleport
-    if (!rollConfirmed) return;
-    if (!hasRoll && busTeleportTo == null && tripleTeleportTo == null) return;
+    // Require confirmation; allow either a numeric roll or a bus teleport (Card step already had its roll on Post).
+    if (activeStep !== 3) {
+      if (!rollConfirmed) return;
+      if (!hasRoll && busTeleportTo == null && tripleTeleportTo == null) return;
+    }
     // Block hold if rent is required but not selected
     if (rentRequiredButNotSelected()) return;
     // Block hold if tax is required but not selected
@@ -1842,7 +1920,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 ? ''
                 : '...';
 
-  const canGoNext = (step: 0 | 1 | 2): boolean => {
+  const canGoNext = (step: 0 | 1 | 2 | 3): boolean => {
     if (step === 0) return true;
     if (step === 1) {
       const pid = players[turnIndex]?.id || players[0]?.id;
@@ -2221,6 +2299,32 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     return null;
   };
 
+  const stagedCardStepMeta = useMemo((): {
+    deck: 'chance' | 'community';
+    cardId: string;
+    effect: { type: 'moveTo'; tileId: string; awardGoIfPassed?: boolean } | { type: 'goToJail' };
+  } | null => {
+    if (stagedChanceCardId) {
+      const def = CHANCE.find((c) => c.id === stagedChanceCardId);
+      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'goToJail')) {
+        return { deck: 'chance', cardId: stagedChanceCardId, effect: def.effect };
+      }
+    }
+    if (stagedCommunityCardId) {
+      const def = COMMUNITY_CHEST.find((c) => c.id === stagedCommunityCardId);
+      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'goToJail')) {
+        return { deck: 'community', cardId: stagedCommunityCardId, effect: def.effect };
+      }
+    }
+    return null;
+  }, [stagedChanceCardId, stagedCommunityCardId]);
+
+  React.useEffect(() => {
+    if (stagedCardStepMeta) {
+      setHighestStep((h) => Math.max(h, 3) as 0 | 1 | 2 | 3);
+    }
+  }, [stagedCardStepMeta]);
+
   const preDesc =
     preActions.length > 0
       ? abbreviateAvenueInTileName(preActions.join(', '))
@@ -2230,10 +2334,19 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const postDescRaw =
     highestStep < 2 ? '' : postAction === 'Buy Property' ? 'Buy' : postAction;
   const postDesc = postDescRaw === '' ? '' : abbreviateAvenueInTileName(postDescRaw);
+  const showCardStepPill = stagedCardStepMeta != null || activeStep === 3;
+  const cardStepDesc = (() => {
+    if (activeStep === 3) return abbreviateAvenueInTileName(getTileByIndex(predictedTo ?? currentIndex).name);
+    if (!stagedCardStepMeta) return '';
+    if (stagedCardStepMeta.effect.type === 'goToJail') return 'Jail';
+    const moveToEffect = stagedCardStepMeta.effect as Extract<CardEffect, { type: 'moveTo' }>;
+    return abbreviateAvenueInTileName(BOARD_TILES.find((t) => t.id === moveToEffect.tileId)?.name ?? '');
+  })();
   const stepItems = [
     { id: 0 as const, title: 'Pre', desc: preDesc },
     { id: 1 as const, title: 'Roll', desc: rollSummary },
     { id: 2 as const, title: 'Post', desc: postDesc },
+    ...(showCardStepPill ? [{ id: 3 as const, title: 'Card', desc: cardStepDesc }] : []),
   ];
 
   const getActiveRentContext = React.useCallback(() => {
@@ -2374,6 +2487,141 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', actorPlayerId: pid, payload: { tileId: t.id, from: pid, amount: t.taxAmount, message: `Tax ${t.taxAmount}` }, moneyDelta: -t.taxAmount, createdAt: new Date().toISOString() })
     );
     dispatch(addToFreeParking(t.taxAmount));
+  };
+
+  /** Dice landing → deck draw → resolve card movement on step 3. Chained card-step draws skip the dice leg. */
+  const transitionPostToCardStep = (): void => {
+    const pid = players[turnIndex]?.id || players[0]?.id;
+    if (!pid) return;
+    const meta = stagedCardStepMeta;
+    if (!meta) return;
+    if (activeStep !== 2 && activeStep !== 3) return;
+    if (activeStep === 2 && !rollConfirmed) return;
+    if (cardDrawRequiredButNotSelected()) return;
+    if (rentRequiredButNotSelected()) return;
+    if (taxRequiredButNotSelected()) return;
+    if (purchaseOrAuctionRequiredButNotResolved()) return;
+    if (birthdayGiftRequiredButNotResolved()) return;
+
+    let dest: number | undefined;
+    if (meta.effect.type === 'moveTo') {
+      const moveToEffect = meta.effect as Extract<CardEffect, { type: 'moveTo' }>;
+      dest = BOARD_TILES.find((t) => t.id === moveToEffect.tileId)?.index;
+    } else {
+      dest = JAIL_INDEX;
+    }
+    if (typeof dest !== 'number') return;
+
+    if (activeStep === 2) {
+      const diceLanding = predictedTo;
+      if (diceLanding == null) return;
+      const rawSteps = (d6A as number) + (d6B as number) + specialNumeric;
+      onApplyMove(pid, diceLanding, false, { source: 'dice', direction: 'forward', rawSteps });
+    }
+
+    const deck = meta.deck;
+    const cardId = meta.cardId;
+    const draw = cardsState.decks[deck].drawPile;
+    const cidx = draw.findIndex((c) => c.id === cardId);
+    if (cidx > 0) {
+      for (let i = 0; i < cidx; i++) {
+        dispatch(putCardOnBottom({ deck, cardId: draw[i].id }));
+      }
+    }
+    dispatch(drawCard(deck));
+    dispatch(
+      appendEvent({
+        id: crypto.randomUUID(),
+        gameId: 'local',
+        type: 'CARD',
+        actorPlayerId: pid,
+        payload: { deck, cardId, message: `Drew ${deck}` },
+        createdAt: new Date().toISOString(),
+      })
+    );
+
+    setStagedChanceCardId(null);
+    setStagedCommunityCardId(null);
+
+    const moveSrc = meta.deck === 'chance' ? ('card_chance' as const) : ('card_community' as const);
+    if (meta.effect.type === 'goToJail') {
+      const fromIdx = (store.getState() as RootState).players.players.find((p) => p.id === pid)?.positionIndex ?? currentIndex;
+      dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));
+      (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });
+      (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'JAIL',
+          actorPlayerId: pid,
+          payload: { playerId: pid, reason: 'CARD', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail' },
+          createdAt: new Date().toISOString(),
+        })
+      );
+      dispatch(
+        appendEvent({
+          id: crypto.randomUUID(),
+          gameId: 'local',
+          type: 'MOVE',
+          actorPlayerId: pid,
+          payload: {
+            playerId: pid,
+            from: fromIdx,
+            to: JAIL_INDEX,
+            steps: 0,
+            distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),
+            direction: 'forward',
+            source: 'jail_card',
+            card: { deck: meta.deck, cardId, effectType: 'goToJail' },
+            message: 'Moved to Jail',
+          },
+          createdAt: new Date().toISOString(),
+        })
+      );
+    } else {
+      onApplyMove(pid, dest, false, {
+        source: moveSrc,
+        direction: 'forward',
+        card: { deck: meta.deck, cardId, effectType: 'moveTo', awardGoIfPassed: meta.effect.awardGoIfPassed },
+        readPlayerPositionFromStore: true,
+      });
+    }
+
+    const tDest = getTileByIndex(dest);
+    let suggested: string = 'None';
+    if (meta.effect.type === 'goToJail') {
+      suggested = 'In Jail';
+    } else if (tDest.type === 'property' || tDest.type === 'railroad' || tDest.type === 'utility') {
+      const owner = propsState.byTileId[tDest.id]?.ownerId as string | null;
+      if (owner && owner !== pid) suggested = 'Pay Rent';
+      else if (!owner) suggested = 'Buy Property';
+    } else if (tDest.type === 'tax') {
+      suggested = 'Pay Tax';
+    } else if (tDest.type === 'chance' || tDest.type === 'community') {
+      suggested = 'Draw Card';
+    } else if (tDest.id === 'birthday-gift') {
+      suggested = 'Birthday Gift';
+    }
+
+    setPostAction(suggested);
+    setBuySelected(false);
+    setAuctionCompleted(false);
+    setAuctionItSelected(false);
+    setStagedAuction(null);
+    setRentSelected(false);
+    setResolvedRentKey(null);
+    setPendingLiquidation(null);
+    setUseRentPassSelected(false);
+    setTaxSelected(false);
+    setDiceBusSelectedCardId(null);
+    setTileBusSelectedCardId(null);
+    setBirthdayGiftCashSelected(false);
+    setBirthdayGiftBusCardId(null);
+    setPredictedTo(meta.effect.type === 'goToJail' ? JAIL_INDEX : dest);
+    setActiveStep(3);
+    setHighestStep(3);
+    setSummaryOpen(false);
   };
 
   // //#render
@@ -2809,7 +3057,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 </motion.div>
               )}
 
-              {activeStep === 2 && (
+              {(activeStep === 2 || activeStep === 3) && (
                 <motion.div key="post" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2 p-4 pt-1">
                   {(() => {
                     const pid = players[turnIndex]?.id || players[0]?.id;
@@ -3140,7 +3388,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                               stagedChanceCardId ? (
                                 <DrawnUndoButton
                                   aria-label="Undo Chance card selection; return to draw pile"
-                                  onClick={() => setStagedChanceCardId(null)}
+                                  onClick={() => {
+                                    setStagedChanceCardId(null);
+                                    if (activeStep < 3) setHighestStep(2);
+                                  }}
                                 />
                               ) : undefined
                             }
@@ -3173,7 +3424,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                               stagedCommunityCardId ? (
                                 <DrawnUndoButton
                                   aria-label="Undo Community Chest card selection; return to draw pile"
-                                  onClick={() => setStagedCommunityCardId(null)}
+                                  onClick={() => {
+                                    setStagedCommunityCardId(null);
+                                    if (activeStep < 3) setHighestStep(2);
+                                  }}
                                 />
                               ) : undefined
                             }
@@ -3375,15 +3629,39 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
                     const continueRoll =
                       isDoublesNow &&
+                      activeStep !== 3 &&
                       !isTriple &&
                       !thirdDoublesNow &&
                       !jailReleaseDoublesRoll &&
                       (busTeleportTo == null) &&
                       (tripleTeleportTo == null);
                     const birthdayBlocked = birthdayGiftRequiredButNotResolved();
+                    const postResolutionBlocked =
+                      cardDrawRequiredButNotSelected() ||
+                      rentRequiredButNotSelected() ||
+                      taxRequiredButNotSelected() ||
+                      purchaseOrAuctionRequiredButNotResolved() ||
+                      birthdayBlocked;
                     const blocked = isQueuedFlowActive
-                      ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked)
-                      : (!hasRollWithSpecialSelected || cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayBlocked);
+                      ? postResolutionBlocked
+                      : activeStep === 3
+                        ? postResolutionBlocked
+                        : !hasRollWithSpecialSelected || postResolutionBlocked;
+                    if ((activeStep === 2 || activeStep === 3) && stagedCardStepMeta) {
+                      return (
+                        <button
+                          type="button"
+                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${postResolutionBlocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                          disabled={postResolutionBlocked}
+                          onClick={() => {
+                            if (postResolutionBlocked) return;
+                            transitionPostToCardStep();
+                          }}
+                        >
+                          Next
+                        </button>
+                      );
+                    }
                     if (isQueuedFlowActive) {
                       return (
                         <button
@@ -3849,9 +4127,13 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 <button onClick={() => setSummaryOpen(false)} className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm">Back</button>
                 {(() => {
                   const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
-                  const blocked = isQueuedFlowActive
-                    ? (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayGiftRequiredButNotResolved())
-                    : (cardDrawRequiredButNotSelected() || rentRequiredButNotSelected() || taxRequiredButNotSelected() || purchaseOrAuctionRequiredButNotResolved() || birthdayGiftRequiredButNotResolved());
+                  const summaryPostBlocked =
+                    cardDrawRequiredButNotSelected() ||
+                    rentRequiredButNotSelected() ||
+                    taxRequiredButNotSelected() ||
+                    purchaseOrAuctionRequiredButNotResolved() ||
+                    birthdayGiftRequiredButNotResolved();
+                  const blocked = stagedCardStepMeta != null || summaryPostBlocked;
                   const label = isQueuedFlowActive ? 'Next' : 'End Turn';
                   return (
                     <button

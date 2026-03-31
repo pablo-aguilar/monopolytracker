@@ -1,23 +1,24 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
 
 export interface StepItem {
-  id: 0 | 1 | 2;
+  id: 0 | 1 | 2 | 3;
   title: string;
   desc: React.ReactNode;
 }
 
 export interface StepNavigatorProps {
   items: StepItem[];
-  activeStep: 0 | 1 | 2;
-  highestStep: 0 | 1 | 2;
-  onSelect: (step: 0 | 1 | 2) => void;
+  activeStep: 0 | 1 | 2 | 3;
+  highestStep: 0 | 1 | 2 | 3;
+  onSelect: (step: 0 | 1 | 2 | 3) => void;
 }
 
 export default function StepNavigator({ items, activeStep, highestStep, onSelect }: StepNavigatorProps): JSX.Element {
   return (
     <div data-cmp="m/StepNavigator" className="  p-4">
-      <div className="flex items-baseline px-2">
+      <div className="flex min-w-0 items-baseline px-2">
         {items.map((s, i) => {
           const status = s.id < activeStep ? 'done' : s.id === activeStep ? 'current' : 'upcoming';
           const clickable = s.id <= highestStep || s.id === activeStep;
@@ -27,8 +28,16 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
           const justify = isFirst ? 'justify-start' : isLast ? 'justify-end' : 'justify-center';
           const midLeft = isFirst ? 'left-[16px]' : 'left-1/2';
           const midRight = isLast ? 'right-[16px]' : 'right-1/2';
+          const isCardReveal = s.id === 3 && items.length === 4;
           return (
-            <div key={s.id} className={`flex-1 flex flex-col ${align}`}>
+            <motion.div
+              key={s.id}
+              layout
+              className={`min-w-0 flex-1 flex flex-col ${align}`}
+              initial={isCardReveal ? { opacity: 0, scale: 0.82 } : false}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            >
               <div className="text-sm text-subtle w-[32px] text-center font-medium mb-1.5 ">{s.title}</div>
               <div className={`relative w-full h-8 flex items-center text-lg ${justify}`}>
                 {/* Baseline connectors (neutral) */}
@@ -61,7 +70,7 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
                 </button>
               </div>
               <div className="text-base text-muted mt-2 min-h-4 px-1">{s.desc}</div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
