@@ -32,8 +32,8 @@ export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, 
   const showBuy = firstRoundLocked || !auctionItSelected;
   const showAuction = firstRoundLocked || !buySelected;
   return (
-    <div data-cmp="m/PurchaseActionsRow" className="space-y-1">
-      <div className="flex items-center gap-2">
+    <div data-cmp="m/PurchaseActionsRow" className="flex flex-col space-y-1">
+      <div className="flex flex-col items-center gap-2">
         {showBuy && (
           firstRoundLocked ? (
             <Tooltip content={lockedTip}>
@@ -42,7 +42,7 @@ export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, 
                 label={
                   <span className="inline-flex items-center gap-2">
                     <span>Buy {tileName}</span>
-                    <span className="opacity-80">· ${price}</span>
+                    <span className="opacity-80">${price}</span>
                   </span>
                 }
                 className="border border-neutral-300 text-neutral-500 bg-neutral-100 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 cursor-not-allowed"
@@ -51,7 +51,7 @@ export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, 
             </Tooltip>
           ) : (
             <TogglePillButton
-              label={<span className="inline-flex items-center gap-2"><span>Buy {tileName}</span><span className="opacity-80">· ${price}</span></span>}
+              label={<span className="inline-flex items-center gap-2"><span>Buy {tileName}</span><span className="opacity-80">${price}</span></span>}
               active={buySelected}
               onToggle={onToggleBuy}
               disabled={!canAffordBuy}
@@ -68,14 +68,14 @@ export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, 
             <Tooltip content={lockedTip}>
               <IconLabelButton
                 icon={<FaLock className="h-4 w-4 text-current" />}
-                label="Auction it"
+                label="Auction"
                 className="border border-neutral-300 text-neutral-500 bg-neutral-100 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 cursor-not-allowed"
                 onClick={(e) => e.preventDefault()}
               />
             </Tooltip>
           ) : (
             <TogglePillButton
-              label="Auction it"
+              label="Auction"
               active={auctionItSelected}
               onToggle={onToggleAuctionIt}
               disabled={false}

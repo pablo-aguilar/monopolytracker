@@ -103,47 +103,28 @@ export default function PlayerTurnCards({
                   )}
                 </div>
               </div>
-              {/* inventory HUD */}
+              {/* inventory HUD: bus / jail / passes stay left; properties + railroads + utilities share one wrap row */}
               <div className="flex items-center gap-3 px-1 pb-1 text-sm text-muted">
-                {(Number(p.busTickets ?? 0) > 0) && (
-                  <HudBadge
-                    title="Bus tickets"
-                    icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />}
-                    count={Number(p.busTickets ?? 0)}
-                  />
-                )}
-                {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
-                {(() => {
-                  const badges = tradePassBadgesForPlayer(p.id);
-                  if (badges.length <= 0) return null;
-                  return badges.map((badge) => (
-                    <Tooltip key={badge.key} content={badge.tooltip}>
-                      <HudBadge title="Trade passes" icon={<span>🎟️</span>} count={badge.count} variant="pill" borderClassName={badge.borderClassName} />
-                    </Tooltip>
-                  ));
-                })()}
-                {(() => {
-                  const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsByTileId[t.id]?.ownerId === p.id)).length;
-                  if (rrCount <= 0) return null;
-                  const tip = railroadTooltipForPlayer(p.id);
-                  return (
-                    <Tooltip content={tip || `Railroads x${rrCount}`}>
-                      <HudBadge title="Railroads owned" icon={<span>🚂</span>} count={rrCount} variant="pill" borderClassName="border-white" />
-                    </Tooltip>
-                  );
-                })()}
-                {(() => {
-                  const utilCount = BOARD_TILES.filter((t) => t.type === 'utility' && (propsByTileId[t.id]?.ownerId === p.id)).length;
-                  if (utilCount <= 0) return null;
-                  const tip = utilitiesTooltipForPlayer(p.id);
-                  return (
-                    <Tooltip content={tip || `Utilities x${utilCount}`}>
-                      <HudBadge title="Utilities owned" icon={<span>🛠️</span>} count={utilCount} variant="pill" borderClassName="border-white" />
-                    </Tooltip>
-                  );
-                })()}
-                {/* per-group property indicators */}
-                <div className="inline-flex items-center gap-1 flex-wrap">
+                <div className="flex shrink-0 items-center gap-3">
+                  {(Number(p.busTickets ?? 0) > 0) && (
+                    <HudBadge
+                      title="Bus tickets"
+                      icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />}
+                      count={Number(p.busTickets ?? 0)}
+                    />
+                  )}
+                  {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
+                  {(() => {
+                    const badges = tradePassBadgesForPlayer(p.id);
+                    if (badges.length <= 0) return null;
+                    return badges.map((badge) => (
+                      <Tooltip key={badge.key} content={badge.tooltip}>
+                        <HudBadge title="Trade passes" icon={<span>🎟️</span>} count={badge.count} variant="pill" borderClassName={badge.borderClassName} />
+                      </Tooltip>
+                    ));
+                  })()}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                   {(['brown', 'lightBlue', 'pink', 'orange', 'red', 'yellow', 'green', 'darkBlue'] as ColorGroup[]).map((g) => {
                     const ownedIds = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g && (propsByTileId[t.id]?.ownerId === p.id));
                     if (ownedIds.length === 0) return null;
@@ -154,6 +135,26 @@ export default function PlayerTurnCards({
                       </Tooltip>
                     );
                   })}
+                  {(() => {
+                    const rrCount = BOARD_TILES.filter((t) => t.type === 'railroad' && (propsByTileId[t.id]?.ownerId === p.id)).length;
+                    if (rrCount <= 0) return null;
+                    const tip = railroadTooltipForPlayer(p.id);
+                    return (
+                      <Tooltip content={tip || `Railroads x${rrCount}`}>
+                        <HudBadge title="Railroads owned" icon={<span>🚂</span>} count={rrCount} variant="pill" borderClassName="border-white" />
+                      </Tooltip>
+                    );
+                  })()}
+                  {(() => {
+                    const utilCount = BOARD_TILES.filter((t) => t.type === 'utility' && (propsByTileId[t.id]?.ownerId === p.id)).length;
+                    if (utilCount <= 0) return null;
+                    const tip = utilitiesTooltipForPlayer(p.id);
+                    return (
+                      <Tooltip content={tip || `Utilities x${utilCount}`}>
+                        <HudBadge title="Utilities owned" icon={<span>🛠️</span>} count={utilCount} variant="pill" borderClassName="border-white" />
+                      </Tooltip>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

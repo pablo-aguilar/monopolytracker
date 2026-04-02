@@ -1921,7 +1921,12 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                 : '...';
 
   const canGoNext = (step: 0 | 1 | 2 | 3): boolean => {
-    if (step === 0) return true;
+    if (step === 0) {
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const pl = players.find((x) => x.id === pid);
+      if (pl?.inJail && !jailChoice) return false;
+      return true;
+    }
     if (step === 1) {
       const pid = players[turnIndex]?.id || players[0]?.id;
       const pl = players.find((x) => x.id === pid);
@@ -2030,6 +2035,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   // helper for nav button styles
   const nextBtnDisabled = (): boolean => {
     if (activeStep >= 2) return true;
+    if (activeStep === 0) {
+      const pid = players[turnIndex]?.id || players[0]?.id;
+      const pl = players.find((x) => x.id === pid);
+      return !!(pl?.inJail && !jailChoice);
+    }
     if (activeStep === 1) {
       const pid = players[turnIndex]?.id || players[0]?.id;
       const pl = players.find((x) => x.id === pid);
@@ -2835,73 +2845,96 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
               }}
             />
 
-            {/* Build/sell & trade quick access (pre-roll only) */}
-            {(() => {
-              if (activeStep !== 0) return null;
-              const pid = players[turnIndex]?.id || players[0]?.id;
-              if (!pid) return null;
-              const pl = players.find((x) => x.id === pid);
-              const allowPreRollActions = !pl?.inJail || jailChoice === 'pay';
-              const showManage =
-                allowPreRollActions &&
-                BOARD_TILES.some((t) => {
-                  if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
-                  return propsState.byTileId[t.id]?.ownerId === pid;
-                });
-              const showTrade = allowPreRollActions && (players?.length ?? 0) >= 2;
-              if (!showManage && !showTrade) return null;
-              return (
-                <div className="flex items-stretch gap-2 px-4 pb-4">
-                  {showManage && (
-                    <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Build & Sell">
-                      <div className="px-2 pt-2 pb-2">
-                        <IconLabelButton
-                          iconSrc="/icons/house.webp"
-                          iconClassName="h-[30px] w-[30px] object-contain"
-                          label="Manage"
-                          className="w-full border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
-                          onClick={() => {
-                            setBuildOverlayMode('manage');
-                            setLiquidationContext(null);
-                            setBuildOverlayOpen(true);
-                          }}
-                        />
-                      </div>
-                    </SectionCard>
-                  )}
-                  {showTrade && (
-                    <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Trade with a players">
-                      <div className="px-2 pt-2 pb-2">
-                        <IconLabelButton
-                          icon={<FaHandshake className="h-[30px] w-[30px]" aria-hidden />}
-                          iconClassName="inline-flex items-center justify-center text-current"
-                          label="Trade"
-                          className="border flex w-full border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                          onClick={() => setTradeModalOpen(true)}
-                        />
-                      </div>
-                    </SectionCard>
-                  )}
-                </div>
-              );
-            })()}
-
             <AnimatePresence mode="wait">
               {activeStep === 0 && (
-                <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2">
+                <motion.div key="pre" variants={pageVariants} initial="initial" animate="enter" exit="exit" className="space-y-2 pb-4">
                   {(() => {
                     // Jail choices when in jail
                     const pid = players[turnIndex]?.id || players[0]?.id;
                     const pl = players.find((x) => x.id === pid);
                     if (!pl?.inJail) return null;
                     const gojfTotal = (pl.gojfChance ?? 0) + (pl.gojfCommunity ?? 0);
+                    const jailStatus =
+                      jailChoice === 'pay'
+                        ? 'Pay $50'
+                        : jailChoice === 'gojf'
+                          ? `Use GOJF (${gojfTotal})`
+                          : jailChoice === 'roll'
+                            ? 'Try Doubles'
+                            : undefined;
                     return (
-                      <div className="flex flex-wrap gap-2 p-4 pt-1">
-                        <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
-                        {gojfTotal > 0 && (
-                          <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
+                      <div className="px-4 pt-1">
+                        <SectionCard
+                          className="p-0 overflow-hidden"
+                          title="Jail"
+                          status={jailStatus}
+                          headerTrailing={
+                            jailChoice != null ? (
+                              <DrawnUndoButton
+                                aria-label="Clear jail choice"
+                                onClick={() => setJailChoice(null)}
+                              />
+                            ) : undefined
+                          }
+                        >
+                          <div className="flex flex-wrap gap-2 p-3 pt-1">
+                            <TogglePillButton label={<span>Pay $50</span>} active={jailChoice === 'pay'} onToggle={() => setJailChoice(jailChoice === 'pay' ? null : 'pay')} variant="rose" />
+                            {gojfTotal > 0 && (
+                              <TogglePillButton label={<span>Use GOJF ({gojfTotal})</span>} active={jailChoice === 'gojf'} onToggle={() => setJailChoice(jailChoice === 'gojf' ? null : 'gojf')} variant="blue" />
+                            )}
+                            <TogglePillButton label={<span>Try Doubles</span>} active={jailChoice === 'roll'} onToggle={() => setJailChoice(jailChoice === 'roll' ? null : 'roll')} variant="emerald" />
+                          </div>
+                        </SectionCard>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Build/sell & trade quick access (pre-roll; below Jail when in jail) */}
+                  {(() => {
+                    const pid = players[turnIndex]?.id || players[0]?.id;
+                    if (!pid) return null;
+                    const pl = players.find((x) => x.id === pid);
+                    const allowPreRollActions = !pl?.inJail || jailChoice === 'pay';
+                    const showManage =
+                      allowPreRollActions &&
+                      BOARD_TILES.some((t) => {
+                        if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;
+                        return propsState.byTileId[t.id]?.ownerId === pid;
+                      });
+                    const showTrade = allowPreRollActions && (players?.length ?? 0) >= 2;
+                    if (!showManage && !showTrade) return null;
+                    return (
+                      <div className="flex items-stretch gap-2 px-4">
+                        {showManage && (
+                          <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Build & Sell">
+                            <div className="px-2 pt-2 pb-2">
+                              <IconLabelButton
+                                iconSrc="/icons/house.webp"
+                                iconClassName="h-[30px] w-[30px] object-contain"
+                                label="Manage"
+                                className="w-full border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                                onClick={() => {
+                                  setBuildOverlayMode('manage');
+                                  setLiquidationContext(null);
+                                  setBuildOverlayOpen(true);
+                                }}
+                              />
+                            </div>
+                          </SectionCard>
                         )}
-                        <TogglePillButton label={<span>Try Doubles</span>} active={jailChoice === 'roll'} onToggle={() => setJailChoice(jailChoice === 'roll' ? null : 'roll')} variant="emerald" />
+                        {showTrade && (
+                          <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Trade with a players">
+                            <div className="px-2 pt-2 pb-2">
+                              <IconLabelButton
+                                icon={<FaHandshake className="h-[30px] w-[30px]" aria-hidden />}
+                                iconClassName="inline-flex items-center justify-center text-current"
+                                label="Trade"
+                                className="border flex w-full border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                onClick={() => setTradeModalOpen(true)}
+                              />
+                            </div>
+                          </SectionCard>
+                        )}
                       </div>
                     );
                   })()}
@@ -3009,45 +3042,56 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                         </SectionCard>
 
                         {showBusTicketSection && (
-                          <SectionCard
-                            className={`mt-3 p-0 overflow-hidden ${diceChosen ? 'opacity-50 pointer-events-none' : ''}`}
-                            title="Ticket"
-                            status={busTeleportTo != null ? 'Ticket Used' : undefined}
-                            headerTrailing={
-                              busTeleportTo != null ? (
-                                <DrawnUndoButton
-                                  aria-label="Undo bus destination; return ticket and show Use Ticket"
-                                  onClick={cancelBusTeleportSelection}
-                                />
-                              ) : undefined
-                            }
-                          >
-                            <div className="p-3 pt-1">
-                              {busTeleportTo != null ? (
-                                <p className="text-sm text-fg flex flex-wrap items-center gap-1.5">
-                                  <FaBusAlt className="h-4 w-4 shrink-0 text-fg" aria-hidden />
-                                  <span className="text-muted">to</span>
-                                  <span className="font-medium text-fg">
-                                    {abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}
-                                  </span>
-                                </p>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center gap-2 w-full rounded-md px-3 py-1.5 text-sm font-semibold border border-game-bus text-game-bus hover:text-game-bus-muted hover:border-game-bus-muted hover:bg-violet-50 dark:hover:bg-violet-950/30"
-                                  onClick={() => {
-                                    setD6A(null);
-                                    setD6B(null);
-                                    setSpecial(null);
-                                    setCenterOverlay({ type: 'busTeleport' });
-                                  }}
-                                >
-                                  <FaBusAlt className="h-4 w-4 shrink-0" aria-hidden />
-                                  Use Ticket
-                                </button>
-                              )}
+                          <>
+                            <div
+                              className="relative flex items-center gap-2 px-1 py-2"
+                              role="separator"
+                              aria-orientation="horizontal"
+                            >
+                              <div className="h-px flex-1 bg-neutral-300 dark:bg-neutral-600" />
+                              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted">or</span>
+                              <div className="h-px flex-1 bg-neutral-300 dark:bg-neutral-600" />
                             </div>
-                          </SectionCard>
+                            <SectionCard
+                              className={`p-0 overflow-hidden ${diceChosen ? 'opacity-50 pointer-events-none' : ''}`}
+                              title="Ticket"
+                              status={busTeleportTo != null ? 'Ticket Used' : undefined}
+                              headerTrailing={
+                                busTeleportTo != null ? (
+                                  <DrawnUndoButton
+                                    aria-label="Undo bus destination; return ticket and show Use Ticket"
+                                    onClick={cancelBusTeleportSelection}
+                                  />
+                                ) : undefined
+                              }
+                            >
+                              <div className="p-3 pt-1">
+                                {busTeleportTo != null ? (
+                                  <p className="text-sm text-fg flex flex-wrap items-center gap-1.5">
+                                    <FaBusAlt className="h-4 w-4 shrink-0 text-fg" aria-hidden />
+                                    <span className="text-muted">to</span>
+                                    <span className="font-medium text-fg">
+                                      {abbreviateAvenueInTileName(getTileByIndex(busTeleportTo).name)}
+                                    </span>
+                                  </p>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center justify-center gap-2 w-full rounded-md px-3 py-1.5 text-sm font-semibold border border-game-bus text-game-bus hover:text-game-bus-muted hover:border-game-bus-muted hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                                    onClick={() => {
+                                      setD6A(null);
+                                      setD6B(null);
+                                      setSpecial(null);
+                                      setCenterOverlay({ type: 'busTeleport' });
+                                    }}
+                                  >
+                                    <FaBusAlt className="h-4 w-4 shrink-0" aria-hidden />
+                                    Use Ticket
+                                  </button>
+                                )}
+                              </div>
+                            </SectionCard>
+                          </>
                         )}
                       </div>
                     );
@@ -3175,6 +3219,13 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                     const pendingJackpot = isTripleOnes && tripleTeleportTo != null ? 1000 : 0;
                     const effectivePreviewMoney = p.money + pendingJackpot;
                     const groupVariant = t.type === 'property' ? 'emerald' as const : 'slate' as const;
+                    const propertyPurchaseCommitted =
+                      buySelected ||
+                      auctionItSelected ||
+                      (stagedAuction != null && stagedAuction.tileId === t.id);
+                    const propertyPurchaseStatus = propertyPurchaseCommitted
+                      ? (buySelected ? 'Buy' : 'Auction')
+                      : undefined;
 
                     return (
                       <div className="space-y-3">
@@ -3229,7 +3280,28 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           <div className="space-y-3">
                         {/* Property (buy/auction it) */}
                         {isUnownedBuyable && (
-                          <SectionCard className="p-0 overflow-hidden" title="Property">
+                          <SectionCard
+                            className="p-0 overflow-hidden"
+                            title="Property"
+                            status={propertyPurchaseStatus}
+                            headerTrailing={
+                              propertyPurchaseCommitted ? (
+                                <DrawnUndoButton
+                                  aria-label="Clear property choice; choose buy or auction again"
+                                  onClick={() => {
+                                    const hadBuy = buySelected;
+                                    setBuySelected(false);
+                                    setAuctionItSelected(false);
+                                    setAuctionOpen(false);
+                                    setStagedAuction(null);
+                                    if (hadBuy) {
+                                      setPostAction((pa) => (pa === 'Buy Property' ? 'None' : pa));
+                                    }
+                                  }}
+                                />
+                              ) : undefined
+                            }
+                          >
                             <div className="p-3 pt-1">
                               <PurchaseActionsRow
                                 tileName={t.name}
@@ -3271,16 +3343,26 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           <SectionCard
                             className="p-0 overflow-hidden"
                             header={
-                              <div className="border-b border-surface px-3 pt-3 pb-2">
+                              <div className="flex shrink-0 items-center justify-between gap-2 px-3 pt-3 pb-2">
                                 <div
                                   className={
                                     rentDueLabel
-                                      ? 'text-xs font-medium text-muted'
-                                      : 'text-[11px] font-semibold uppercase tracking-wide text-subtle'
+                                      ? 'min-w-0 flex-1 flex flex-wrap items-center gap-1 text-xs font-medium text-muted'
+                                      : 'min-w-0 flex-1 flex flex-wrap items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-subtle'
                                   }
                                 >
                                   {paymentsHeader}
                                 </div>
+                                {rentInfo && rentSelected && !hidePayRentToggle ? (
+                                  <DrawnUndoButton
+                                    aria-label="Clear pay rent selection"
+                                    onClick={() => {
+                                      setRentSelected(false);
+                                      setResolvedRentKey(null);
+                                      setUseRentPassSelected(false);
+                                    }}
+                                  />
+                                ) : null}
                               </div>
                             }
                           >
@@ -3610,96 +3692,90 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   );
                 })()
               ) : (
-                <motion.div
-                  key="nav-summary"
-                  data-qa="play-console-footer"
-                  className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-                >
-                  {(() => {
-                    const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
-                    const isDoublesNow =
-                      d6A !== null &&
-                      d6B !== null &&
-                      (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
-                    const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
-                    // Triples (e.g. 2-2-2) are also doubles, but should NOT create a doubles chain.
-                    const continueRoll =
-                      isDoublesNow &&
-                      activeStep !== 3 &&
-                      !isTriple &&
-                      !thirdDoublesNow &&
-                      !jailReleaseDoublesRoll &&
-                      (busTeleportTo == null) &&
-                      (tripleTeleportTo == null);
-                    const birthdayBlocked = birthdayGiftRequiredButNotResolved();
-                    const postResolutionBlocked =
-                      cardDrawRequiredButNotSelected() ||
-                      rentRequiredButNotSelected() ||
-                      taxRequiredButNotSelected() ||
-                      purchaseOrAuctionRequiredButNotResolved() ||
-                      birthdayBlocked;
-                    const blocked = isQueuedFlowActive
+                (() => {
+                  const isQueuedFlowActive = queuedPostPending || postActionQueue.length > 0;
+                  const isDoublesNow =
+                    d6A !== null &&
+                    d6B !== null &&
+                    (d6A === d6B || (typeof special === 'number' && (special === d6A || special === d6B)));
+                  const thirdDoublesNow = rollCount >= 3 && isDoublesNow && (busTeleportTo == null) && (tripleTeleportTo == null);
+                  const continueRoll =
+                    isDoublesNow &&
+                    activeStep !== 3 &&
+                    !isTriple &&
+                    !thirdDoublesNow &&
+                    !jailReleaseDoublesRoll &&
+                    (busTeleportTo == null) &&
+                    (tripleTeleportTo == null);
+                  const birthdayBlocked = birthdayGiftRequiredButNotResolved();
+                  const postResolutionBlocked =
+                    cardDrawRequiredButNotSelected() ||
+                    rentRequiredButNotSelected() ||
+                    taxRequiredButNotSelected() ||
+                    purchaseOrAuctionRequiredButNotResolved() ||
+                    birthdayBlocked;
+                  const blocked = isQueuedFlowActive
+                    ? postResolutionBlocked
+                    : activeStep === 3
                       ? postResolutionBlocked
-                      : activeStep === 3
-                        ? postResolutionBlocked
-                        : !hasRollWithSpecialSelected || postResolutionBlocked;
-                    if ((activeStep === 2 || activeStep === 3) && stagedCardStepMeta) {
-                      return (
-                        <button
-                          type="button"
-                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${postResolutionBlocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                          disabled={postResolutionBlocked}
-                          onClick={() => {
-                            if (postResolutionBlocked) return;
-                            transitionPostToCardStep();
-                          }}
-                        >
-                          Next
-                        </button>
-                      );
-                    }
-                    if (isQueuedFlowActive) {
-                      return (
-                        <button
-                          type="button"
-                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                          disabled={blocked}
-                          onClick={() => {
-                            if (blocked) return;
-                            const pid = players[turnIndex]?.id || players[0]?.id;
-                            if (!pid) return;
-                            finalizeTurn(pid);
-                          }}
-                        >
-                          Next
-                        </button>
-                      );
-                    }
-                    if (continueRoll) {
-                      // During Bus flow, hide "Next Roll" until the required bus ticket has been drawn.
-                      if (requiresBusCard && !diceBusSelectedCardId) return null;
-                      return (
-                        <button
-                          type="button"
-                          className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                          disabled={blocked}
-                          onClick={() => {
-                            if (blocked) return;
-                            const pid = players[turnIndex]?.id || players[0]?.id;
-                            if (!pid) return;
-                            finalizeTurn(pid);
-                          }}
-                        >
-                          Next Roll
-                        </button>
-                      );
-                    }
-                    // End-of-turn: show Summary button with hold-to-end
-                    return (
+                      : !hasRollWithSpecialSelected || postResolutionBlocked;
+
+                  let footerKey: string;
+                  let inner: React.ReactNode;
+
+                  if ((activeStep === 2 || activeStep === 3) && stagedCardStepMeta) {
+                    footerKey = 'nav-post-card-next';
+                    inner = (
+                      <button
+                        type="button"
+                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${postResolutionBlocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        disabled={postResolutionBlocked}
+                        onClick={() => {
+                          if (postResolutionBlocked) return;
+                          transitionPostToCardStep();
+                        }}
+                      >
+                        Next
+                      </button>
+                    );
+                  } else if (isQueuedFlowActive) {
+                    footerKey = 'nav-post-queued-next';
+                    inner = (
+                      <button
+                        type="button"
+                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (!pid) return;
+                          finalizeTurn(pid);
+                        }}
+                      >
+                        Next
+                      </button>
+                    );
+                  } else if (continueRoll) {
+                    if (requiresBusCard && !diceBusSelectedCardId) return null;
+                    footerKey = 'nav-post-next-roll';
+                    inner = (
+                      <button
+                        type="button"
+                        className={`inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-lg font-semibold ${blocked ? 'bg-emerald-600/40 text-white/60 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        disabled={blocked}
+                        onClick={() => {
+                          if (blocked) return;
+                          const pid = players[turnIndex]?.id || players[0]?.id;
+                          if (!pid) return;
+                          finalizeTurn(pid);
+                        }}
+                      >
+                        Next Roll
+                      </button>
+                    );
+                  } else {
+                    footerKey = 'nav-post-summary';
+                    inner = (
                       <motion.button
                         type="button"
                         className={`relative inline-flex w-full touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow select-none ${
@@ -3741,8 +3817,28 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                         <span className="absolute left-0 top-0 h-full rounded-md bg-emerald-500/40" style={{ width: `${holdProgress}%` }} aria-hidden />
                       </motion.button>
                     );
-                  })()}
-                </motion.div>
+                  }
+
+                  // Match pre-roll Next: no footer strip until the CTA is actionable (avoid disabled Summary/Next while drawing cards, etc.).
+                  if (footerKey === 'nav-post-card-next' && postResolutionBlocked) return null;
+                  if (footerKey === 'nav-post-queued-next' && blocked) return null;
+                  if (footerKey === 'nav-post-next-roll' && blocked) return null;
+                  if (footerKey === 'nav-post-summary' && blocked) return null;
+
+                  return (
+                    <motion.div
+                      key={footerKey}
+                      data-qa="play-console-footer"
+                      className="flex items-center justify-end gap-0 py-3 px-3 bg-surface-1 rounded-b-3xl"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                    >
+                      {inner}
+                    </motion.div>
+                  );
+                })()
               )}
             </AnimatePresence>
           </>
