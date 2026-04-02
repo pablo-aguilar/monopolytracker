@@ -28,7 +28,9 @@ type TabId = 'a' | 'b' | 'special' | 'teleport';
 
 function btnClass(active: boolean): string {
   return `inline-flex items-center justify-center h-10 min-w-8 rounded-md border px-2 text-base font-medium ${
-    active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+    active
+      ? 'border-slate-800 bg-slate-100 font-semibold text-slate-900 shadow-sm dark:border-slate-300 dark:bg-slate-800 dark:text-slate-50'
+      : 'bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-800'
   }`;
 }
 
@@ -364,7 +366,7 @@ export default function DiceSelector({
   const tabLabelClass = (id: TabId): string => {
     const on = activeTab === id;
     return `relative z-[2] flex flex-1 flex-col items-center justify-center gap-1 rounded-full border border-transparent px-2 py-2 text-center text-xs font-semibold transition-colors sm:text-sm pointer-events-none ${
-      on ? 'text-emerald-900 dark:text-emerald-100' : 'text-neutral-500 dark:text-neutral-400'
+      on ? 'text-slate-900 dark:text-slate-100' : 'text-neutral-500 dark:text-neutral-400'
     }`;
   };
 
@@ -390,7 +392,7 @@ export default function DiceSelector({
         onKeyDown={onTabListKeyDown}
         onPointerDown={onStripPointerDown}
         onPointerUp={onStripPointerUp}
-        className="relative flex h-11 items-center gap-0.5 border-b border-tint bg-surface-0 py-0 pl-1 pr-1 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-neutral-600 dark:focus-visible:ring-offset-neutral-900 rounded-full"
+        className="relative flex h-11 items-center gap-0.5 border-b border-tint bg-surface-0 py-0 pl-1 pr-1 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 dark:border-neutral-600 dark:focus-visible:ring-neutral-500 dark:focus-visible:ring-offset-neutral-900 rounded-full"
       >
         <motion.div
           ref={pillRef}
@@ -402,7 +404,7 @@ export default function DiceSelector({
           dragMomentum={false}
           dragTransition={{ bounceStiffness: 100, bounceDamping: 18 }}
           style={{ x: dragX, touchAction: 'none' }}
-          className="absolute top-1 bottom-1 z-[3] cursor-grab rounded-full border border-emerald-500/45 bg-emerald-500/10 shadow-sm active:cursor-grabbing dark:border-emerald-400/40 dark:bg-emerald-400/10 dark:shadow-emerald-950/20"
+          className="absolute top-1 bottom-1 z-[3] cursor-grab rounded-full border border-slate-800 bg-slate-800/10 shadow-sm active:cursor-grabbing dark:border-slate-300 dark:bg-slate-300/10 dark:shadow-black/25"
           initial={false}
           animate={{ left: pill.left, width: Math.max(0, pill.width) }}
           transition={pillLayoutTransition}
