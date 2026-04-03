@@ -14,21 +14,22 @@ export interface TogglePillButtonProps {
 }
 
 function classesFor(variant: Variant, active: boolean): string {
-  const base = 'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold shadow select-none w-full';
+  // Light shadow only — active states use tint + border (not solid fills) so they don’t read like primary footer CTAs.
+  const base = 'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold shadow-sm select-none w-full';
   if (active) {
     switch (variant) {
       case 'rose':
-        return `${base} bg-rose-600 text-white`;
+        return `${base} border border-rose-500/70 bg-rose-100 text-rose-900 dark:border-rose-400/50 dark:bg-rose-950/40 dark:text-rose-100`;
       case 'orange':
-        return `${base} bg-orange-600 text-white`;
+        return `${base} border border-orange-500/70 bg-orange-100 text-orange-900 dark:border-orange-400/55 dark:bg-orange-950/40 dark:text-orange-100`;
       case 'emerald':
-        return `${base} bg-emerald-600 text-white`;
+        return `${base} border border-emerald-600/50 bg-emerald-50 text-emerald-900 dark:border-emerald-400/45 dark:bg-emerald-950/35 dark:text-emerald-100`;
       case 'blue':
-        return `${base} bg-blue-600 text-white`;
+        return `${base} border border-blue-500/70 bg-blue-100 text-blue-900 dark:border-blue-400/50 dark:bg-blue-950/40 dark:text-blue-100`;
       case 'bus':
-        return `${base} bg-game-bus text-white`;
+        return `${base} border border-game-bus bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100`;
       default:
-        return `${base} bg-slate-700 text-white`;
+        return `${base} border border-slate-500/70 bg-slate-200 text-slate-900 dark:border-slate-400/50 dark:bg-slate-800 dark:text-slate-100`;
     }
   }
   switch (variant) {

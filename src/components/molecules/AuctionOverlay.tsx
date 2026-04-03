@@ -1,7 +1,14 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
-import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type BoardTileData } from '@/data/board';
+import {
+  BOARD_TILES,
+  getBoardTileStripeStyle,
+  getTileById,
+  getTileHeaderBgClass,
+  getTileHeaderTextClass,
+  type BoardTileData,
+} from '@/data/board';
 import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
 import AvatarToken from '@/components/atoms/AvatarToken';
@@ -97,7 +104,10 @@ export default function AuctionOverlay({ open, onClose, bankOwnedByTileId, playe
               <div className="space-y-2 p-2">
                 {/* <div className="text-xs font-medium">Step 2 — Winner and price</div> */}
                 {chosen && (
-                  <div className={`rounded-md border border-surface p-2 text-xs ${chosenBg} ${chosenFg}`}>
+                  <div
+                    className={`rounded-md border border-surface p-2 text-xs ${chosenBg} ${chosenFg}`}
+                    style={chosen ? getBoardTileStripeStyle(chosen) : undefined}
+                  >
                     <div className="font-semibold">{chosen.name}</div>
                     <div className="opacity-80">Type: {chosen.type}</div>
                   </div>

@@ -103,16 +103,9 @@ export default function PlayerTurnCards({
                   )}
                 </div>
               </div>
-              {/* inventory HUD: bus / jail / passes stay left; properties + railroads + utilities share one wrap row */}
+              {/* inventory HUD: jail / passes stay left; bus (first when owned) + properties + railroads + utilities share one wrap row */}
               <div className="flex items-center gap-3 px-1 pb-1 text-sm text-muted">
                 <div className="flex shrink-0 items-center gap-3">
-                  {(Number(p.busTickets ?? 0) > 0) && (
-                    <HudBadge
-                      title="Bus tickets"
-                      icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />}
-                      count={Number(p.busTickets ?? 0)}
-                    />
-                  )}
                   {(Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0) > 0) && (<HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={Number(p.gojfChance ?? 0) + Number(p.gojfCommunity ?? 0)} />)}
                   {(() => {
                     const badges = tradePassBadgesForPlayer(p.id);
@@ -125,6 +118,13 @@ export default function PlayerTurnCards({
                   })()}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                  {(Number(p.busTickets ?? 0) > 0) && (
+                    <HudBadge
+                      title="Bus tickets"
+                      icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />}
+                      count={Number(p.busTickets ?? 0)}
+                    />
+                  )}
                   {(['brown', 'lightBlue', 'pink', 'orange', 'red', 'yellow', 'green', 'darkBlue'] as ColorGroup[]).map((g) => {
                     const ownedIds = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g && (propsByTileId[t.id]?.ownerId === p.id));
                     if (ownedIds.length === 0) return null;

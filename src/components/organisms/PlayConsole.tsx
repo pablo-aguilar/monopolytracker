@@ -14,7 +14,20 @@ import SegmentedControl from '@/components/molecules/SegmentedControl';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
-import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';
+import {
+  BOARD_TILES,
+  BOARD_SIZE,
+  FREE_PARKING_INDEX,
+  GO_TO_JAIL_INDEX,
+  getBoardTileStripeStyle,
+  getTileByIndex,
+  getTileHeaderBgClass,
+  getForwardDistance,
+  passedGo,
+  wrapIndex,
+  JAIL_INDEX,
+  type ColorGroup,
+} from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle, type CardEffect } from '@/data/cards';
 import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
@@ -1663,7 +1676,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     if (purchaseOrAuctionRequiredButNotResolved()) return;
     setHoldProgress(0);
     const start = Date.now();
-    const duration = 3000;
+    const duration = 1000;
     holdIntervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - start;
       const progress = Math.min(100, Math.round((elapsed / duration) * 100));
@@ -2113,32 +2126,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
     }
     if (tile.type === 'railroad') return { bgClass: 'bg-stone-300', textClass: 'text-neutral-900', borderClass: 'border-stone-400', textStrongClass: 'text-stone-600' };
     return { bgClass: 'bg-amber-600', textClass: 'text-white', borderClass: 'border-amber-600', textStrongClass: 'text-amber-600' };
-  }
-
-  function getTileHeaderBg(tile: ReturnType<typeof getTileByIndex>): string {
-    if (tile.type === 'property') {
-      switch (tile.group) {
-        case 'brown':
-          return 'bg-amber-800';
-        case 'lightBlue':
-          return 'bg-sky-300';
-        case 'pink':
-          return 'bg-pink-400';
-        case 'orange':
-          return 'bg-orange-400';
-        case 'red':
-          return 'bg-red-600';
-        case 'yellow':
-          return 'bg-yellow-400';
-        case 'green':
-          return 'bg-green-600';
-        case 'darkBlue':
-          return 'bg-blue-900';
-      }
-    }
-    if (tile.type === 'railroad') return 'bg-stone-300';
-    if (tile.type === 'utility') return 'bg-zinc-200';
-    return 'bg-neutral-200';
   }
 
   function getGroupBorderClass(group: ColorGroup): string {
@@ -2923,12 +2910,12 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           </SectionCard>
                         )}
                         {showTrade && (
-                          <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Trade with a players">
+                          <SectionCard fillHeight className="min-w-0 flex-1 p-0 overflow-hidden" title="Trade with players">
                             <div className="px-2 pt-2 pb-2">
                               <IconLabelButton
                                 icon={<FaHandshake className="h-[30px] w-[30px]" aria-hidden />}
                                 iconClassName="inline-flex items-center justify-center text-current"
-                                label="Trade"
+                                label="Deal"
                                 className="border flex w-full border-indigo-500 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                                 onClick={() => setTradeModalOpen(true)}
                               />
@@ -4311,7 +4298,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
 
       {/* Centered board picker for teleports */}
       <AnimatePresence>
-        {centerOverlay.type && (
+        {centerOverlay.type &&
+          (() => {
+            const tp = players[turnIndex] ?? players[0];
+            const teleporterEmoji = tp ? (AVATARS.find((a) => a.key === tp.avatarKey)?.emoji ?? '🙂') : '🙂';
+            return (
           <motion.div
             key="center-bus"
             initial={{ opacity: 0 }}
@@ -4324,10 +4315,43 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
           >
             <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
               <OverlayHeader
-                title={centerOverlay.type === 'busTeleport' ? 'Select destination (Bus)' : 'Select destination (Teleport)'}
-                subtitle="Pick a tile to set your teleport destination."
+                title={
+                  <span className="flex items-center gap-2 min-w-0">
+                    {tp ? (
+                      <div
+                        className="shrink-0"
+                        style={{ ['--player-color' as any]: tp.color } as React.CSSProperties}
+                      >
+                        <AvatarToken
+                          emoji={teleporterEmoji}
+                          borderColorClass="border-[color:var(--player-color)]"
+                          ring
+                          ringColorClass="ring-[color:var(--player-color)]"
+                          size={28}
+                        />
+                      </div>
+                    ) : null}
+                    <span className="flex min-w-0 items-center gap-2 truncate">
+                      <span className="min-w-0 truncate">Select destination</span>
+                      {centerOverlay.type === 'busTeleport' ? (
+                        <FaBusAlt
+                          className="h-4 w-4 shrink-0 text-fg"
+                          aria-label="Bus"
+                          role="img"
+                        />
+                      ) : (
+                        <GiTeleport
+                          className="h-4 w-4 shrink-0 text-fg"
+                          aria-label="Teleport"
+                          role="img"
+                        />
+                      )}
+                    </span>
+                  </span>
+                }
                 onClose={() => setCenterOverlay({ type: null })}
                 className="p-1 pl-3 bg-surface-1 rounded-t-xl"
+                titleClassName="min-w-0 flex-1 pr-2 text-sm font-semibold"
               />
               <div className="grid grid-cols-5 sm:grid-cols-8 sm:gap-2 gap-1  max-h-[70vh] overflow-auto px-2 pt-2 pb-4 sm:px-4">
                 {BOARD_TILES.map((t) => {
@@ -4346,7 +4370,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                         </div>
                       )}
                       {ownerColor && (
-                        <div className="pointer-events-none absolute left-0 right-0 top-2 bottom-0 rounded-xl" style={{ outline: `3px solid ${ownerColor}` }} aria-hidden />
+                        <div className="pointer-events-none absolute left-0 right-0 top-2 bottom-0 rounded-lg" style={{ outline: `3px solid ${ownerColor}` }} aria-hidden />
                       )}
                       <button
                         onClick={() => {
@@ -4379,11 +4403,11 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           setCenterOverlay({ type: null });
                           setPredictedTo(t.index);
                         }}
-                        className={`relative rounded-xl border text-[11px] text-left bg-white dark:bg-neutral-900 ${t.index === (players[turnIndex]?.positionIndex ?? 0) ? 'border-emerald-500' : 'border-neutral-200 dark:border-neutral-700'} hover:shadow w-full`}
+                        className="relative rounded-xl text-[11px] text-left bg-white dark:bg-neutral-900 border-0 hover:shadow w-full"
                         title={t.name}
                       >
                         {/* colored header */}
-                        <div className={`h-2 rounded-t-xl ${getTileHeaderBg(t)}`} />
+                        <div className={`h-2 rounded-t-xl ${getTileHeaderBgClass(t)}`} style={getBoardTileStripeStyle(t)} />
                         <div className="p-2 space-y-1">
                           <div className="font-semibold text-[12px] truncate">{t.name}</div>
                         </div>
@@ -4397,10 +4421,10 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   );
                 })}
               </div>
-              <div className="mt-2 text-xs opacity-70">GO is at index 0 (top-right).</div>
             </div>
           </motion.div>
-        )}
+            );
+          })()}
       </AnimatePresence>
       
       {/* Trade modal */}

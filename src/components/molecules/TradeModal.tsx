@@ -3,7 +3,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import MoneyInput from '@/components/atoms/MoneyInput';
 import { AVATARS } from '@/data/avatars';
-import { BOARD_TILES, getTileById, getTileHeaderBgClass, getTileHeaderTextClass, type ColorGroup } from '@/data/board';
+import {
+  BOARD_TILES,
+  getBoardTileStripeStyle,
+  getTileById,
+  getTileHeaderBgClass,
+  getTileHeaderTextClass,
+  type ColorGroup,
+} from '@/data/board';
 import type { TradePassEntry, TradePassScopeType } from '@/features/tradePasses/tradePassesSlice';
 import { FaCheck, FaChevronDown } from 'react-icons/fa';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
@@ -435,7 +442,7 @@ export default function TradeModal({
     const resolvePropertyCards = (
       selectedIds: string[],
       inventory: PlayerTradeInventory | undefined
-    ): Array<{ id: string; name: string; bgClass: string; fgClass: string }> => {
+    ): Array<{ id: string; name: string; bgClass: string; fgClass: string; bgStyle?: React.CSSProperties }> => {
       const map = new Map((inventory?.properties ?? []).map((p) => [p.id, p.name] as const));
       return selectedIds.map((id) => {
         const tile = getTileById(id);
@@ -444,6 +451,7 @@ export default function TradeModal({
           name: map.get(id) ?? tile?.name ?? id,
           bgClass: tile ? getTileHeaderBgClass(tile) : 'bg-surface-1',
           fgClass: tile ? getTileHeaderTextClass(tile) : 'text-fg',
+          bgStyle: tile ? getBoardTileStripeStyle(tile) : undefined,
         };
       });
     };
@@ -568,6 +576,7 @@ export default function TradeModal({
                             const selected = offer1.propertyIds.includes(prop.id);
                             const bgClass = tile ? getTileHeaderBgClass(tile) : 'bg-surface-1';
                             const fgClass = tile ? getTileHeaderTextClass(tile) : 'text-fg';
+                            const bgStyle = tile ? getBoardTileStripeStyle(tile) : undefined;
                             return (
                               <button
                                 key={prop.id}
@@ -576,7 +585,7 @@ export default function TradeModal({
                                 onClick={() => toggleProperty(1, prop.id)}
                                 className={`w-full rounded-md border text-left transition-colors ${selected ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-surface hover:border-neutral-400 dark:hover:border-neutral-500'}`}
                               >
-                                <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`}>
+                                <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`} style={bgStyle}>
                                   <span className="truncate text-sm font-semibold">{prop.name}</span>
                                   <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}><FaCheck className="h-3.5 w-3.5" aria-hidden /></span>
                                 </div>
@@ -828,6 +837,7 @@ export default function TradeModal({
                                 const selected = offer2.propertyIds.includes(prop.id);
                                 const bgClass = tile ? getTileHeaderBgClass(tile) : 'bg-surface-1';
                                 const fgClass = tile ? getTileHeaderTextClass(tile) : 'text-fg';
+                                const bgStyle = tile ? getBoardTileStripeStyle(tile) : undefined;
                                 return (
                                   <button
                                     key={prop.id}
@@ -836,7 +846,7 @@ export default function TradeModal({
                                     onClick={() => toggleProperty(2, prop.id)}
                                     className={`w-full rounded-md border text-left transition-colors ${selected ? 'border-emerald-500 ring-1 ring-emerald-500/50' : 'border-surface hover:border-neutral-400 dark:hover:border-neutral-500'}`}
                                   >
-                                    <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`}>
+                                    <div className={`flex items-center justify-between gap-2 px-2 py-1.5 ${bgClass} ${fgClass}`} style={bgStyle}>
                                       <span className="truncate text-sm font-semibold">{prop.name}</span>
                                       <span className={`text-sm font-semibold ${selected ? 'opacity-100' : 'opacity-0'}`}><FaCheck className="h-3.5 w-3.5" aria-hidden /></span>
                                     </div>
@@ -1027,7 +1037,9 @@ export default function TradeModal({
                           <div className="mt-2 grid grid-cols-1 gap-2">
                             {tradeSummary.to.properties.map((prop) => (
                               <div key={`gain-you-property-${prop.id}`} className="rounded-md border border-surface overflow-hidden">
-                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`}>{prop.name}</div>
+                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`} style={prop.bgStyle}>
+                                  {prop.name}
+                                </div>
                               </div>
                             ))}
                             {tradeSummary.to.cash > 0 && <SummaryCardTile label={`$${tradeSummary.to.cash}`} sublabel="Cash" />}
@@ -1066,7 +1078,9 @@ export default function TradeModal({
                           <div className="mt-2 grid grid-cols-1 gap-2">
                             {tradeSummary.from.properties.map((prop) => (
                               <div key={`gain-other-property-${prop.id}`} className="rounded-md border border-surface overflow-hidden">
-                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`}>{prop.name}</div>
+                                <div className={`px-2 py-1.5 text-sm font-semibold ${prop.bgClass} ${prop.fgClass}`} style={prop.bgStyle}>
+                                  {prop.name}
+                                </div>
                               </div>
                             ))}
                             {tradeSummary.from.cash > 0 && <SummaryCardTile label={`$${tradeSummary.from.cash}`} sublabel="Cash" />}

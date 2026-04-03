@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BOARD_TILES, type BoardTileData } from '@/data/board';
+import { BOARD_TILES, getBoardTileStripeStyle, getTileHeaderBgClass, type BoardTileData } from '@/data/board';
 import { AVATARS } from '@/data/avatars';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
 
@@ -36,9 +36,13 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
             if (e.target === e.currentTarget) onClose();
           }}
         >
-          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-            <OverlayHeader title={title} onClose={onClose} className="mb-2" />
-            <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 max-h-[70vh] overflow-auto">
+          <div className="w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 py-0 px-0 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+            <OverlayHeader
+              title={title}
+              onClose={onClose}
+              rowClassName="pt-2 pb-2 pl-3.5 pr-2"
+            />
+            <div className="grid grid-cols-4 lg:grid-cols-6 gap-2 max-h-[70vh] overflow-auto pl-4 pr-4 pb-4">
               {BOARD_TILES.map((t) => {
                 if (filterTileIds && !filterTileIds.includes(t.id)) return null;
                 const onTile = players.filter((pl) => pl.positionIndex === t.index);
@@ -59,14 +63,14 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
                       </div>
                     )}
                     {ownerColor && (
-                      <div className="pointer-events-none absolute left-0 right-0 top-2 bottom-0 rounded-xl" style={{ outline: `3px solid ${ownerColor}` }} aria-hidden />
+                      <div className="pointer-events-none absolute left-0 right-0 top-2 bottom-0 rounded-lg" style={{ outline: `3px solid ${ownerColor}` }} aria-hidden />
                     )}
                     <ButtonTag
                       className={`relative rounded-xl border text-[11px] text-left bg-white dark:bg-neutral-900 ${isActive ? 'border-emerald-500' : 'border-neutral-200 dark:border-neutral-700'} ${canSelect ? 'hover:shadow' : ''} w-full`}
                       title={t.name}
                       {...onClickProp}
                     >
-                      <div className={`h-2 rounded-t-xl ${getTileHeaderBg(t)}`} />
+                      <div className={`h-2 rounded-t-xl ${getTileHeaderBgClass(t)}`} style={getBoardTileStripeStyle(t)} />
                       <div className="p-2 space-y-1">
                         <div className="font-semibold text-xs truncate">{t.name} </div>
                       </div>
@@ -79,40 +83,10 @@ export default function BoardPickerOverlay({ open, title = 'Board', mode = 'view
                 );
               })}
             </div>
-            <div className="mt-2 text-xs opacity-70">GO is at index 0 (top-right).</div>
           </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
-
-function getTileHeaderBg(tile: BoardTileData): string {
-  if (tile.type === 'property') {
-    switch (tile.group) {
-      case 'brown':
-        return 'bg-amber-800';
-      case 'lightBlue':
-        return 'bg-sky-300';
-      case 'pink':
-        return 'bg-pink-400';
-      case 'orange':
-        return 'bg-orange-400';
-      case 'red':
-        return 'bg-red-600';
-      case 'yellow':
-        return 'bg-yellow-400';
-      case 'green':
-        return 'bg-green-600';
-      case 'darkBlue':
-        return 'bg-blue-900';
-      default:
-        return 'bg-neutral-200';
-    }
-  }
-  if (tile.type === 'railroad') return 'bg-stone-300';
-  if (tile.type === 'utility') return 'bg-zinc-200';
-  return 'bg-neutral-200';
-}
-
 

@@ -9,7 +9,7 @@ export interface MortgageButtonProps {
 }
 
 export default function MortgageButton({ label, onClick, danger = false, disabled = false, className }: MortgageButtonProps): JSX.Element {
-  const base = 'rounded-md border px-2 py-1 text-xs';
+  const base = 'rounded-md border px-2 py-1 text-xs text-fg bg-surface-tint-2';
   const variant = danger ? 'border-rose-500 text-rose-600' : 'border-zinc-300 text-zinc-700 dark:text-zinc-300';
   const disabledCls = disabled ? 'opacity-50 cursor-not-allowed' : '';
   return (

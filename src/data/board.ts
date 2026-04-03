@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 // #index
 // - //#types: tile and economics types
 // - //#constants: board constants and indices
@@ -171,6 +173,25 @@ export function getTileById(id: string): BoardTileData {
   return tile;
 }
 
+/** Yellow/black hazard stripes — matches BuildSell railroad group wrapper. */
+export const BOARD_TILE_RAILROAD_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: '#facc15',
+  backgroundImage: 'repeating-linear-gradient(135deg, #facc15 0 15px, #0a0a0a 15px 19px)',
+};
+
+/** Zinc field with diagonal hatch — matches BuildSell utilities group wrapper. */
+export const BOARD_TILE_UTILITY_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: 'var(--color-zinc-400)',
+  backgroundImage:
+    'repeating-linear-gradient(45deg, rgba(0,0,0,0.5) 0px, rgba(0,0,0,0.5) 6px, rgba(0,0,0,0) 6px, rgba(0,0,0,0) 12px)',
+};
+
+export function getBoardTileStripeStyle(tile: BoardTileData): CSSProperties | undefined {
+  if (tile.type === 'railroad') return BOARD_TILE_RAILROAD_STRIPE_STYLE;
+  if (tile.type === 'utility') return BOARD_TILE_UTILITY_STRIPE_STYLE;
+  return undefined;
+}
+
 export function getTileHeaderBgClass(tile: BoardTileData): string {
   if (tile.type === 'property') {
     switch (tile.group) {
@@ -194,8 +215,8 @@ export function getTileHeaderBgClass(tile: BoardTileData): string {
         return 'bg-neutral-200';
     }
   }
-  if (tile.type === 'railroad') return 'bg-stone-300';
-  if (tile.type === 'utility') return 'bg-zinc-200';
+  if (tile.type === 'railroad' || tile.type === 'utility') return '';
+  if (tile.type === 'busStop' || tile.id === 'birthday-gift') return 'bg-game-bus';
   return 'bg-neutral-200';
 }
 

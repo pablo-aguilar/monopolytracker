@@ -1,10 +1,16 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BOARD_TILES, type BoardTileData, type ColorGroup } from '@/data/board';
+import {
+  BOARD_TILES,
+  BOARD_TILE_RAILROAD_STRIPE_STYLE,
+  BOARD_TILE_UTILITY_STRIPE_STYLE,
+  type BoardTileData,
+  type ColorGroup,
+} from '@/data/board';
 import MortgageButton from '@/components/atoms/MortgageButton';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
 import { DndContext, type DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { computeRent, countGroupOwned } from '@/features/selectors/rent';
+import { computeRent, countGroupOwned, countRailroadsOwned, countUtilitiesOwned } from '@/features/selectors/rent';
 import type { RootState } from '@/app/store';
 import { BsCashStack } from 'react-icons/bs';
 import { MdOutlineMoreHoriz } from 'react-icons/md';
@@ -462,9 +468,13 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
               <OverlayHeader
                 title={isLiquidationMode ? 'Liquidate & Pay' : 'Property Management'}
                 onClose={onClose}
-                subtitle={isLiquidationMode ? 'You can undo sales and mortgages while planning. You cannot buy above starting levels.' : undefined}
+                subtitle={
+                  isLiquidationMode && liquidationShortfall > 0 ? (
+                    `Need $${liquidationShortfall} more to cover rent.`
+                  ) : undefined
+                }
                 className="pl-2"
-                subtitleClassName="pt-1 text-xs text-muted"
+                subtitleClassName="pt-1 text-xs text-rose-600 dark:text-rose-400"
               />
               <div className=" p-2 flex items-center justify-between text-sm">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -517,7 +527,10 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                   const showHouseBuildControls = groupCanPlus;
 
                   return (
-                    <div key={g.group ?? 'none'} className={`rounded-b-[34px] rounded-t-2xl shadow-lg dark:shadow/70 ${getGroupContainerClasses(g.group)}`}>
+                    <div
+                      key={g.group ?? 'none'}
+                      className={`${showHouseBuildControls ? 'rounded-b-[16px] rounded-t-2xl' : 'rounded-2xl'} shadow-lg dark:shadow/70 ${getGroupContainerClasses(g.group)}`}
+                    >
                       <div className="space-y-2">
                         {tiles.map((t) => {
                           const cur = tileLevels[t.id] ?? 0;
@@ -596,7 +609,7 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                           };
 
                           return (
-                            <div key={t.id} className="rounded-xl bg-surface-tint-1 text-fg m-2 shadow-lg">
+                            <div key={t.id} className="rounded-xl bg-surface-tint-1 text-fg m-0 shadow-lg m-1.5">
                               <div className="flex rounded-t-xl items-center justify-between px-2 py-1 gap-2 bg-surface-tint-2">
                                 <div className="text-sm font-medium truncate">{t.name}</div>
                                 <div className="flex items-center gap-2">
@@ -674,20 +687,51 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
 
               {/* Utilities group: white with diagonal bar pattern */}
               {ownedAllTiles.some((t) => t.type === 'utility') && (
-                <div className=" rounded-md border border-neutral-200 dark:border-neutral-700 p-2 text-white" style={{ backgroundColor: 'var(--color-zinc-600)', backgroundImage: 'repeating-linear-gradient(45deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 6px, rgba(0,0,0,0) 6px, rgba(0,0,0,0) 12px)' }}>
-                  <div className="space-y-2">
+                <div
+                  className="flex flex-col gap-1 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-1.5"
+                  style={BOARD_TILE_UTILITY_STRIPE_STYLE}
+                >
+                  <div className="flex flex-col gap-1.5">
                     {ownedAllTiles.filter((t) => t.type === 'utility').map((t) => {
                       const mort = !!desiredMortgaged[t.id];
-                      const mv = (t.utility?.mortgageValue ?? 0);
+                      const mv = t.utility?.mortgageValue ?? 0;
+                      const u = t.utility;
+                      const ownedUtils = countUtilitiesOwned(rentState, playerId);
+                      let rentMult = u?.rentMultiplier1 ?? 0;
+                      if (u && ownedUtils >= 3 && u.rentMultiplier3 != null) rentMult = u.rentMultiplier3;
+                      else if (u && ownedUtils >= 2) rentMult = u.rentMultiplier2;
                       return (
-                        <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 bg-white/90 dark:bg-neutral-900/90 text-white">
-                          <div className="flex items-center justify-between gap-2">
+                        <div key={t.id} className="rounded-xl bg-surface-tint-3 text-fg m-0 shadow-lg">
+                          <div className="flex rounded-t-xl items-center justify-between px-2 py-1 gap-2 bg-surface-tint-3">
                             <div className="text-sm font-medium truncate">{t.name}</div>
-                            <div className="flex items-center gap-2">
-                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage $${mv}`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="text-sm font-bold tabular-nums">
+                                <span className="opacity-80 font-normal text-xs">Rent</span>{' '}
+                                {mort ? '—' : `${rentMult}× dice`}
+                              </div>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md border border-surface-strong bg-surface-tint-3 px-2 py-1 text-sm font-semibold hover:brightness-[1.03] active:brightness-[0.98]"
+                                onClick={() => setDetailsTileId(t.id)}
+                                title="Details"
+                                aria-label="Utility details"
+                              >
+                                <MdOutlineMoreHoriz className="h-5 w-5" />
+                              </button>
                             </div>
                           </div>
-                          
+                          <div className="mt-2 flex items-center justify-between px-2 py-2.5 pt-0 gap-2">
+                            <div className="min-w-0 flex-1">
+                              {mort ? <div className="text-xs opacity-80 text-fg">Mortgaged</div> : null}
+                            </div>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <MortgageButton
+                                label={mort ? 'Unmortgage' : `Mortgage $${mv}`}
+                                danger={mort}
+                                onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))}
+                              />
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -695,34 +739,57 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                 </div>
               )}
 
-              {/* Railroads group: white with black dot pattern */}
+              {/* Railroads group: yellow/black hazard stripes (yellow wider) */}
               {ownedAllTiles.some((t) => t.type === 'railroad') && (
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 text-white" 
-                style={{ 
-                  backgroundColor: 'var(--color-zinc-600)', 
-                  backgroundImage: 'radial-gradient(rgba(0,0,0,0.30) 4px, transparent 1px)', 
-                  backgroundSize: '14px 14px', 
-                  backgroundPosition: '0 0' }}>
-                  <div className="space-y-2">
+                <div
+                  className="flex flex-col gap-1 rounded-2xl border border-neutral-200 dark:border-neutral-700 p-1.5"
+                  style={BOARD_TILE_RAILROAD_STRIPE_STYLE}
+                >
+                  <div className="flex flex-col gap-1.5">
                     {ownedAllTiles.filter((t) => t.type === 'railroad').map((t) => {
                       const mort = !!desiredMortgaged[t.id];
                       const mv = (t.railroad?.mortgageValue ?? 0);
+                      const depot = !!desiredDepotInstalled[t.id];
+                      const rent = computeRent(rentState, t.id, 0);
                       return (
-                        <div key={t.id} className="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 bg-white/90 dark:bg-neutral-900/90 text-white">
-                          <div className="text-xs font-medium truncate mb-2">{t.name}</div>
-                          <div className="flex items-center gap-2">
-                            {!desiredDepotInstalled[t.id] && (
-                              <MortgageButton label={mort ? 'Unmortgage' : `Mortgage $${mv}`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
-                            )}
-                            {!isLiquidationMode && (
+                        <div key={t.id} className="rounded-xl bg-surface-tint-3 text-fg m-0 shadow-lg">
+                          <div className="flex rounded-t-xl items-center justify-between px-2 py-1 gap-2 bg-surface-tint-3">
+                            <div className="text-sm font-medium truncate">{t.name}</div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="text-sm font-bold tabular-nums">
+                                <span className="opacity-80 font-normal text-xs">Rent</span> ${rent}
+                              </div>
                               <button
                                 type="button"
-                                className={`rounded-md border px-2 py-0.5 text-xs ${desiredDepotInstalled[t.id] ? 'border-emerald-500 text-emerald-600' : 'border-zinc-300 text-zinc-700 dark:text-zinc-300'}`}
-                                onClick={() => setDesiredDepotInstalled((m) => ({ ...m, [t.id]: !m[t.id] }))}
+                                className="inline-flex items-center justify-center rounded-md border border-surface-strong bg-surface-tint-3 px-2 py-1 text-sm font-semibold hover:brightness-[1.03] active:brightness-[0.98]"
+                                onClick={() => setDetailsTileId(t.id)}
+                                title="Details"
+                                aria-label="Railroad details"
                               >
-                                {desiredDepotInstalled[t.id] ? 'Remove Depot' : 'Install Depot (+$100)'}
+                                <MdOutlineMoreHoriz className="h-5 w-5" />
                               </button>
-                            )}
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between px-2 py-2.5 pt-0 gap-2">
+                            <div className="min-w-0 flex-1">
+                              {mort ? (
+                                <div className="text-xs opacity-80 text-fg ">Mortgaged</div>
+                              ) : depot ? (
+                                <div className="text-xs text-fg font-medium">Depot installed — rent doubled on this line</div>
+                              ) : null}
+                            </div>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              {!depot && (
+                                <MortgageButton label={mort ? 'Unmortgage' : `Mortgage $${mv}`} danger={mort} onClick={() => setDesiredMortgaged((m) => ({ ...m, [t.id]: !mort }))} />
+                              )}
+                              {!isLiquidationMode && (
+                                <MortgageButton
+                                  label={depot ? 'Remove Depot' : 'Install Depot (+$100)'}
+                                  onClick={() => setDesiredDepotInstalled((m) => ({ ...m, [t.id]: !m[t.id] }))}
+                                  className={depot ? 'border-emerald-500 text-emerald-600' : undefined}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -737,7 +804,178 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
               {(() => {
                 if (!detailsTileId) return null;
                 const tile = BOARD_TILES.find((t) => t.id === detailsTileId);
-                if (!tile || tile.type !== 'property' || !tile.property) return null;
+                if (!tile) return null;
+
+                if (tile.type === 'railroad' && tile.railroad) {
+                  const rr = tile.railroad;
+                  const ownedRR = countRailroadsOwned(rentState, playerId);
+                  const ladder = [
+                    { count: 1, base: rr.rent1 },
+                    { count: 2, base: rr.rent2 },
+                    { count: 3, base: rr.rent3 },
+                    { count: 4, base: rr.rent4 },
+                  ] as const;
+                  const isRowActive = (n: number) => {
+                    if (ownedRR <= 0) return false;
+                    if (ownedRR >= 4) return n === 4;
+                    return ownedRR === n;
+                  };
+
+                  return (
+                    <motion.div
+                      key="rr-details"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4"
+                      onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) setDetailsTileId(null);
+                      }}
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Railroad details"
+                    >
+                      <div className="w-full max-w-md rounded-xl bg-surface-2 shadow-2xl border border-surface">
+                        <OverlayHeader
+                          title={tile.name}
+                          onClose={() => setDetailsTileId(null)}
+                          className="bg-surface-1 pl-3 pr-1 py-2 rounded-t-md"
+                        />
+                        <div className="divide-y divide-surface text-sm">
+                          <div className="px-3 py-2.5 space-y-1 bg-surface-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="opacity-80">Purchase price</span>
+                              <span className="tabular-nums font-semibold">${rr.purchasePrice}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="opacity-80">Mortgage value</span>
+                              <span className="tabular-nums font-semibold">${rr.mortgageValue}</span>
+                            </div>
+                            {rr.hasDepot && (
+                              <p className="text-xs opacity-80 pt-1 leading-snug">
+                                Train depot: $100 to install on this line (doubles rent). Removing the depot returns $50 from the bank.
+                              </p>
+                            )}
+                          </div>
+                          <div className="px-3 py-2 bg-surface-0 rounded-b-xl">
+                            <div className="flex items-center justify-between gap-2 text-xs mb-2">
+                              <span className="font-semibold uppercase tracking-wide">Rent by railroads owned</span>
+                              <span className="tabular-nums opacity-80">
+                                You: <strong className="text-fg">{ownedRR}</strong>
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {ladder.map(({ count, base }) => {
+                                const active = isRowActive(count);
+                                const withDepot = base * 2;
+                                return (
+                                  <div
+                                    key={count}
+                                    className={`flex items-center justify-between rounded-md px-2 py-1.5 tabular-nums ${
+                                      active ? 'bg-emerald-500/10 border border-emerald-500/40' : 'border border-transparent'
+                                    }`}
+                                  >
+                                    <span className={active ? 'font-semibold' : 'opacity-90'}>{count} owned</span>
+                                    <div className="text-right text-xs sm:text-sm">
+                                      <div className="font-semibold">${base}</div>
+                                      {rr.hasDepot && (
+                                        <div className="opacity-70">Depot on this line: ${withDepot}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                }
+
+                if (tile.type === 'utility' && tile.utility) {
+                  const u = tile.utility;
+                  const ownedU = countUtilitiesOwned(rentState, playerId);
+                  const ladder = [
+                    { count: 1 as const, mult: u.rentMultiplier1 },
+                    { count: 2 as const, mult: u.rentMultiplier2 },
+                    ...(u.rentMultiplier3 != null ? ([{ count: 3 as const, mult: u.rentMultiplier3 }] as const) : []),
+                  ];
+                  const isRowActive = (n: number) => {
+                    if (ownedU <= 0) return false;
+                    if (u.rentMultiplier3 != null) {
+                      if (ownedU >= 3) return n === 3;
+                      return ownedU === n;
+                    }
+                    if (ownedU >= 2) return n === 2;
+                    return n === 1;
+                  };
+
+                  return (
+                    <motion.div
+                      key="utility-details"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[60] flex items-center justify-center modal-backdrop p-4"
+                      onMouseDown={(e) => {
+                        if (e.target === e.currentTarget) setDetailsTileId(null);
+                      }}
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label="Utility details"
+                    >
+                      <div className="w-full max-w-md rounded-xl bg-surface-2 shadow-2xl border border-surface">
+                        <OverlayHeader
+                          title={tile.name}
+                          onClose={() => setDetailsTileId(null)}
+                          className="bg-surface-1 pl-3 pr-1 py-2 rounded-t-md"
+                        />
+                        <div className="divide-y divide-surface text-sm">
+                          <div className="px-3 py-2.5 space-y-1 bg-surface-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="opacity-80">Purchase price</span>
+                              <span className="tabular-nums font-semibold">${u.purchasePrice}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="opacity-80">Mortgage value</span>
+                              <span className="tabular-nums font-semibold">${u.mortgageValue}</span>
+                            </div>
+                            <p className="text-xs opacity-80 pt-1 leading-snug">
+                              Rent is the last dice roll total times the multiplier below (per utilities you own).
+                            </p>
+                          </div>
+                          <div className="px-3 py-2 bg-surface-0 rounded-b-xl">
+                            <div className="flex items-center justify-between gap-2 text-xs mb-2">
+                              <span className="font-semibold uppercase tracking-wide">Rent by utilities owned</span>
+                              <span className="tabular-nums opacity-80">
+                                You: <strong className="text-fg">{ownedU}</strong>
+                              </span>
+                            </div>
+                            <div className="space-y-1">
+                              {ladder.map(({ count, mult }) => {
+                                const active = isRowActive(count);
+                                return (
+                                  <div
+                                    key={count}
+                                    className={`flex items-center justify-between rounded-md px-2 py-1.5 tabular-nums ${
+                                      active ? 'bg-emerald-500/10 border border-emerald-500/40' : 'border border-transparent'
+                                    }`}
+                                  >
+                                    <span className={active ? 'font-semibold' : 'opacity-90'}>{count} owned</span>
+                                    <div className="text-right text-xs sm:text-sm font-semibold">{mult}× dice</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                }
+
+                if (tile.type !== 'property' || !tile.property) return null;
                 const tar = getLevelForTile(detailsTileId, targets, tileLevels);
 
                 const rentRows: Array<{ key: string; level: number; value: number | null }> = (() => {
@@ -904,9 +1142,6 @@ export default function BuildSellOverlay({ open, onClose, mode = 'manage', rentD
                 {isLiquidationMode ? `Liquidate & Pay $${rentDue}` : 'Confirm'}
               </button>
             </div>
-            {isLiquidationMode && liquidationShortfall > 0 && (
-              <div className="px-3 pb-3 text-xs text-rose-600">Need ${liquidationShortfall} more to cover rent.</div>
-            )}
           </div>
         </motion.div>
       )}
