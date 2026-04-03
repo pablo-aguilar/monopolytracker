@@ -37,6 +37,12 @@
 
   /* Jail attempt tracker (filled chip + bars) */
   --game-jail: theme(colors.slate.900);
+
+  /* Board tile header stripes (Chance / Community Chest) */
+  --game-chance: theme(colors.amber.500);
+  --game-chance-muted: theme(colors.amber.300);
+  --game-community: theme(colors.cyan.300);
+  --game-community-muted: theme(colors.cyan.100);
 }
 
 .dark {
@@ -68,6 +74,11 @@
   --game-doubles: theme(colors.blue.600);
 
   --game-jail: theme(colors.slate.50);
+
+  --game-chance: theme(colors.amber.400);
+  --game-chance-muted: theme(colors.amber.200);
+  --game-community: theme(colors.cyan.400);
+  --game-community-muted: theme(colors.cyan.200);
 }
 
 @layer utilities {
@@ -99,6 +110,9 @@
   .bg-game-jail { background-color: var(--game-jail); }
   .text-game-jail { color: var(--game-jail); }
   .border-game-jail { border-color: var(--game-jail); }
+
+  .bg-game-chance { background-color: var(--game-chance); }
+  .bg-game-community { background-color: var(--game-community); }
 
   /* Divider helpers (use with divide-y / divide-x) */
   .divide-y.divide-surface > :not([hidden]) { border-color: var(--divider); }

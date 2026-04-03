@@ -186,7 +186,23 @@ export const BOARD_TILE_UTILITY_STRIPE_STYLE: CSSProperties = {
     'repeating-linear-gradient(45deg, rgba(0,0,0,0.5) 0px, rgba(0,0,0,0.5) 6px, rgba(0,0,0,0) 6px, rgba(0,0,0,0) 12px)',
 };
 
+/** Vertical amber bars — Chance (semantic: --game-chance / --game-chance-muted). */
+export const BOARD_TILE_CHANCE_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: 'var(--game-chance)',
+  backgroundImage:
+    'repeating-linear-gradient(90deg, var(--game-chance) 0 6px, var(--game-chance-muted) 6px 12px)',
+};
+
+/** Vertical cyan bars — Community Chest (semantic: --game-community / --game-community-muted). */
+export const BOARD_TILE_COMMUNITY_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: 'var(--game-community)',
+  backgroundImage:
+    'repeating-linear-gradient(90deg, var(--game-community) 0 6px, var(--game-community-muted) 6px 12px)',
+};
+
 export function getBoardTileStripeStyle(tile: BoardTileData): CSSProperties | undefined {
+  if (tile.type === 'chance') return BOARD_TILE_CHANCE_STRIPE_STYLE;
+  if (tile.type === 'community') return BOARD_TILE_COMMUNITY_STRIPE_STYLE;
   if (tile.type === 'railroad') return BOARD_TILE_RAILROAD_STRIPE_STYLE;
   if (tile.type === 'utility') return BOARD_TILE_UTILITY_STRIPE_STYLE;
   return undefined;
@@ -215,7 +231,7 @@ export function getTileHeaderBgClass(tile: BoardTileData): string {
         return 'bg-neutral-200';
     }
   }
-  if (tile.type === 'railroad' || tile.type === 'utility') return '';
+  if (tile.type === 'railroad' || tile.type === 'utility' || tile.type === 'chance' || tile.type === 'community') return '';
   if (tile.type === 'busStop' || tile.id === 'birthday-gift') return 'bg-game-bus';
   return 'bg-neutral-200';
 }
