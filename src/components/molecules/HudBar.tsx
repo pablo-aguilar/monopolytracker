@@ -85,7 +85,7 @@ export default function HudBar({
 
   const unownedLotsCount = bankUnownedLots.length;
   const lotsCountBadge = (
-    <span className="rounded-full bg-surface-1 px-1.5 py-0.5 text-xs font-semibold text-muted">{unownedLotsCount}</span>
+    <span className="rounded-full bg-surface-1 px-1 py-px text-xs font-semibold text-muted">{unownedLotsCount}</span>
   );
 
   const StatRow = ({ iconSrc, alt, label, value }: { iconSrc: string; alt: string; label: string; value: number }): JSX.Element => (
@@ -149,7 +149,7 @@ export default function HudBar({
           aria-expanded={open}
           aria-haspopup="menu"
           aria-label={ariaLabel}
-          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2.5 pr-2.5 py-2 text-sm font-normal text-fg sm:pl-3"
+          className="inline-flex items-center gap-1 rounded-[18px] border border-surface bg-surface-0 pl-2 pr-1.5 py-1.5 text-sm font-normal text-fg sm:pl-3"
           {...getReferenceProps()}
         >
           <span className="inline-flex shrink-0 text-fg [&>svg]:h-4 [&>svg]:w-4" aria-hidden>

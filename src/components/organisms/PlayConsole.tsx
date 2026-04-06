@@ -2643,35 +2643,37 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       {(() => {
         const playChromeInner = (
           <>
-            <h1 className="text-2xl font-semibold flex flex-wrap items-center gap-3 self-start">
-              Game
-              {racePot.active && (
-                <RacePotBadge amount={racePot.amount} participantIds={racePot.participants} players={players} />
-              )}
-            </h1>
-            <div className="flex w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-sm lg:w-auto lg:justify-end">
-          <HudBar
-            housesRemaining={propsState.housesRemaining}
-            hotelsRemaining={propsState.hotelsRemaining}
-            skyscrapersRemaining={propsState.skyscrapersRemaining}
-            depotsLeft={depotsLeft}
-            freeParkingPot={freeParkingPot}
-            bankUnownedLots={bankUnownedLots}
-            chanceLeft={chanceLeft}
-            communityLeft={communityLeft}
-            busLeft={busLeft}
-          />
-          <button
-            type="button"
-            aria-label="Logs"
-            onClick={() => setEventLogOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 px-2 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 sm:px-3"
-          >
-            <MdReceiptLong className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Logs</span>
-          </button>
-          <SettingsGear
-            className="shrink-0"
+            <div className="flex w-full flex-wrap items-center justify-start gap-1.5 sm:gap-2.5 text-sm lg:w-auto lg:justify-end">
+              {racePot.active ? (
+                <RacePotBadge
+                  className="shrink-0"
+                  amount={racePot.amount}
+                  participantIds={racePot.participants}
+                  players={players}
+                />
+              ) : null}
+              <HudBar
+                housesRemaining={propsState.housesRemaining}
+                hotelsRemaining={propsState.hotelsRemaining}
+                skyscrapersRemaining={propsState.skyscrapersRemaining}
+                depotsLeft={depotsLeft}
+                freeParkingPot={freeParkingPot}
+                bankUnownedLots={bankUnownedLots}
+                chanceLeft={chanceLeft}
+                communityLeft={communityLeft}
+                busLeft={busLeft}
+              />
+              <button
+                type="button"
+                aria-label="Logs"
+                onClick={() => setEventLogOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white/90 dark:bg-neutral-900/90 px-2 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-800 sm:px-3"
+              >
+                <MdReceiptLong className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">Logs</span>
+              </button>
+              <SettingsGear
+                className="shrink-0"
             modalContent={(
               <div className="w-full">
                 <button

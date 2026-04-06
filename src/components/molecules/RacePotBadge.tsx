@@ -12,7 +12,7 @@ import {
   useInteractions,
   useRole,
 } from '@floating-ui/react';
-import { FaChevronDown, FaRunning } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
 import { FaFlagCheckered } from 'react-icons/fa6';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import { AVATARS } from '@/data/avatars';
@@ -78,10 +78,7 @@ export default function RacePotBadge({ amount, participantIds, players, classNam
         className="inline-flex items-center gap-1.5 rounded-[18px] border border-emerald-700/35 bg-emerald-600 pl-2.5 pr-2 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 sm:pl-3"
         {...getReferenceProps()}
       >
-        <span className="inline-flex items-center gap-px" aria-hidden>
-          <FaRunning className="h-4 w-4 shrink-0" />
-          <FaFlagCheckered className="h-4 w-4 shrink-0" />
-        </span>
+        <FaFlagCheckered className="h-4 w-4 shrink-0" aria-hidden />
         <span>${amount}</span>
         <FaChevronDown className={`h-3 w-3 shrink-0 transition-transform text-white/90 ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
