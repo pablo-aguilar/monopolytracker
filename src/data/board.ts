@@ -96,7 +96,8 @@ export const BOARD_FRAME_LEFT_INDICES: readonly number[] = Array.from({ length: 
 
 /** Non-corner segments on top/bottom (corners are split h/v in `BoardFrame`). */
 export const BOARD_FRAME_TOP_MIDDLE_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => i + 1);
-export const BOARD_FRAME_BOTTOM_MIDDLE_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => i + 27);
+/** Bottom row in BoardFrame is GTJ (left) → … → FP (right); middles run California (38) → … → Kentucky (27). */
+export const BOARD_FRAME_BOTTOM_MIDDLE_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => 38 - i);
 
 /**
  * Clockwise walk around the rim: top LTR → right (top→bottom) → bottom LTR → left (40–51, up from bottom-left to below Jail).

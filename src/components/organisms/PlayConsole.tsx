@@ -7,6 +7,7 @@
 
 // //#imports
 import React, { useMemo, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
 import EventLog from '@/components/molecules/EventLog';
 import GameStatsPanel from '@/components/molecules/GameStatsPanel';
@@ -57,7 +58,6 @@ import PostActionsBar from '@/components/molecules/PostActionsBar';
 import PurchaseActionsRow from '@/components/molecules/PurchaseActionsRow';
 import BuildSellOverlay from '@/components/molecules/BuildSellOverlay';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
-import BoardPickerOverlay from '@/components/molecules/BoardPickerOverlay';
 import AuctionOverlay from '@/components/molecules/AuctionOverlay';
 import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecules/TradeModal';
 import VictoryModal from '@/components/molecules/VictoryModal';
@@ -77,12 +77,14 @@ function abbreviateAvenueInTileName(name: string): string {
 
 export type PlayConsoleProps = {
   onTimelineRestored?: () => void;
+  /** When set, the top chrome row (title, HUD, logs, settings) renders into this node above the board frame. */
+  playChromeHost?: HTMLDivElement | null;
 };
 
 /** Staged bus deck picks in chronological order (Regular = +1; Big = clear all players then +1 to drawer). */
 type StagedBusPick = 'regular' | 'big';
 
-export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {}): JSX.Element {
+export default function PlayConsole({ onTimelineRestored, playChromeHost }: PlayConsoleProps = {}): JSX.Element {
   const dispatch = useDispatch<AppDispatch>();
   const store = useStore<RootState>();
   const players = useSelector((s: RootState) => s.players.players);
@@ -185,7 +187,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
   const [pendingLiquidation, setPendingLiquidation] = useState<PendingLiquidationPlan | null>(null);
   const [resolvedRentKey, setResolvedRentKey] = useState<string | null>(null);
   const [liquidationBanner, setLiquidationBanner] = useState<string | null>(null);
-  const [boardOverlayOpen, setBoardOverlayOpen] = useState<boolean>(false);
   const [auctionOpen, setAuctionOpen] = useState<boolean>(false);
   const [tradeModalOpen, setTradeModalOpen] = useState<boolean>(false);
   const [auctionCompleted, setAuctionCompleted] = useState<boolean>(false);
@@ -2639,17 +2640,16 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <h1 className="text-2xl font-semibold flex flex-wrap items-center gap-3 self-start">
-          <button type="button" onClick={() => setBoardOverlayOpen(true)} className="hover:underline">
-            GM Console
-          </button>
-          {racePot.active && (
-            <RacePotBadge amount={racePot.amount} participantIds={racePot.participants} players={players} />
-          )}
-        </h1>
-        {/* HUD summary — centered when stacked; end-aligned on wide screens */}
-        <div className="flex w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-sm lg:w-auto lg:justify-end">
+      {(() => {
+        const playChromeInner = (
+          <>
+            <h1 className="text-2xl font-semibold flex flex-wrap items-center gap-3 self-start">
+              Game
+              {racePot.active && (
+                <RacePotBadge amount={racePot.amount} participantIds={racePot.participants} players={players} />
+              )}
+            </h1>
+            <div className="flex w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 text-sm lg:w-auto lg:justify-end">
           <HudBar
             housesRemaining={propsState.housesRemaining}
             hotelsRemaining={propsState.hotelsRemaining}
@@ -2787,8 +2787,22 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
               </div>
             )}
           />
-        </div>
-      </div>
+            </div>
+          </>
+        );
+        return playChromeHost
+          ? createPortal(
+              <div className="mx-auto w-full max-w-5xl flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                {playChromeInner}
+              </div>,
+              playChromeHost,
+            )
+          : (
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                {playChromeInner}
+              </div>
+            );
+      })()}
 
       {/* Player turn cards */}
       <PlayerTurnCards
@@ -4911,24 +4925,6 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
         }}
       />
 
-      {/* Reusable Board Picker overlay (view mode) */}
-      <BoardPickerOverlay
-        open={boardOverlayOpen}
-        title="Board"
-        mode="view"
-        onClose={() => setBoardOverlayOpen(false)}
-        players={players.map((pl) => ({ id: pl.id, avatarKey: pl.avatarKey, positionIndex: pl.positionIndex, color: pl.color }))}
-        activePlayerId={players[turnIndex]?.id}
-        ownedByTileId={useMemo(() => {
-          const map: Record<string, string | null> = {};
-          for (const t of BOARD_TILES) {
-            const ps = propsState.byTileId[t.id];
-            map[t.id] = (ps?.ownerId as string | null) ?? null;
-          }
-          return map;
-        }, [propsState.byTileId])}
-        tileFooterIcon={(id) => tileFooterIcon(id)}
-      />
     </div>
   );
 }

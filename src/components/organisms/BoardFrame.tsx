@@ -162,7 +162,7 @@ export default function BoardFrame({ children, size = 'sm', className = '', rimP
           {/* Bottom-left corner: Go To Jail (matches bottom row left = GTJ) */}
           <BoardFrameTile key="gtj-v" tile={goToJail} edge="vertical" rim="left" size={size} qaSuffix="-v" cornerHalf corner="bl" />
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-auto p-2.5 sm:p-6">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-start overflow-auto p-2.5 sm:p-6">{children}</div>
         <div className={`flex min-h-0 shrink-0 flex-col self-stretch ${TILE_GAP} ${wrapCol}`}>
           <BoardFrameTile key="jail-v" tile={jail} edge="vertical" rim="right" size={size} qaSuffix="-v" cornerHalf corner="tr" />
           {rightMiddle.map((t) => (
