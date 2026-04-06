@@ -12,6 +12,8 @@ export default function DrawnUndoButton({ onClick, 'aria-label': ariaLabel }: Dr
   return (
     <button
       type="button"
+      data-cmp="a/DrawnUndoButton"
+      data-qa="drawn-undo-button"
       onClick={onClick}
       aria-label={ariaLabel}
       className="inline-flex absolute -top-1 -right-1 pl-1 h-[40px] w-[40px] shrink-0 items-center justify-center rounded-bl-full bg-emerald-600 text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-2 dark:focus-visible:ring-offset-neutral-900"

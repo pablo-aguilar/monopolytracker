@@ -372,15 +372,15 @@ export default function DiceSelector({
 
   const teleportPanelClass = isTripleOnesStyle
     ? 'border-amber-500/60 bg-amber-50/80 dark:bg-amber-950/30'
-    : 'border-indigo-500/60 bg-indigo-50/80 dark:bg-indigo-950/30';
+    : 'border-game-go-soft bg-game-go-tint';
 
   const teleportBtnClass = isTripleOnesStyle
     ? 'border-amber-500 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-    : 'border-indigo-500 text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-900/40';
+    : 'border-game-go text-game-go hover:bg-game-go-tint';
 
   const teleportChosenClass = isTripleOnesStyle
     ? 'border-amber-500 text-amber-900 dark:text-amber-100 bg-amber-50 dark:bg-amber-900/40'
-    : 'border-indigo-500 text-indigo-800 dark:text-indigo-100 bg-indigo-50 dark:bg-indigo-900/40';
+    : 'border-game-go text-game-go bg-game-go-tint';
 
   return (
     <div data-cmp="m/DiceSelector" className="space-y-3">

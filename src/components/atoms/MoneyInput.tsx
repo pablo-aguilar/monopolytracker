@@ -58,7 +58,11 @@ export default function MoneyInput({
   const plusEnabled = value < max;
 
   return (
-    <div className="flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-visible relative">
+    <div
+      data-cmp="a/MoneyInput"
+      data-qa="money-input"
+      className="flex items-center rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 overflow-visible relative"
+    >
       <div className="relative">
         <button
           ref={minusButtonRef}

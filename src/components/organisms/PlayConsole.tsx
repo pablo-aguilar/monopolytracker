@@ -2977,7 +2977,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                           : 'bg-surface-1 text-subtle';
 
                     return (
-                      <div data-ql="roll-container" className="px-4 pb-2">
+                      <div data-qa="roll-container" className="px-4 pb-2">
                         <SectionCard
                           className={busChosen ? 'opacity-50 pointer-events-none' : ''}
                           header={
@@ -4313,7 +4313,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
               if (e.target === e.currentTarget) setCenterOverlay({ type: null });
             }}
           >
-            <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border border-neutral-200 dark:border-neutral-700">
+            <div className="w-full max-w-3xl rounded-xl bg-surface-2 text-fg shadow-2xl border-2 border-solid border-game-go">
               <OverlayHeader
                 title={
                   <span className="flex items-center gap-2 min-w-0">
@@ -4341,7 +4341,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                         />
                       ) : (
                         <GiTeleport
-                          className="h-4 w-4 shrink-0 text-fg"
+                          className="h-4 w-4 shrink-0 text-game-go"
                           aria-label="Teleport"
                           role="img"
                         />
@@ -4350,7 +4350,7 @@ export default function PlayConsole({ onTimelineRestored }: PlayConsoleProps = {
                   </span>
                 }
                 onClose={() => setCenterOverlay({ type: null })}
-                className="p-1 pl-3 bg-surface-1 rounded-t-xl"
+                className="p-1 pl-3 bg-game-go-tint rounded-t-xl"
                 titleClassName="min-w-0 flex-1 pr-2 text-sm font-semibold"
               />
               <div className="grid grid-cols-5 sm:grid-cols-8 sm:gap-2 gap-1  max-h-[70vh] overflow-auto px-2 pt-2 pb-4 sm:px-4">

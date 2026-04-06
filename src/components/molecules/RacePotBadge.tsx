@@ -67,7 +67,7 @@ export default function RacePotBadge({ amount, participantIds, players, classNam
   const label = `Race pot $${amount}`;
 
   return (
-    <div className={`relative ${className ?? ''}`}>
+    <div data-cmp="m/RacePotBadge" className={`relative ${className ?? ''}`}>
       <button
         type="button"
         data-qa="badge-race-pot"

@@ -88,6 +88,52 @@ export const JAIL_INDEX = 13; // Mega board shifts; approximation
 export const FREE_PARKING_INDEX = 26;
 export const GO_TO_JAIL_INDEX = 39;
 
+/** Perimeter order for `BoardFrame`: top/bottom LTR; right column top→bottom; left column Boardwalk→Pacific. */
+export const BOARD_FRAME_TOP_INDICES: readonly number[] = Array.from({ length: 14 }, (_, i) => i);
+export const BOARD_FRAME_RIGHT_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => 14 + i);
+export const BOARD_FRAME_BOTTOM_INDICES: readonly number[] = Array.from({ length: 14 }, (_, i) => 26 + i);
+export const BOARD_FRAME_LEFT_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => 51 - i);
+
+/** Non-corner segments on top/bottom (corners are split h/v in `BoardFrame`). */
+export const BOARD_FRAME_TOP_MIDDLE_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => i + 1);
+export const BOARD_FRAME_BOTTOM_MIDDLE_INDICES: readonly number[] = Array.from({ length: 12 }, (_, i) => i + 27);
+
+/**
+ * Clockwise walk around the rim: top LTR → right (top→bottom) → bottom LTR → left (40–51, up from bottom-left to below Jail).
+ * Used for rim token path animation between board indices.
+ */
+export const BOARD_FRAME_PERIMETER_CLOCKWISE: readonly number[] = [
+  ...BOARD_FRAME_TOP_INDICES,
+  ...BOARD_FRAME_RIGHT_INDICES,
+  ...BOARD_FRAME_BOTTOM_INDICES,
+  ...Array.from({ length: 12 }, (_, i) => 40 + i),
+];
+
+/** Shortest rim path (either direction) including both endpoints. */
+export function perimeterPathInclusive(fromIndex: number, toIndex: number): number[] {
+  const perm = BOARD_FRAME_PERIMETER_CLOCKWISE;
+  const n = perm.length;
+  const iFrom = perm.indexOf(fromIndex);
+  const iTo = perm.indexOf(toIndex);
+  if (iFrom < 0 || iTo < 0) {
+    return [Number.isFinite(toIndex) ? toIndex : fromIndex];
+  }
+  if (fromIndex === toIndex) return [toIndex];
+  const forward = (iTo - iFrom + n) % n;
+  const backward = (iFrom - iTo + n) % n;
+  const steps: number[] = [];
+  if (forward <= backward) {
+    for (let k = 0; k <= forward; k++) {
+      steps.push(perm[(iFrom + k) % n]);
+    }
+  } else {
+    for (let k = 0; k <= backward; k++) {
+      steps.push(perm[(iFrom - k + n * 10) % n]);
+    }
+  }
+  return steps;
+}
+
 //#data
 // Note: Economics are approximations based on classic values with modest scaling
 // to provide functional rents. Can be tuned later to exact Winning Moves schedule.
@@ -176,7 +222,7 @@ export function getTileById(id: string): BoardTileData {
 /** Yellow/black hazard stripes — matches BuildSell railroad group wrapper. */
 export const BOARD_TILE_RAILROAD_STRIPE_STYLE: CSSProperties = {
   backgroundColor: '#facc15',
-  backgroundImage: 'repeating-linear-gradient(135deg, #facc15 0 15px, #0a0a0a 15px 19px)',
+  backgroundImage: 'repeating-linear-gradient(135deg, #facc15 0 8px, #0a0a0a 8px 11px)',
 };
 
 /** Zinc field with diagonal hatch — matches BuildSell utilities group wrapper. */
@@ -200,15 +246,63 @@ export const BOARD_TILE_COMMUNITY_STRIPE_STYLE: CSSProperties = {
     'repeating-linear-gradient(90deg, var(--game-community) 0 6px, var(--game-community-muted) 6px 12px)',
 };
 
-export function getBoardTileStripeStyle(tile: BoardTileData): CSSProperties | undefined {
+/**
+ * Black/white bands along the short axis — only for **left/right rim** (narrow, tall strips).
+ * Wide short strips (pickers, top/bottom rim) use `BOARD_TILE_JAIL_STRIPE_STYLE_RIM_TOP_BOTTOM`.
+ */
+export const BOARD_TILE_JAIL_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: 'var(--game-jail-stripe-light)',
+  backgroundImage:
+    'repeating-linear-gradient(to bottom, var(--game-jail-stripe-light) 0 7px, var(--game-jail-stripe-dark) 7px 14px)',
+};
+
+/**
+ * Vertical pinstripes — for wide, short strips (tile pickers, top/bottom board rim). `to bottom` does not repeat in ~8px height.
+ */
+export const BOARD_TILE_JAIL_STRIPE_STYLE_RIM_TOP_BOTTOM: CSSProperties = {
+  backgroundColor: 'var(--game-jail-stripe-light)',
+  backgroundImage:
+    'repeating-linear-gradient(to right, var(--game-jail-stripe-light) 0 7px, var(--game-jail-stripe-dark) 7px 14px)',
+};
+
+/** Stone bands — **left/right rim** only (narrow, tall). */
+export const BOARD_TILE_TAX_STRIPE_STYLE: CSSProperties = {
+  backgroundColor: 'var(--game-tax-stripe-light)',
+  backgroundImage:
+    'repeating-linear-gradient(to bottom, var(--game-tax-stripe-light) 0 7px, var(--game-tax-stripe-dark) 7px 14px)',
+};
+
+/** Stone pinstripes — pickers + top/bottom rim (wide, short). */
+export const BOARD_TILE_TAX_STRIPE_STYLE_RIM_TOP_BOTTOM: CSSProperties = {
+  backgroundColor: 'var(--game-tax-stripe-light)',
+  backgroundImage:
+    'repeating-linear-gradient(to right, var(--game-tax-stripe-light) 0 7px, var(--game-tax-stripe-dark) 7px 14px)',
+};
+
+export type BoardRimSegment = 'horizontal' | 'vertical';
+
+export function getBoardTileStripeStyle(
+  tile: BoardTileData,
+  rimSegment?: BoardRimSegment
+): CSSProperties | undefined {
   if (tile.type === 'chance') return BOARD_TILE_CHANCE_STRIPE_STYLE;
   if (tile.type === 'community') return BOARD_TILE_COMMUNITY_STRIPE_STYLE;
   if (tile.type === 'railroad') return BOARD_TILE_RAILROAD_STRIPE_STYLE;
   if (tile.type === 'utility') return BOARD_TILE_UTILITY_STRIPE_STYLE;
+  if (tile.type === 'tax') {
+    if (rimSegment === 'vertical') return BOARD_TILE_TAX_STRIPE_STYLE;
+    return BOARD_TILE_TAX_STRIPE_STYLE_RIM_TOP_BOTTOM;
+  }
+  if (tile.type === 'jail' || tile.type === 'goToJail') {
+    if (rimSegment === 'vertical') return BOARD_TILE_JAIL_STRIPE_STYLE;
+    return BOARD_TILE_JAIL_STRIPE_STYLE_RIM_TOP_BOTTOM;
+  }
   return undefined;
 }
 
 export function getTileHeaderBgClass(tile: BoardTileData): string {
+  if (tile.type === 'go') return 'bg-game-go';
+  if (tile.type === 'freeParking') return 'bg-game-free-parking';
   if (tile.type === 'property') {
     switch (tile.group) {
       case 'brown':
@@ -231,12 +325,24 @@ export function getTileHeaderBgClass(tile: BoardTileData): string {
         return 'bg-neutral-200';
     }
   }
-  if (tile.type === 'railroad' || tile.type === 'utility' || tile.type === 'chance' || tile.type === 'community') return '';
+  if (
+    tile.type === 'railroad' ||
+    tile.type === 'utility' ||
+    tile.type === 'chance' ||
+    tile.type === 'community' ||
+    tile.type === 'tax' ||
+    tile.type === 'jail' ||
+    tile.type === 'goToJail'
+  ) {
+    return '';
+  }
   if (tile.type === 'busStop' || tile.id === 'birthday-gift') return 'bg-game-bus';
   return 'bg-neutral-200';
 }
 
 export function getTileHeaderTextClass(tile: BoardTileData): string {
+  if (tile.type === 'go') return 'text-white';
+  if (tile.type === 'freeParking') return 'text-white';
   if (tile.type === 'property') {
     switch (tile.group) {
       case 'brown':

@@ -38,11 +38,26 @@
   /* Jail attempt tracker (filled chip + bars) */
   --game-jail: theme(colors.slate.900);
 
+  /* Jail / Go To Jail tile header stripes (board.ts BOARD_TILE_JAIL_STRIPE_STYLE) */
+  --game-jail-stripe-light: theme(colors.white);
+  --game-jail-stripe-dark: theme(colors.neutral.950);
+
+  /* GO tile + teleport picker accent */
+  --game-go: theme(colors.cyan.600);
+  --game-go-tint: theme(colors.cyan.600 / 10%);
+
+  /* Free Parking corner / tile */
+  --game-free-parking: theme(colors.red.700);
+
   /* Board tile header stripes (Chance / Community Chest) */
   --game-chance: theme(colors.amber.500);
   --game-chance-muted: theme(colors.amber.300);
   --game-community: theme(colors.cyan.300);
   --game-community-muted: theme(colors.cyan.100);
+
+  /* Income Tax / Luxury Tax tile stripes (board.ts BOARD_TILE_TAX_STRIPE_STYLE) */
+  --game-tax-stripe-light: theme(colors.yellow.600);
+  --game-tax-stripe-dark: theme(colors.yellow.800);
 }
 
 .dark {
@@ -75,10 +90,21 @@
 
   --game-jail: theme(colors.slate.50);
 
+  --game-jail-stripe-light: theme(colors.neutral.100);
+  --game-jail-stripe-dark: theme(colors.neutral.900);
+
+  --game-go: theme(colors.cyan.400);
+  --game-go-tint: theme(colors.cyan.400 / 14%);
+
+  --game-free-parking: theme(colors.red.800);
+
   --game-chance: theme(colors.amber.400);
   --game-chance-muted: theme(colors.amber.200);
   --game-community: theme(colors.cyan.400);
   --game-community-muted: theme(colors.cyan.200);
+
+  --game-tax-stripe-light: theme(colors.yellow.600);
+  --game-tax-stripe-dark: theme(colors.yellow.800);
 }
 
 @layer utilities {
@@ -113,6 +139,17 @@
 
   .bg-game-chance { background-color: var(--game-chance); }
   .bg-game-community { background-color: var(--game-community); }
+
+  .bg-game-go { background-color: var(--game-go); }
+  .bg-game-go-tint { background-color: var(--game-go-tint); }
+  .text-game-go { color: var(--game-go); }
+  .border-game-go { border-color: var(--game-go); }
+  .border-game-go-soft {
+    border-color: color-mix(in srgb, var(--game-go) 52%, transparent);
+  }
+
+  .bg-game-free-parking { background-color: var(--game-free-parking); }
+  .text-game-free-parking { color: var(--game-free-parking); }
 
   /* Divider helpers (use with divide-y / divide-x) */
   .divide-y.divide-surface > :not([hidden]) { border-color: var(--divider); }

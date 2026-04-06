@@ -94,6 +94,8 @@ export default function VictoryModal({
       {open && (
         <motion.div
           key="victory-modal"
+          data-cmp="m/VictoryModal"
+          data-qa="victory-modal"
           role="dialog"
           aria-modal="true"
           aria-labelledby="victory-modal-title"

@@ -1,0 +1,23 @@
+---
+description: Add data-cmp and data-qa to atoms, molecules, and organisms; do not use data-ql.
+globs: src/components/atoms/**/*.{tsx,ts},src/components/molecules/**/*.{tsx,ts},src/components/organisms/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Component data attributes (`data-cmp`, `data-qa`)
+
+## `data-cmp` (required)
+
+- Add on the **root DOM node** of every **default-export** component under `src/components/atoms`, `molecules`, and `organisms`.
+- **Format:** `a/FileBasename`, `m/FileBasename`, or `o/FileBasename` matching the folder (e.g. `BoardFrame.tsx` in `organisms` → `data-cmp="o/BoardFrame"`).
+- If the component returns `null` or a fragment with no wrapper, attach `data-cmp` to the first meaningful host element (or skip only when there is no DOM).
+
+## `data-qa` (as needed)
+
+- Use for **stable test and automation hooks**: primary buttons, inputs, footers, modals, game-master panels, HUD regions, and other elements tests or scripts must target.
+- Prefer **kebab-case** slugs: `play-console-footer`, `btn-apply-move`, `roll-container`.
+- **Do not** duplicate `data-cmp` as `data-qa`; `data-qa` names describe **behavior or region**, not file names.
+
+## `data-ql` (deprecated)
+
+- **Do not add** `data-ql`. Use `data-qa` for the same purpose (grep-friendly region/control id). Remove any remaining `data-ql` when touching a file.

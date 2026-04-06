@@ -21,7 +21,7 @@ export default function OverlayHeader({
   subtitleClassName,
 }: OverlayHeaderProps): JSX.Element {
   return (
-    <div className={className ?? ''}>
+    <div data-cmp="m/OverlayHeader" className={className ?? ''}>
       <div className={`flex items-center justify-between ${rowClassName ?? ''}`}>
         <div className={titleClassName ?? 'text-sm font-semibold'}>{title}</div>
         <CloseIconButton onClick={onClose} />
