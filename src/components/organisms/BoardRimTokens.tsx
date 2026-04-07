@@ -8,7 +8,7 @@ export type BoardRimPlayer = {
   color: string;
 };
 
-/** 4px fill + 1px border each side (box-content) → ~6px across; offset from center to top-left */
+/** 6×6px token; offset from anchor center to top-left of the dot */
 const TOKEN_OFFSET = 3;
 const HOP_MS = 88;
 
@@ -32,6 +32,32 @@ function unionCenterToContainer(
   return { x: (l + r) / 2 - cr.left, y: (t + b) / 2 - cr.top };
 }
 
+/** Token dot center offset from the board-facing (inner) edge of the tile; keeps a gap past RimBuildings. */
+const TOKEN_RIM_INNER_INSET_PX = 5;
+
+function tokenAnchorFromRim(
+  container: HTMLElement,
+  el: HTMLElement,
+  rim: string | undefined,
+): { x: number; y: number } | null {
+  if (rim !== 'top' && rim !== 'bottom' && rim !== 'left' && rim !== 'right') return null;
+  const r = el.getBoundingClientRect();
+  const cr = container.getBoundingClientRect();
+  const inset = TOKEN_RIM_INNER_INSET_PX;
+  switch (rim) {
+    case 'top':
+      return { x: r.left + r.width / 2 - cr.left, y: r.bottom - cr.top - inset };
+    case 'bottom':
+      return { x: r.left + r.width / 2 - cr.left, y: r.top - cr.top + inset };
+    case 'left':
+      return { x: r.right - cr.left - inset, y: r.top + r.height / 2 - cr.top };
+    case 'right':
+      return { x: r.left - cr.left + inset, y: r.top + r.height / 2 - cr.top };
+    default:
+      return null;
+  }
+}
+
 function measureCenters(container: HTMLElement): Map<number, { x: number; y: number }> {
   const byIndex = new Map<number, HTMLElement[]>();
   container.querySelectorAll<HTMLElement>('[data-board-index]').forEach((node) => {
@@ -45,6 +71,14 @@ function measureCenters(container: HTMLElement): Map<number, { x: number; y: num
   });
   const out = new Map<number, { x: number; y: number }>();
   byIndex.forEach((els, idx) => {
+    if (els.length === 1) {
+      const rim = els[0].dataset.boardRim;
+      const anchored = tokenAnchorFromRim(container, els[0], rim);
+      if (anchored) {
+        out.set(idx, anchored);
+        return;
+      }
+    }
     const c = unionCenterToContainer(container, els);
     if (c) out.set(idx, c);
   });
@@ -110,7 +144,7 @@ function PlayerRimToken({
 
   return (
     <motion.div
-      className="pointer-events-none absolute left-0 top-0 z-[30] box-content h-1 w-1 rounded-full border border-solid border-surface-1"
+      className="pointer-events-none absolute left-0 top-0 z-[30] h-[6px] w-[6px] rounded-full"
       style={{ backgroundColor: color }}
       initial={false}
       animate={{ x, y }}
