@@ -79,7 +79,7 @@ function cornerBridgeClass(corner: BoardFrameCorner, edge: 'horizontal' | 'verti
   return `right-0 top-full ${thick} ${bridgeLen}`;
 }
 
-/** Small rim glyphs: houses (green squares), hotel (red rectangle), skyscraper (circle). Sizes use clamp so they scale on narrow tiles. */
+/** Small rim glyphs: houses (green squares), hotel (red rectangle), skyscraper (amber triangle). Sizes use clamp so they scale on narrow tiles. */
 function RimBuildings({
   improvements,
   rim,
@@ -113,7 +113,7 @@ function RimBuildings({
   const hotelClass =
     'shrink-0 rounded-none bg-red-600 dark:bg-red-500 border border-red-900/40 min-h-[5px] min-w-[10px] h-[clamp(5px,1.8vmin,8px)] w-[clamp(12px,5vmin,22px)]';
   const skyClass =
-    'shrink-0 rounded-full bg-amber-400 dark:bg-amber-300 border border-amber-700/45 min-h-[6px] min-w-[6px] h-[clamp(6px,2vmin,10px)] w-[clamp(6px,2vmin,10px)]';
+    'shrink-0 bg-amber-400 dark:bg-amber-300 [clip-path:polygon(50%_0%,0%_100%,100%_100%)] min-h-[6px] min-w-[8px] h-[clamp(6px,2vmin,10px)] w-[clamp(8px,2.6vmin,12px)] [filter:drop-shadow(0_0_0.35px_rgba(120,53,15,0.65))]';
 
   let inner: React.ReactNode;
   if (improvements >= 6) {

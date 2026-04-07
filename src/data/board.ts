@@ -110,7 +110,10 @@ export const BOARD_FRAME_PERIMETER_CLOCKWISE: readonly number[] = [
   ...Array.from({ length: 12 }, (_, i) => 40 + i),
 ];
 
-/** Shortest rim path (either direction) including both endpoints. */
+/**
+ * Clockwise path along the rim (`BOARD_FRAME_PERIMETER_CLOCKWISE`), including both endpoints.
+ * Always walks forward around the board, even when the other direction would be shorter (e.g. teleports).
+ */
 export function perimeterPathInclusive(fromIndex: number, toIndex: number): number[] {
   const perm = BOARD_FRAME_PERIMETER_CLOCKWISE;
   const n = perm.length;
@@ -121,16 +124,9 @@ export function perimeterPathInclusive(fromIndex: number, toIndex: number): numb
   }
   if (fromIndex === toIndex) return [toIndex];
   const forward = (iTo - iFrom + n) % n;
-  const backward = (iFrom - iTo + n) % n;
   const steps: number[] = [];
-  if (forward <= backward) {
-    for (let k = 0; k <= forward; k++) {
-      steps.push(perm[(iFrom + k) % n]);
-    }
-  } else {
-    for (let k = 0; k <= backward; k++) {
-      steps.push(perm[(iFrom - k + n * 10) % n]);
-    }
+  for (let k = 0; k <= forward; k++) {
+    steps.push(perm[(iFrom + k) % n]);
   }
   return steps;
 }
