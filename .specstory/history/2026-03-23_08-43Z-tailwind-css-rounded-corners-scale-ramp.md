@@ -9851,3 +9851,6297 @@ Status: **completed**
 
 ---
 
+
+
+---
+
+
+
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "lastChance|lastCommunity|lastBus",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "lastChance|lastCommunity|lastBus",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker",
+  "outputMode": "content",
+  "totalFiles": 4,
+  "totalMatches": 44,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 6
+    },
+    {
+      "uri": ".specstory/history/2026-03-23_08-43Z-tailwind-css-rounded-corners-scale-ramp.md",
+      "matchCount": 2
+    },
+    {
+      "uri": ".specstory/history/2025-08-09_10-26Z-use-project-brief-for-app-development.md",
+      "matchCount": 22
+    },
+    {
+      "uri": ".specstory/history/2026-02-18_13-24Z-mega-monopoly-rules-update.md",
+      "matchCount": 14
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Removing derived constants**
+
+I'm removing the derived constants block while preserving the `// //#derived` comment. I'm removing the empty '// //#derived' comment block and related constants. </details></think>
+
+---
+
+
+Removing the "Last Chance / Last Community / Last Bus" strip and the unused `lastChance`, `lastCommunity`, and `lastBus` variables.
+
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "cards-last",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "cards-last",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker",
+  "outputMode": "content",
+  "totalFiles": 2,
+  "totalMatches": 10,
+  "topFiles": [
+    {
+      "uri": ".specstory/history/2026-03-23_08-43Z-tailwind-css-rounded-corners-scale-ramp.md",
+      "matchCount": 2
+    },
+    {
+      "uri": ".specstory/history/2025-08-09_10-26Z-use-project-brief-for-app-development.md",
+      "matchCount": 8
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && npm run build</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 516 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-C6bvYqxf.css   78.75 kB │ gzip:  12.83 kB
+dist/assets/index--eQetw5b.js   622.27 kB │ gzip: 188.61 kB
+✓ built in 2.29s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Here’s what changed:
+
+### Removed from `PlayConsole.tsx`
+1. **The three “last card” rows** — the grid with `data-qa="cards-last"` showing **Last Chance**, **Last Community Chest**, and **Last Bus**.
+2. **The only code that used it** — `lastChance`, `lastCommunity`, and `lastBus` (top discard from each deck).
+
+`cardsState` is unchanged for the rest of the play flow (deck overlays, draw logic, etc.). Lint is clean and `npm run build` succeeds.
+
+When you wire this into the Logs modal, you can read the same info from `cardsState.decks.chance.discardPile[0]`, `community.discardPile[0]`, and `bus.discardPile[0]` (or from your event log entries if you log draws there).
+
+---
+
+_**User**_
+
+lets push the latest to git
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git status</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git status
+```
+
+```
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add &lt;file&gt;..." to update what will be committed)
+  (use "git restore &lt;file&gt;..." to discard changes in working directory)
+	modified:   .specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+	modified:   src/components/atoms/MortgageButton.tsx
+	modified:   src/components/molecules/AuctionOverlay.tsx
+	modified:   src/components/molecules/BoardPickerOverlay.tsx
+	modified:   src/components/molecules/BuildSellOverlay.tsx
+	modified:   src/components/molecules/HudBar.tsx
+	modified:   src/components/molecules/PlayerTurnCards.tsx
+	modified:   src/components/molecules/PostActionsBar.tsx
+	modified:   src/components/molecules/RulesModal.tsx
+	modified:   src/components/molecules/SettingsGear.tsx
+	modified:   src/components/molecules/SettingsModal.tsx
+	modified:   src/components/molecules/TradeModal.tsx
+	modified:   src/components/organisms/PlayConsole.tsx
+	modified:   src/features/players/playersSlice.ts
+	modified:   src/features/properties/propertiesSlice.ts
+	modified:   src/features/session/sessionSlice.ts
+	modified:   src/index.css
+	modified:   src/pages/Play.tsx
+	modified:   tsconfig.tsbuildinfo
+	modified:   vite.config.ts
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+	.cursor/debug-e6c2a6.log
+	.cursor/debug.log
+	.specstory/history/2026-03-21_10-43Z-mortgagebutton-css-style-changes.md
+	.specstory/history/2026-03-22_12-31Z-css-style-changes-for-grouppanel.md
+	.specstory/history/2026-03-22_12-32Z-css-style-changes-for-grouppanel-component.md
+	.specstory/history/2026-03-22_12-33Z-css-style-changes-for-grouppanel-component.md
+	.specstory/history/2026-03-22_12-37Z-css-style-changes-for-grouppanel.md
+	.specstory/history/2026-03-23_08-32Z-css-style-changes-for-playerturncards.md
+	.specstory/history/2026-03-23_08-33Z-css-style-changes-for-grouppanel.md
+	.specstory/history/2026-03-23_08-43Z-tailwind-css-rounded-corners-scale-ramp.md
+	.specstory/history/2026-03-23_12-03Z-localhost-page-monitoring.md
+	src/components/atoms/MoneyInput.tsx
+	src/components/molecules/OverlayHeader.tsx
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+```
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Staging source files**
+
+I'm staging modified and new source files while skipping build artifacts like tsconfig.tsbuildinfo. </details></think>
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "\\.cursor|tsbuildinfo",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/.gitignore",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "\\.cursor|tsbuildinfo",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/.gitignore",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/.gitignore</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Adding files to commit**
+
+I'm adding specific files to the commit while excluding .cursor/ and other ignored directories. </details></think>
+
+---
+
+
+Staging all changes except `.cursor/` debug logs, then committing and pushing.
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git add -A && git reset -- .cursor/</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git add -A && git reset -- .cursor/
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git status</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git status
+```
+
+```
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged &lt;file&gt;..." to unstage)
+	modified:   .specstory/history/2026-03-14_22-43Z-player-selection-in-trade-modal.md
+	new file:   .specstory/history/2026-03-21_10-43Z-mortgagebutton-css-style-changes.md
+	new file:   .specstory/history/2026-03-22_12-31Z-css-style-changes-for-grouppanel.md
+	new file:   .specstory/history/2026-03-22_12-32Z-css-style-changes-for-grouppanel-component.md
+	new file:   .specstory/history/2026-03-22_12-33Z-css-style-changes-for-grouppanel-component.md
+	new file:   .specstory/history/2026-03-22_12-37Z-css-style-changes-for-grouppanel.md
+	new file:   .specstory/history/2026-03-23_08-32Z-css-style-changes-for-playerturncards.md
+	new file:   .specstory/history/2026-03-23_08-33Z-css-style-changes-for-grouppanel.md
+	new file:   .specstory/history/2026-03-23_08-43Z-tailwind-css-rounded-corners-scale-ramp.md
+	new file:   .specstory/history/2026-03-23_12-03Z-localhost-page-monitoring.md
+	new file:   src/components/atoms/MoneyInput.tsx
+	modified:   src/components/atoms/MortgageButton.tsx
+	modified:   src/components/molecules/AuctionOverlay.tsx
+	modified:   src/components/molecules/BoardPickerOverlay.tsx
+	modified:   src/components/molecules/BuildSellOverlay.tsx
+	modified:   src/components/molecules/HudBar.tsx
+	new file:   src/components/molecules/OverlayHeader.tsx
+	modified:   src/components/molecules/PlayerTurnCards.tsx
+	modified:   src/components/molecules/PostActionsBar.tsx
+	modified:   src/components/molecules/RulesModal.tsx
+	modified:   src/components/molecules/SettingsGear.tsx
+	modified:   src/components/molecules/SettingsModal.tsx
+	modified:   src/components/molecules/TradeModal.tsx
+	modified:   src/components/organisms/PlayConsole.tsx
+	modified:   src/features/players/playersSlice.ts
+	modified:   src/features/properties/propertiesSlice.ts
+	modified:   src/features/session/sessionSlice.ts
+	modified:   src/index.css
+	modified:   src/pages/Play.tsx
+	modified:   tsconfig.tsbuildinfo
+	modified:   vite.config.ts
+
+Untracked files:
+  (use "git add &lt;file&gt;..." to include in what will be committed)
+	.cursor/debug-e6c2a6.log
+	.cursor/debug.log
+
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git commit --trailer "Made-with: Cursor" -m "UI: overlay headers, HUD/logs, settings; session & play updates; remove last-cards strip"</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git commit --trailer "Made-with: Cursor" -m "UI: overlay headers, HUD/logs, settings; session & play updates; remove last-cards strip"
+```
+
+```
+[main 1b23483] UI: overlay headers, HUD/logs, settings; session &amp; play updates; remove last-cards strip
+ 31 files changed, 21347 insertions(+), 703 deletions(-)
+ create mode 100644 .specstory/history/2026-03-21_10-43Z-mortgagebutton-css-style-changes.md
+ create mode 100644 .specstory/history/2026-03-22_12-31Z-css-style-changes-for-grouppanel.md
+ create mode 100644 .specstory/history/2026-03-22_12-32Z-css-style-changes-for-grouppanel-component.md
+ create mode 100644 .specstory/history/2026-03-22_12-33Z-css-style-changes-for-grouppanel-component.md
+ create mode 100644 .specstory/history/2026-03-22_12-37Z-css-style-changes-for-grouppanel.md
+ create mode 100644 .specstory/history/2026-03-23_08-32Z-css-style-changes-for-playerturncards.md
+ create mode 100644 .specstory/history/2026-03-23_08-33Z-css-style-changes-for-grouppanel.md
+ create mode 100644 .specstory/history/2026-03-23_08-43Z-tailwind-css-rounded-corners-scale-ramp.md
+ create mode 100644 .specstory/history/2026-03-23_12-03Z-localhost-page-monitoring.md
+ create mode 100644 src/components/atoms/MoneyInput.tsx
+ create mode 100644 src/components/molecules/OverlayHeader.tsx
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git push</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git push
+```
+
+```
+To https://github.com/pablo-aguilar/monopolytracker.git
+   9447c58..1b23483  main -&gt; main
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Here’s what was done:
+
+### Commit `1b23483`
+**Message:** `UI: overlay headers, HUD/logs, settings; session & play updates; remove last-cards strip`
+
+**Included:** 31 files (source, `vite.config.ts`, `tsconfig.tsbuildinfo`, `.specstory` history updates, new `MoneyInput.tsx` & `OverlayHeader.tsx`).
+
+**Not committed:** `.cursor/debug.log` and `.cursor/debug-e6c2a6.log` (left untracked so they’re not pushed).
+
+### Push
+`main` was pushed to `origin` (`9447c58 → 1b23483` on `github.com/pablo-aguilar/monopolytracker`).
+
+---
+
+_**User**_
+
+write me concise bulleted brief of the changes to share with my team
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+<think><details><summary>Thought Process</summary>
+**Summarizing changes**
+
+I'm compiling a concise bulleted list of the recent UI restructuring changes for the user. I'm checking the last commit's file changes to identify UI restructuring elements for the concise summary. </details></think>
+
+---
+
+
+Pulling the last commit summary for accuracy:
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git log -1 --pretty=format:"%s%n%n%b" && echo "---" && git show -1 --stat --oneline | tail -40</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && git log -1 --pretty=format:"%s%n%n%b" && echo "---" && git show -1 --stat --oneline | tail -40
+```
+
+```
+UI: overlay headers, HUD/logs, settings; session &amp; play updates; remove last-cards strip
+
+Made-with: Cursor
+---
+1b23483 UI: overlay headers, HUD/logs, settings; session &amp; play updates; remove last-cards strip
+ ...03-14_22-43Z-player-selection-in-trade-modal.md | 3192 ++++++-
+ ...3-21_10-43Z-mortgagebutton-css-style-changes.md | 2684 ++++++
+ ...3-22_12-31Z-css-style-changes-for-grouppanel.md |  474 +
+ ...Z-css-style-changes-for-grouppanel-component.md |  249 +
+ ...Z-css-style-changes-for-grouppanel-component.md |  272 +
+ ...3-22_12-37Z-css-style-changes-for-grouppanel.md | 1580 ++++
+ ...08-32Z-css-style-changes-for-playerturncards.md | 1242 +++
+ ...3-23_08-33Z-css-style-changes-for-grouppanel.md |  418 +
+ ...-43Z-tailwind-css-rounded-corners-scale-ramp.md | 9853 ++++++++++++++++++++
+ .../2026-03-23_12-03Z-localhost-page-monitoring.md |   18 +
+ src/components/atoms/MoneyInput.tsx                |  139 +
+ src/components/atoms/MortgageButton.tsx            |    2 +-
+ src/components/molecules/AuctionOverlay.tsx        |   20 +-
+ src/components/molecules/BoardPickerOverlay.tsx    |    7 +-
+ src/components/molecules/BuildSellOverlay.tsx      |  208 +-
+ src/components/molecules/HudBar.tsx                |  208 +-
+ src/components/molecules/OverlayHeader.tsx         |   36 +
+ src/components/molecules/PlayerTurnCards.tsx       |   16 +-
+ src/components/molecules/PostActionsBar.tsx        |    2 +-
+ src/components/molecules/RulesModal.tsx            |    7 +-
+ src/components/molecules/SettingsGear.tsx          |   10 +-
+ src/components/molecules/SettingsModal.tsx         |   19 +-
+ src/components/molecules/TradeModal.tsx            |   87 +-
+ src/components/organisms/PlayConsole.tsx           | 1233 ++-
+ src/features/players/playersSlice.ts               |   24 +-
+ src/features/properties/propertiesSlice.ts         |    7 +-
+ src/features/session/sessionSlice.ts               |   26 +-
+ src/index.css                                      |    4 +
+ src/pages/Play.tsx                                 |    2 -
+ tsconfig.tsbuildinfo                               |    2 +-
+ vite.config.ts                                     |    9 +
+ 31 files changed, 21347 insertions(+), 703 deletions(-)
+
+```
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Summarizing console changes**
+
+I'm drafting a team brief to capture key themes from the PlayConsole refactor without overcommitting to unverified details. 
+
+**Updating console headers**
+
+I'm implementing shared modal headers with MoneyInput and OverlayHeader components while removing last chance strips. I'm refactoring modal headers to use shared components while removing last chance strips. I'm implementing shared overlay headers and removing last drawn card strip from main console. </details></think>
+
+---
+
+
+Here’s a concise **team brief** you can paste (from commit `1b23483` / `main`):
+
+---
+
+### Monopoly tracker — recent UI & play updates
+
+- **HUD** — Event log is opened from the HUD (e.g. **Logs**), not embedded in the main play layout.
+- **Settings** — GM-oriented controls are consolidated in **Settings** (via gear / settings flow).
+- **Modals / overlays** — Shared **`OverlayHeader`** pattern for consistent titles and close behavior across settings, rules, trade, auction, board picker, build/sell, and related play UI.
+- **Play console** — Removed the **“Last Chance / Last Community / Last Bus”** quick-reference strip from the main screen (same info can move into **Logs** later).
+- **New building blocks** — **`MoneyInput`** and **`OverlayHeader`** for reuse across flows.
+- **Visual polish** — Tweaks to **Player turn cards**, **mortgage** control, and global **CSS** (incl. Tailwind-related ramp / tokens where touched).
+- **State & flows** — Updates in **`session`**, **`players`**, and **`properties`** slices plus **`PlayConsole`** to match the above (trades, overlays, and play behavior).
+- **Tooling** — Small **`vite.config`** / **`tsconfig`** housekeeping.
+
+---
+
+*Optional footnote for devs:* large `.specstory` history files were updated as part of local Cursor session capture—not product behavior.
+
+---
+
+_**User**_
+
+i don't see the liquidation botton and bankcrupt flow on this list, can you add it
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+
+
+---
+
+
+Checking how liquidation and bankruptcy are implemented in the app so we can describe them accurately.
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="semantic_search_full">
+<details>
+<summary>Tool use: **semantic_search_full**</summary>
+
+
+Parameters:
+
+```json
+{
+  "query": "Where is liquidation button or bankrupt flow handled?",
+  "includePattern": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "topK": 10,
+  "explanation": ""
+}
+```
+Result:
+
+```json
+{
+  "codeResults": [
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "(p) =&gt; (",
+            "lineNumber": 2295
+          },
+          {
+            "text": "() =&gt; {",
+            "lineNumber": 2505
+          },
+          {
+            "text": " (",
+            "lineNumber": 2698
+          },
+          {
+            "text": "                                  &lt;div className=\"mt-2 flex items-center gap-2 text-xs\"&gt;",
+            "lineNumber": 2699
+          },
+          {
+            "text": "                                    &lt;button",
+            "lineNumber": 2700
+          },
+          {
+            "text": "                                      type=\"button\"",
+            "lineNumber": 2701
+          },
+          {
+            "text": "                                      disabled={!canLiquidateForRent}",
+            "lineNumber": 2702
+          },
+          {
+            "text": "                                      className={&#96;rounded-md border px-2 py-1 font-semibold ${",
+            "lineNumber": 2703
+          },
+          {
+            "text": "                                        canLiquidateForRent",
+            "lineNumber": 2704
+          },
+          {
+            "text": "                                          ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'",
+            "lineNumber": 2705
+          },
+          {
+            "text": "                                          : 'border-neutral-300 text-neutral-400 dark:border-neutral-700 dark:text-neutral-500 cursor-not-allowed'",
+            "lineNumber": 2706
+          },
+          {
+            "text": "                                      }&#96;}",
+            "lineNumber": 2707
+          },
+          {
+            "text": "                                      onClick={() =&gt; {",
+            "lineNumber": 2708
+          },
+          {
+            "text": "                                        if (!pid || !canLiquidateForRent || !rentInfo) return;",
+            "lineNumber": 2709
+          },
+          {
+            "text": "                                        setBuildOverlayMode('liquidate_for_rent');",
+            "lineNumber": 2710
+          },
+          {
+            "text": "                                        setLiquidationContext({",
+            "lineNumber": 2711
+          },
+          {
+            "text": "                                          payerId: pid,",
+            "lineNumber": 2712
+          },
+          {
+            "text": "                                          payeeId: rentInfo.ownerId,",
+            "lineNumber": 2713
+          },
+          {
+            "text": "                                          tileId: t.id,",
+            "lineNumber": 2714
+          },
+          {
+            "text": "                                          rentDue: rentInfo.rentAmount,",
+            "lineNumber": 2715
+          },
+          {
+            "text": "                                        });",
+            "lineNumber": 2716
+          },
+          {
+            "text": "                                        setBuildOverlayOpen(true);",
+            "lineNumber": 2717
+          },
+          {
+            "text": "                                      }}",
+            "lineNumber": 2718
+          },
+          {
+            "text": "                                    &gt;",
+            "lineNumber": 2719
+          },
+          {
+            "text": "                                      {pendingForThisRent ? 'Edit Liquidation' : 'Liquidate &amp;amp; Pay'}",
+            "lineNumber": 2720
+          },
+          {
+            "text": "                                    &lt;/button&gt;",
+            "lineNumber": 2721
+          },
+          {
+            "text": "                                    {pendingForThisRent &amp;&amp; pendingLiquidation ? (",
+            "lineNumber": 2722
+          },
+          {
+            "text": "                                      &lt;span className=\"text-amber-700 dark:text-amber-300\"&gt;",
+            "lineNumber": 2723
+          },
+          {
+            "text": "                                        Pending settlement: net ${pendingLiquidation.projectedNetNow} now, cash after rent ${pendingLiquidation.projectedCashAfter}",
+            "lineNumber": 2724
+          },
+          {
+            "text": "                                      &lt;/span&gt;",
+            "lineNumber": 2725
+          },
+          {
+            "text": "                                    ) : (",
+            "lineNumber": 2726
+          },
+          {
+            "text": "                                      &lt;span className=\"text-muted\"&gt;Need ${rentShortfall} more to pay rent.&lt;/span&gt;",
+            "lineNumber": 2727
+          },
+          {
+            "text": "                                    )}",
+            "lineNumber": 2728
+          },
+          {
+            "text": "                  }",
+            "lineNumber": 2818
+          },
+          {
+            "text": "        )",
+            "lineNumber": 2963
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.24623019993305206
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1776,
+                "column": 28
+              },
+              "endPosition": {
+                "line": 1777,
+                "column": 11
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "\"&gt;Bus&lt;/button&gt;",
+            "lineNumber": 2256
+          },
+          {
+            "text": "                        )}",
+            "lineNumber": 2257
+          },
+          {
+            "text": "                      &lt;/div&gt;",
+            "lineNumber": 2258
+          },
+          {
+            "text": "                    &lt;/div&gt;",
+            "lineNumber": 2259
+          },
+          {
+            "lineNumber": 2260
+          },
+          {
+            "text": "                    {/* Game */}",
+            "lineNumber": 2261
+          },
+          {
+            "text": "                    &lt;div data-qa=\"gm-game\" className=\"rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4\"&gt;",
+            "lineNumber": 2262
+          },
+          {
+            "text": "                      &lt;h3 className=\"text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2\"&gt;Game&lt;/h3&gt;",
+            "lineNumber": 2263
+          },
+          {
+            "text": "                      &lt;p className=\"text-xs text-neutral-500 dark:text-neutral-400 mb-3\"&gt;Start over from Setup and clear the saved game state on this device.&lt;/p&gt;",
+            "lineNumber": 2264
+          },
+          {
+            "text": "                      &lt;div className=\"flex items-center justify-end\"&gt;",
+            "lineNumber": 2265
+          },
+          {
+            "text": "                        &lt;button",
+            "lineNumber": 2266
+          },
+          {
+            "text": "                          data-qa=\"btn-new-game\"",
+            "lineNumber": 2267
+          },
+          {
+            "text": "                          type=\"button\"",
+            "lineNumber": 2268
+          },
+          {
+            "text": "                          onClick={() =&gt; setNewGameConfirmOpen(true)}",
+            "lineNumber": 2269
+          },
+          {
+            "text": "                          className=\"inline-flex items-center justify-center rounded-md px-4 py-2 bg-rose-600 text-white font-semibold text-sm shadow hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-400\"",
+            "lineNumber": 2270
+          },
+          {
+            "text": "                        &gt;",
+            "lineNumber": 2271
+          },
+          {
+            "text": "                          New Game",
+            "lineNumber": 2272
+          },
+          {
+            "text": "                        &lt;/button&gt;",
+            "lineNumber": 2273
+          },
+          {
+            "text": "                      &lt;/div&gt;",
+            "lineNumber": 2274
+          },
+          {
+            "text": "                    &lt;/div&gt;",
+            "lineNumber": 2275
+          },
+          {
+            "text": "                  &lt;/div&gt;",
+            "lineNumber": 2276
+          },
+          {
+            "text": "                )}",
+            "lineNumber": 2277
+          },
+          {
+            "text": "              &lt;/div&gt;",
+            "lineNumber": 2278
+          },
+          {
+            "text": "            )}",
+            "lineNumber": 2279
+          },
+          {
+            "text": "          /&gt;",
+            "lineNumber": 2280
+          },
+          {
+            "text": "        &lt;/div&gt;",
+            "lineNumber": 2281
+          },
+          {
+            "text": "      &lt;/div&gt;",
+            "lineNumber": 2282
+          },
+          {
+            "lineNumber": 2283
+          },
+          {
+            "text": "      {/* Player turn cards */}",
+            "lineNumber": 2284
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.24143190681934357
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const finalizeTurn = ",
+            "lineNumber": 766
+          },
+          {
+            "lineNumber": 1276
+          },
+          {
+            "text": "      dispatch(",
+            "lineNumber": 1277
+          },
+          {
+            "text": "        appendEvent({",
+            "lineNumber": 1278
+          },
+          {
+            "text": "          id: crypto.randomUUID(),",
+            "lineNumber": 1279
+          },
+          {
+            "text": "          gameId: 'local',",
+            "lineNumber": 1280
+          },
+          {
+            "text": "          type: 'MOVE',",
+            "lineNumber": 1281
+          },
+          {
+            "text": "          actorPlayerId: pid,",
+            "lineNumber": 1282
+          },
+          {
+            "text": "          payload: {",
+            "lineNumber": 1283
+          },
+          {
+            "text": "            playerId: pid,",
+            "lineNumber": 1284
+          },
+          {
+            "text": "            from: fromIdx,",
+            "lineNumber": 1285
+          },
+          {
+            "text": "            to: JAIL_INDEX,",
+            "lineNumber": 1286
+          },
+          {
+            "text": "            steps: 0,",
+            "lineNumber": 1287
+          },
+          {
+            "text": "            distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),",
+            "lineNumber": 1288
+          },
+          {
+            "text": "            direction: 'forward',",
+            "lineNumber": 1289
+          },
+          {
+            "text": "            source: 'jail_three_doubles',",
+            "lineNumber": 1290
+          },
+          {
+            "text": "            message: 'Moved to Jail (3rd doubles)',",
+            "lineNumber": 1291
+          },
+          {
+            "text": "          },",
+            "lineNumber": 1292
+          },
+          {
+            "text": "          createdAt: new Date().toISOString(),",
+            "lineNumber": 1293
+          },
+          {
+            "text": "        })",
+            "lineNumber": 1294
+          },
+          {
+            "text": "      );",
+            "lineNumber": 1295
+          },
+          {
+            "text": "      dispatch(advanceTurn({ playerCount: players.length }));",
+            "lineNumber": 1296
+          },
+          {
+            "text": "    } else if (busTeleportTo != null) {",
+            "lineNumber": 1297
+          },
+          {
+            "text": "      // Teleport move ignores doubles chaining; advance immediately",
+            "lineNumber": 1298
+          },
+          {
+            "text": "      onApplyMove(pid, busTeleportTo, true, { source: 'teleport_bus', direction: 'forward' });",
+            "lineNumber": 1299
+          },
+          {
+            "text": "    } else if (tripleTeleportTo != null) {",
+            "lineNumber": 1300
+          },
+          {
+            "text": "      // Triple teleport ignores doubles chaining; advance immediately",
+            "lineNumber": 1301
+          },
+          {
+            "text": "      const fromIdx = players.find((p) =&gt; p.id === pid)?.positionIndex ?? currentIndex;",
+            "lineNumber": 1302
+          },
+          {
+            "text": "      const nearGoToJail111 = isTripleOnes &amp;&amp; (getForwardDistance(wrapIndex(fromIdx), wrapIndex(GO_TO_JAIL_INDEX)) === 3);",
+            "lineNumber": 1303
+          },
+          {
+            "text": "      if (nearGoToJail111) {",
+            "lineNumber": 1304
+          },
+          {
+            "text": "        // House rule: if 1-1-1 while 3 spaces from Go To Jail, go directly to Jail (no teleport, no +$1000).",
+            "lineNumber": 1305
+          },
+          {
+            "text": "        dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));",
+            "lineNumber": 1306
+          },
+          {
+            "text": "        (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });",
+            "lineNumber": 1307
+          },
+          {
+            "text": "        (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });",
+            "lineNumber": 1308
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1309
+          },
+          {
+            "text": "          appendEvent({",
+            "lineNumber": 1310
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1311
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1312
+          },
+          {
+            "text": "            type: 'JAIL',",
+            "lineNumber": 1313
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1314
+          },
+          {
+            "text": "            payload: { playerId: pid, reason: 'TRIPLE_ONES_NEAR_JAIL', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail (1-1-1 near Go To Jail)' },",
+            "lineNumber": 1315
+          },
+          {
+            "text": "            createdAt: new Date().toISOString(),",
+            "lineNumber": 1316
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1317
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1318
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1319
+          },
+          {
+            "text": "          appendEvent({",
+            "lineNumber": 1320
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1321
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1322
+          },
+          {
+            "lineNumber": 1336
+          },
+          {
+            "lineNumber": 1337
+          },
+          {
+            "text": ";",
+            "lineNumber": 1409
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.2173047959804535
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 587,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 587,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 587,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 587,
+                "column": 24
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const onApplyMove = ",
+            "lineNumber": 589
+          },
+          {
+            "text": "const computeDistance = ",
+            "lineNumber": 609
+          },
+          {
+            "lineNumber": 616
+          },
+          {
+            "text": "      // forward",
+            "lineNumber": 617
+          },
+          {
+            "text": "      if (isTeleportMove &amp;&amp; toWrapped === fromWrapped) return BOARD_SIZE;",
+            "lineNumber": 618
+          },
+          {
+            "text": "      return getForwardDistance(fromWrapped, toWrapped);",
+            "lineNumber": 619
+          },
+          {
+            "text": "    };",
+            "lineNumber": 620
+          },
+          {
+            "lineNumber": 621
+          },
+          {
+            "text": "    // Handle Go To Jail tile immediately per classic rules",
+            "lineNumber": 622
+          },
+          {
+            "text": "    if (tile.type === 'goToJail') {",
+            "lineNumber": 623
+          },
+          {
+            "text": "      const pid2 = pid;",
+            "lineNumber": 624
+          },
+          {
+            "text": "      const dist = getForwardDistance(wrapIndex(fromIndex), wrapIndex(JAIL_INDEX));",
+            "lineNumber": 625
+          },
+          {
+            "text": "      // Move to Jail, mark inJail, reset attempts, end turn",
+            "lineNumber": 626
+          },
+          {
+            "text": "      dispatch(setPlayerPosition({ id: pid2, index: JAIL_INDEX }));",
+            "lineNumber": 627
+          },
+          {
+            "text": "      (dispatch as any)({ type: 'players/setInJail', payload: { id: pid2, value: true } });",
+            "lineNumber": 628
+          },
+          {
+            "text": "      (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid2, attempts: 0 } });",
+            "lineNumber": 629
+          },
+          {
+            "text": "      dispatch(",
+            "lineNumber": 630
+          },
+          {
+            "text": "        appendEvent({",
+            "lineNumber": 631
+          },
+          {
+            "text": "          id: crypto.randomUUID(),",
+            "lineNumber": 632
+          },
+          {
+            "text": "          gameId: 'local',",
+            "lineNumber": 633
+          },
+          {
+            "text": "          type: 'JAIL',",
+            "lineNumber": 634
+          },
+          {
+            "text": "          actorPlayerId: pid2,",
+            "lineNumber": 635
+          },
+          {
+            "text": "          payload: { playerId: pid2, reason: 'GO_TO_JAIL_TILE', from: fromIndex, to: JAIL_INDEX, message: 'Go to Jail' },",
+            "lineNumber": 636
+          },
+          {
+            "text": "          createdAt: new Date().toISOString(),",
+            "lineNumber": 637
+          },
+          {
+            "text": "        })",
+            "lineNumber": 638
+          },
+          {
+            "text": "      );",
+            "lineNumber": 639
+          },
+          {
+            "text": "      // Also record movement for stats (no passing GO payout from jail moves)",
+            "lineNumber": 640
+          },
+          {
+            "text": "      dispatch(",
+            "lineNumber": 641
+          },
+          {
+            "text": "        appendEvent({",
+            "lineNumber": 642
+          },
+          {
+            "text": "          id: crypto.randomUUID(),",
+            "lineNumber": 643
+          },
+          {
+            "text": "          gameId: 'local',",
+            "lineNumber": 644
+          },
+          {
+            "text": "          type: 'MOVE',",
+            "lineNumber": 645
+          },
+          {
+            "text": "          actorPlayerId: pid2,",
+            "lineNumber": 646
+          },
+          {
+            "text": "          payload: { playerId: pid2, from: fromIndex, to: JAIL_INDEX, steps: 0, distance: dist, direction: 'forward', source: 'jail_go_to_jail_tile', message: 'Moved to Jail' },",
+            "lineNumber": 647
+          },
+          {
+            "text": "          createdAt: new Date().toISOString(),",
+            "lineNumber": 648
+          },
+          {
+            "text": "        })",
+            "lineNumber": 649
+          },
+          {
+            "text": "      );",
+            "lineNumber": 650
+          },
+          {
+            "text": "      dispatch(advanceTurn({ playerCount: players.length }));",
+            "lineNumber": 651
+          },
+          {
+            "text": "      return;",
+            "lineNumber": 652
+          },
+          {
+            "text": "    }",
+            "lineNumber": 653
+          },
+          {
+            "text": "    const ev: GameEvent = {",
+            "lineNumber": 654
+          },
+          {
+            "text": "      id: crypto.randomUUID(),",
+            "lineNumber": 655
+          },
+          {
+            "text": "      gameId: 'local',",
+            "lineNumber": 656
+          },
+          {
+            "text": "      type: 'MOVE',",
+            "lineNumber": 657
+          },
+          {
+            "text": "      actorPlayerId: pid,",
+            "lineNumber": 658
+          },
+          {
+            "text": ",",
+            "lineNumber": 671
+          },
+          {
+            "text": "    };",
+            "lineNumber": 672
+          },
+          {
+            "text": ";",
+            "lineNumber": 756
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.20522010326385498
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1298,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 1298,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1298,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 1298,
+                "column": 18
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const finalizeTurn = ",
+            "lineNumber": 766
+          },
+          {
+            "lineNumber": 1319
+          },
+          {
+            "text": "{",
+            "lineNumber": 1320
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1321
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1322
+          },
+          {
+            "text": "            type: 'MOVE',",
+            "lineNumber": 1323
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1324
+          },
+          {
+            "text": "            payload: {",
+            "lineNumber": 1325
+          },
+          {
+            "text": "              playerId: pid,",
+            "lineNumber": 1326
+          },
+          {
+            "text": "              from: fromIdx,",
+            "lineNumber": 1327
+          },
+          {
+            "text": "              to: JAIL_INDEX,",
+            "lineNumber": 1328
+          },
+          {
+            "text": "              steps: 0,",
+            "lineNumber": 1329
+          },
+          {
+            "text": "              distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),",
+            "lineNumber": 1330
+          },
+          {
+            "text": "              direction: 'forward',",
+            "lineNumber": 1331
+          },
+          {
+            "text": "              source: 'jail_triple_ones_near_jail',",
+            "lineNumber": 1332
+          },
+          {
+            "text": "              message: 'Moved to Jail (1-1-1 near Go To Jail)',",
+            "lineNumber": 1333
+          },
+          {
+            "text": "            },",
+            "lineNumber": 1334
+          },
+          {
+            "text": "            createdAt: new Date().toISOString(),",
+            "lineNumber": 1335
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1336
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1337
+          },
+          {
+            "text": "        dispatch(advanceTurn({ playerCount: players.length }));",
+            "lineNumber": 1338
+          },
+          {
+            "text": "        return;",
+            "lineNumber": 1339
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1340
+          },
+          {
+            "lineNumber": 1341
+          },
+          {
+            "text": "      dispatch(",
+            "lineNumber": 1342
+          },
+          {
+            "text": "        appendEvent({",
+            "lineNumber": 1343
+          },
+          {
+            "text": "          id: crypto.randomUUID(),",
+            "lineNumber": 1344
+          },
+          {
+            "text": "          gameId: 'local',",
+            "lineNumber": 1345
+          },
+          {
+            "text": "          type: 'TELEPORT',",
+            "lineNumber": 1346
+          },
+          {
+            "text": "          actorPlayerId: pid,",
+            "lineNumber": 1347
+          },
+          {
+            "text": "          payload: { playerId: pid, from: currentIndex, to: tripleTeleportTo, message: &#96;Teleported to ${getTileByIndex(tripleTeleportTo).name}&#96; },",
+            "lineNumber": 1348
+          },
+          {
+            "text": "          createdAt: new Date().toISOString(),",
+            "lineNumber": 1349
+          },
+          {
+            "text": "        })",
+            "lineNumber": 1350
+          },
+          {
+            "text": "      );",
+            "lineNumber": 1351
+          },
+          {
+            "text": "      if (isTripleOnes) {",
+            "lineNumber": 1352
+          },
+          {
+            "text": "        dispatch(adjustPlayerMoney({ id: pid, delta: +1000 }));",
+            "lineNumber": 1353
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1354
+          },
+          {
+            "text": "          appendEvent({",
+            "lineNumber": 1355
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1356
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1357
+          },
+          {
+            "text": "            type: 'JACKPOT_111',",
+            "lineNumber": 1358
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1359
+          },
+          {
+            "lineNumber": 1363
+          },
+          {
+            "lineNumber": 1364
+          },
+          {
+            "text": ";",
+            "lineNumber": 1409
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.20453380048274994
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "lineNumber": 3110
+          },
+          {
+            "text": "            &lt;div className=\"w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700 max-h-[85vh] overflow-y-auto\"&gt;",
+            "lineNumber": 3111
+          },
+          {
+            "text": "              &lt;OverlayHeader title=\"Event Logs\" onClose={() =&gt; setEventLogOpen(false)} className=\"mb-3\" /&gt;",
+            "lineNumber": 3112
+          },
+          {
+            "text": "              &lt;EventLog /&gt;",
+            "lineNumber": 3113
+          },
+          {
+            "text": "            &lt;/div&gt;",
+            "lineNumber": 3114
+          },
+          {
+            "text": "          &lt;/motion.div&gt;",
+            "lineNumber": 3115
+          },
+          {
+            "text": "        )}",
+            "lineNumber": 3116
+          },
+          {
+            "text": "      &lt;/AnimatePresence&gt;",
+            "lineNumber": 3117
+          },
+          {
+            "lineNumber": 3118
+          },
+          {
+            "text": "      {/* Summary overlay */}",
+            "lineNumber": 3119
+          },
+          {
+            "text": "      &lt;AnimatePresence&gt;",
+            "lineNumber": 3120
+          },
+          {
+            "text": "        {summaryOpen &amp;&amp; (",
+            "lineNumber": 3121
+          },
+          {
+            "text": "          &lt;motion.div key=\"summary\" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className=\"fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4\"&gt;",
+            "lineNumber": 3122
+          },
+          {
+            "text": "            &lt;div className=\"w-full max-w-3xl rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700\"&gt;",
+            "lineNumber": 3123
+          },
+          {
+            "text": "              &lt;OverlayHeader title=\"Turn Summary\" onClose={() =&gt; setSummaryOpen(false)} className=\"mb-2\" /&gt;",
+            "lineNumber": 3124
+          },
+          {
+            "text": "              &lt;div className=\"space-y-2 text-sm\"&gt;",
+            "lineNumber": 3125
+          },
+          {
+            "text": "                {/* Completed segments recap */}",
+            "lineNumber": 3126
+          },
+          {
+            "text": "                {turnSegments.length &gt; 0 &amp;&amp; (",
+            "lineNumber": 3127
+          },
+          {
+            "text": "                  &lt;div className=\"space-y-1\"&gt;",
+            "lineNumber": 3128
+          },
+          {
+            "text": "                    {turnSegments.map((seg, idx) =&gt; (",
+            "lineNumber": 3129
+          },
+          {
+            "text": "                      &lt;div key={seg.roll} className=\"rounded-md border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800\"&gt;",
+            "lineNumber": 3130
+          },
+          {
+            "text": "                        &lt;div className=\"flex items-center gap-2 text-xs px-2 py-1\"&gt;",
+            "lineNumber": 3131
+          },
+          {
+            "text": "                          &lt;span className=\"font-semibold\"&gt;Roll {seg.roll}&lt;/span&gt;",
+            "lineNumber": 3132
+          },
+          {
+            "text": "                          &lt;span className=\"opacity-80\"&gt;{seg.d6A != null &amp;&amp; seg.d6B != null ? &#96;${seg.d6A}+${seg.d6B}${seg.special != null ? &#96;+${String(seg.special)}&#96; : ''}&#96; : '—'}&lt;/span&gt;",
+            "lineNumber": 3133
+          },
+          {
+            "text": "                          {seg.busUsed &amp;&amp; &lt;span title=\"Bus used\"&gt;🚌&lt;/span&gt;}",
+            "lineNumber": 3134
+          },
+          {
+            "text": "                          &lt;span className=\"opacity-80\"&gt;→ {seg.tileName}&lt;/span&gt;",
+            "lineNumber": 3135
+          },
+          {
+            "text": "                          &lt;span className=\"opacity-50 tabular-nums ml-auto\"&gt;{new Date(seg.at).toLocaleTimeString()}&lt;/span&gt;",
+            "lineNumber": 3136
+          },
+          {
+            "text": "                        &lt;/div&gt;",
+            "lineNumber": 3137
+          },
+          {
+            "text": "                        {(() =&gt; {",
+            "lineNumber": 3138
+          },
+          {
+            "text": "                          const list = getSegmentEvents(idx);",
+            "lineNumber": 3139
+          },
+          {
+            "text": "                          if (!list || list.length === 0) return null;",
+            "lineNumber": 3140
+          },
+          {
+            "text": "                          return (",
+            "lineNumber": 3141
+          },
+          {
+            "text": "                            &lt;ul className=\"text-xs px-3 pb-2 space-y-1\"&gt;",
+            "lineNumber": 3142
+          },
+          {
+            "text": "                              {list.map((ev) =&gt; (",
+            "lineNumber": 3143
+          },
+          {
+            "text": "                                &lt;li key={ev.id} className=\"flex items-center gap-2\"&gt;",
+            "lineNumber": 3144
+          },
+          {
+            "text": "                                  &lt;span className=\"inline-flex items-center justify-center h-4 w-4 rounded-full text-[10px] bg-neutral-200 dark:bg-neutral-700\"&gt;{ev.type === 'CARD' ? 'C' : 'P'}&lt;/span&gt;",
+            "lineNumber": 3145
+          },
+          {
+            "text": "                                  &lt;span className=\"opacity-80\"&gt;{String(ev.payload?.message ?? (ev.type === 'CARD' ? 'Card' : 'Purchase'))}&lt;/span&gt;",
+            "lineNumber": 3146
+          },
+          {
+            "text": "                                  {typeof ev.moneyDelta === 'number' &amp;&amp; ev.moneyDelta !== 0 &amp;&amp; (",
+            "lineNumber": 3147
+          },
+          {
+            "text": "                                    &lt;span",
+            "lineNumber": 3148
+          },
+          {
+            "text": "                              )",
+            "lineNumber": 3151
+          },
+          {
+            "text": "                        }",
+            "lineNumber": 3154
+          },
+          {
+            "text": "                    )",
+            "lineNumber": 3156
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.20116369426250458
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1298,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 1298,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1298,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 1298,
+                "column": 18
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const finalizeTurn = ",
+            "lineNumber": 766
+          },
+          {
+            "lineNumber": 1354
+          },
+          {
+            "text": "({",
+            "lineNumber": 1355
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1356
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1357
+          },
+          {
+            "text": "            type: 'JACKPOT_111',",
+            "lineNumber": 1358
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1359
+          },
+          {
+            "text": "            payload: { playerId: pid, amount: 1000, message: '+$1000 jackpot (1-1-1)' },",
+            "lineNumber": 1360
+          },
+          {
+            "text": "            moneyDelta: +1000,",
+            "lineNumber": 1361
+          },
+          {
+            "text": "            createdAt: new Date().toISOString(),",
+            "lineNumber": 1362
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1363
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1364
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1365
+          },
+          {
+            "text": "      onApplyMove(pid, tripleTeleportTo, true, { source: 'teleport_triple', direction: 'forward' });",
+            "lineNumber": 1366
+          },
+          {
+            "text": "    } else if (isDoubles) {",
+            "lineNumber": 1367
+          },
+          {
+            "text": "      // Record this roll segment now (doubles can create multiple rolls per turn)",
+            "lineNumber": 1368
+          },
+          {
+            "text": "      try {",
+            "lineNumber": 1369
+          },
+          {
+            "text": "        const fromIndexSeg = players.find((p) =&gt; p.id === pid)?.positionIndex ?? 0;",
+            "lineNumber": 1370
+          },
+          {
+            "text": "        const moveStepsSeg = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;",
+            "lineNumber": 1371
+          },
+          {
+            "text": "        const toIndexSeg = (fromIndexSeg + moveStepsSeg) % BOARD_TILES.length;",
+            "lineNumber": 1372
+          },
+          {
+            "text": "        appendUniqueTurnSegment({",
+            "lineNumber": 1373
+          },
+          {
+            "text": "          roll: rollCount,",
+            "lineNumber": 1374
+          },
+          {
+            "text": "          d6A: d6A as number | null,",
+            "lineNumber": 1375
+          },
+          {
+            "text": "          d6B: d6B as number | null,",
+            "lineNumber": 1376
+          },
+          {
+            "text": "          special: special as any,",
+            "lineNumber": 1377
+          },
+          {
+            "text": "          busUsed: false,",
+            "lineNumber": 1378
+          },
+          {
+            "text": "          from: fromIndexSeg,",
+            "lineNumber": 1379
+          },
+          {
+            "text": "          to: toIndexSeg,",
+            "lineNumber": 1380
+          },
+          {
+            "text": "          tileName: getTileByIndex(toIndexSeg).name,",
+            "lineNumber": 1381
+          },
+          {
+            "text": "          at: new Date().toISOString(),",
+            "lineNumber": 1382
+          },
+          {
+            "text": "        });",
+            "lineNumber": 1383
+          },
+          {
+            "text": "      } catch {}",
+            "lineNumber": 1384
+          },
+          {
+            "text": "      // Apply move but do NOT advance; prepare for next roll in the same turn",
+            "lineNumber": 1385
+          },
+          {
+            "text": "      onApplyMove(pid, undefined, false, { source: 'dice', direction: 'forward', rawSteps: (d6A as number) + (d6B as number) + specialNumeric });",
+            "lineNumber": 1386
+          },
+          {
+            "text": "      setRollCount((n) =&gt; n + 1);",
+            "lineNumber": 1387
+          },
+          {
+            "text": "      // Reset flow for next roll",
+            "lineNumber": 1388
+          },
+          {
+            "text": "      setActiveStep(1);",
+            "lineNumber": 1389
+          },
+          {
+            "text": "      setHighestStep(1);",
+            "lineNumber": 1390
+          },
+          {
+            "text": "      setD6A(null);",
+            "lineNumber": 1391
+          },
+          {
+            "text": "      setD6B(null);",
+            "lineNumber": 1392
+          },
+          {
+            "text": "      setSpecial(null);",
+            "lineNumber": 1393
+          },
+          {
+            "text": "      setRollConfirmed(false);",
+            "lineNumber": 1394
+          },
+          {
+            "text": "      setPredictedTo(null);",
+            "lineNumber": 1395
+          },
+          {
+            "text": "      setTripleTeleportTo(null);",
+            "lineNumber": 1396
+          },
+          {
+            "text": "      setPostAction('None');",
+            "lineNumber": 1397
+          },
+          {
+            "text": "      setBuySelected(false);",
+            "lineNumber": 1398
+          },
+          {
+            "text": "      setRentSelected(false);",
+            "lineNumber": 1399
+          },
+          {
+            "text": "      setResolvedRentKey(null);",
+            "lineNumber": 1400
+          },
+          {
+            "text": "      setPendingLiquidation(null);",
+            "lineNumber": 1401
+          },
+          {
+            "text": ";",
+            "lineNumber": 1409
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.19190549850463867
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1776,
+                "column": 28
+              },
+              "endPosition": {
+                "line": 1777,
+                "column": 11
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "function getTileHeaderBg(tile: ReturnType&lt;typeof getTileByIndex&gt;): string {",
+            "lineNumber": 1784
+          },
+          {
+            "lineNumber": 1796
+          },
+          {
+            "text": "        case 'yellow':",
+            "lineNumber": 1797
+          },
+          {
+            "text": "          return 'bg-yellow-400';",
+            "lineNumber": 1798
+          },
+          {
+            "text": "        case 'green':",
+            "lineNumber": 1799
+          },
+          {
+            "text": "          return 'bg-green-600';",
+            "lineNumber": 1800
+          },
+          {
+            "text": "        case 'darkBlue':",
+            "lineNumber": 1801
+          },
+          {
+            "text": "          return 'bg-blue-900';",
+            "lineNumber": 1802
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1803
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1804
+          },
+          {
+            "text": "    if (tile.type === 'railroad') return 'bg-stone-300';",
+            "lineNumber": 1805
+          },
+          {
+            "text": "    if (tile.type === 'utility') return 'bg-zinc-200';",
+            "lineNumber": 1806
+          },
+          {
+            "text": "    return 'bg-neutral-200';",
+            "lineNumber": 1807
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1808
+          },
+          {
+            "lineNumber": 1809
+          },
+          {
+            "text": "  function getGroupBorderClass(group: ColorGroup): string {",
+            "lineNumber": 1810
+          },
+          {
+            "text": "    switch (group) {",
+            "lineNumber": 1811
+          },
+          {
+            "text": "      case 'brown':",
+            "lineNumber": 1812
+          },
+          {
+            "text": "        return 'border-amber-800';",
+            "lineNumber": 1813
+          },
+          {
+            "text": "      case 'lightBlue':",
+            "lineNumber": 1814
+          },
+          {
+            "text": "        return 'border-sky-300';",
+            "lineNumber": 1815
+          },
+          {
+            "text": "      case 'pink':",
+            "lineNumber": 1816
+          },
+          {
+            "text": "        return 'border-pink-400';",
+            "lineNumber": 1817
+          },
+          {
+            "text": "      case 'orange':",
+            "lineNumber": 1818
+          },
+          {
+            "text": "        return 'border-orange-400';",
+            "lineNumber": 1819
+          },
+          {
+            "text": "      case 'red':",
+            "lineNumber": 1820
+          },
+          {
+            "text": "        return 'border-red-600';",
+            "lineNumber": 1821
+          },
+          {
+            "text": "      case 'yellow':",
+            "lineNumber": 1822
+          },
+          {
+            "text": "        return 'border-yellow-400';",
+            "lineNumber": 1823
+          },
+          {
+            "text": "      case 'green':",
+            "lineNumber": 1824
+          },
+          {
+            "text": "        return 'border-green-600';",
+            "lineNumber": 1825
+          },
+          {
+            "text": "      case 'darkBlue':",
+            "lineNumber": 1826
+          },
+          {
+            "text": "        return 'border-blue-900';",
+            "lineNumber": 1827
+          },
+          {
+            "text": "      default:",
+            "lineNumber": 1828
+          },
+          {
+            "text": "        return 'border-neutral-400';",
+            "lineNumber": 1829
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1830
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1831
+          },
+          {
+            "lineNumber": 1832
+          },
+          {
+            "text": "  function renderImprovementIcons(imp: number): React.ReactNode {",
+            "lineNumber": 1833
+          },
+          {
+            "text": "    if (imp &lt;= 0) return null;",
+            "lineNumber": 1834
+          },
+          {
+            "text": "    if (imp &gt;= 6) {",
+            "lineNumber": 1835
+          },
+          {
+            "text": "      return &lt;img src=\"/icons/skyscraper.webp\" alt=\"Skyscraper\" className=\"h-4 w-4 shrink-0 inline-block align-middle\" loading=\"lazy\" decoding=\"async\" /&gt;;",
+            "lineNumber": 1836
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1837
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1844
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.18806500732898712
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1145,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 1145,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1145,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 1145,
+                "column": 21
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const finalizeTurn = ",
+            "lineNumber": 766
+          },
+          {
+            "lineNumber": 1184
+          },
+          {
+            "lineNumber": 1185
+          },
+          {
+            "text": ",",
+            "lineNumber": 1191
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1192
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1193
+          },
+          {
+            "text": "        // Record movement for stats",
+            "lineNumber": 1194
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1195
+          },
+          {
+            "text": "          appendEvent({",
+            "lineNumber": 1196
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1197
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1198
+          },
+          {
+            "text": "            type: 'MOVE',",
+            "lineNumber": 1199
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1200
+          },
+          {
+            "text": "            payload: {",
+            "lineNumber": 1201
+          },
+          {
+            "text": "              playerId: pid,",
+            "lineNumber": 1202
+          },
+          {
+            "text": "              from: fromIdx,",
+            "lineNumber": 1203
+          },
+          {
+            "text": "              to: JAIL_INDEX,",
+            "lineNumber": 1204
+          },
+          {
+            "text": "              steps: 0,",
+            "lineNumber": 1205
+          },
+          {
+            "text": "              distance: getForwardDistance(wrapIndex(fromIdx), wrapIndex(JAIL_INDEX)),",
+            "lineNumber": 1206
+          },
+          {
+            "text": "              direction: 'forward',",
+            "lineNumber": 1207
+          },
+          {
+            "text": "              source: 'jail_card',",
+            "lineNumber": 1208
+          },
+          {
+            "text": "              card: queuedPostActive.card,",
+            "lineNumber": 1209
+          },
+          {
+            "text": "              message: 'Moved to Jail',",
+            "lineNumber": 1210
+          },
+          {
+            "text": "            },",
+            "lineNumber": 1211
+          },
+          {
+            "text": "            createdAt: new Date().toISOString(),",
+            "lineNumber": 1212
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1213
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1214
+          },
+          {
+            "text": "        dispatch(advanceTurn({ playerCount: players.length }));",
+            "lineNumber": 1215
+          },
+          {
+            "text": "        setPredictedTo(null);",
+            "lineNumber": 1216
+          },
+          {
+            "text": "        setQueuedPostPending(false);",
+            "lineNumber": 1217
+          },
+          {
+            "text": "        setQueuedPostActive(null);",
+            "lineNumber": 1218
+          },
+          {
+            "text": "        setPostActionQueue([]);",
+            "lineNumber": 1219
+          },
+          {
+            "text": "        return;",
+            "lineNumber": 1220
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1221
+          },
+          {
+            "lineNumber": 1222
+          },
+          {
+            "text": "      onApplyMove(pid, predictedTo, false, {",
+            "lineNumber": 1223
+          },
+          {
+            "text": "        source: queuedPostActive.source,",
+            "lineNumber": 1224
+          },
+          {
+            "text": "        direction: queuedPostActive.direction,",
+            "lineNumber": 1225
+          },
+          {
+            "text": "        rawSteps: queuedPostActive.card?.rawSteps,",
+            "lineNumber": 1226
+          },
+          {
+            "text": "        card: queuedPostActive.card,",
+            "lineNumber": 1227
+          },
+          {
+            "text": "      });",
+            "lineNumber": 1228
+          },
+          {
+            "text": "      setPredictedTo(null);",
+            "lineNumber": 1229
+          },
+          {
+            "text": "      setQueuedPostPending(false);",
+            "lineNumber": 1230
+          },
+          {
+            "text": "      setQueuedPostActive(null);",
+            "lineNumber": 1231
+          },
+          {
+            "text": "      resolvedQueuedThisCall = true;",
+            "lineNumber": 1232
+          },
+          {
+            "text": "      // If more queued items remain, immediately open the next and stop here",
+            "lineNumber": 1233
+          },
+          {
+            "text": "      if (postActionQueue.length &gt; 0) {",
+            "lineNumber": 1234
+          },
+          {
+            "text": "        const nextMove2 = postActionQueue[0];",
+            "lineNumber": 1235
+          },
+          {
+            "text": "        setPostActionQueue((q) =&gt; q.slice(1));",
+            "lineNumber": 1236
+          },
+          {
+            "text": "        if (nextMove2.kind === 'move') setPredictedTo(nextMove2.to);",
+            "lineNumber": 1237
+          },
+          {
+            "text": "        else setPredictedTo(JAIL_INDEX);",
+            "lineNumber": 1238
+          },
+          {
+            "text": "        setQueuedPostActive(nextMove2);",
+            "lineNumber": 1239
+          },
+          {
+            "text": "        setActiveStep(2);",
+            "lineNumber": 1240
+          },
+          {
+            "text": "        setHighestStep(2);",
+            "lineNumber": 1241
+          },
+          {
+            "text": "        setQueuedPostPending(true);",
+            "lineNumber": 1242
+          },
+          {
+            "text": "        setPostAction('None');",
+            "lineNumber": 1243
+          },
+          {
+            "text": "        setBuySelected(false);",
+            "lineNumber": 1244
+          },
+          {
+            "text": "        setRentSelected(false);",
+            "lineNumber": 1245
+          },
+          {
+            "text": ";",
+            "lineNumber": 1409
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.185983806848526
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "function getBuyStyle(tile: ReturnType&lt;typeof getTileByIndex&gt;): { bgClass: string; textClass: string; borderClass: string; textStrongClass: string } {",
+            "lineNumber": 1756
+          },
+          {
+            "text": " textStrongClass: 'text-pink-400' };",
+            "lineNumber": 1765
+          },
+          {
+            "text": "        case 'orange':",
+            "lineNumber": 1766
+          },
+          {
+            "text": "          return { bgClass: 'bg-orange-400', textClass: 'text-neutral-900', borderClass: 'border-orange-400', textStrongClass: 'text-orange-400' };",
+            "lineNumber": 1767
+          },
+          {
+            "text": "        case 'red':",
+            "lineNumber": 1768
+          },
+          {
+            "text": "          return { bgClass: 'bg-red-600', textClass: 'text-white', borderClass: 'border-red-600', textStrongClass: 'text-red-600' };",
+            "lineNumber": 1769
+          },
+          {
+            "text": "        case 'yellow':",
+            "lineNumber": 1770
+          },
+          {
+            "text": "          return { bgClass: 'bg-yellow-400', textClass: 'text-neutral-900', borderClass: 'border-yellow-400', textStrongClass: 'text-yellow-400' };",
+            "lineNumber": 1771
+          },
+          {
+            "text": "        case 'green':",
+            "lineNumber": 1772
+          },
+          {
+            "text": "          return { bgClass: 'bg-green-600', textClass: 'text-white', borderClass: 'border-green-600', textStrongClass: 'text-green-600' };",
+            "lineNumber": 1773
+          },
+          {
+            "text": "        case 'darkBlue':",
+            "lineNumber": 1774
+          },
+          {
+            "text": "          return { bgClass: 'bg-blue-900', textClass: 'text-white', borderClass: 'border-blue-900', textStrongClass: 'text-blue-900' };",
+            "lineNumber": 1775
+          },
+          {
+            "text": "        default:",
+            "lineNumber": 1776
+          },
+          {
+            "text": "          return { bgClass: 'bg-amber-600', textClass: 'text-white', borderClass: 'border-amber-600', textStrongClass: 'text-amber-600' };",
+            "lineNumber": 1777
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1778
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1779
+          },
+          {
+            "text": "    if (tile.type === 'railroad') return { bgClass: 'bg-stone-300', textClass: 'text-neutral-900', borderClass: 'border-stone-400', textStrongClass: 'text-stone-600' };",
+            "lineNumber": 1780
+          },
+          {
+            "text": "    return { bgClass: 'bg-amber-600', textClass: 'text-white', borderClass: 'border-amber-600', textStrongClass: 'text-amber-600' };",
+            "lineNumber": 1781
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1782
+          },
+          {
+            "lineNumber": 1783
+          },
+          {
+            "text": "  function getTileHeaderBg(tile: ReturnType&lt;typeof getTileByIndex&gt;): string {",
+            "lineNumber": 1784
+          },
+          {
+            "text": "    if (tile.type === 'property') {",
+            "lineNumber": 1785
+          },
+          {
+            "text": "      switch (tile.group) {",
+            "lineNumber": 1786
+          },
+          {
+            "text": "        case 'brown':",
+            "lineNumber": 1787
+          },
+          {
+            "text": "          return 'bg-amber-800';",
+            "lineNumber": 1788
+          },
+          {
+            "text": "        case 'lightBlue':",
+            "lineNumber": 1789
+          },
+          {
+            "text": "          return 'bg-sky-300';",
+            "lineNumber": 1790
+          },
+          {
+            "text": "        case 'pink':",
+            "lineNumber": 1791
+          },
+          {
+            "text": "          return 'bg-pink-400';",
+            "lineNumber": 1792
+          },
+          {
+            "text": "        case 'orange':",
+            "lineNumber": 1793
+          },
+          {
+            "text": "          return 'bg-orange-400';",
+            "lineNumber": 1794
+          },
+          {
+            "text": "        case 'red':",
+            "lineNumber": 1795
+          },
+          {
+            "text": "          return 'bg-red-600';",
+            "lineNumber": 1796
+          },
+          {
+            "text": "        case 'yellow':",
+            "lineNumber": 1797
+          },
+          {
+            "text": "          return 'bg-yellow-400';",
+            "lineNumber": 1798
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1808
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.18420599400997162
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 2776,
+                "column": 18
+              },
+              "endPosition": {
+                "line": 2776,
+                "column": 18
+              }
+            },
+            {
+              "startPosition": {
+                "line": 2776,
+                "column": 34
+              },
+              "endPosition": {
+                "line": 2777,
+                "column": 19
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "(p) =&gt; (",
+            "lineNumber": 2295
+          },
+          {
+            "lineNumber": 2821
+          },
+          {
+            "lineNumber": 2822
+          },
+          {
+            "text": "            {/* Navigation */}",
+            "lineNumber": 2823
+          },
+          {
+            "text": "            &lt;div data-qa=\"play-console-footer\" className=\"flex items-center justify-between gap-0 py-3 px-3 bg-surface-0 rounded-b-3xl\"&gt;",
+            "lineNumber": 2824
+          },
+          {
+            "text": "              &lt;div className=\"flex items-center gap-2\"&gt;",
+            "lineNumber": 2825
+          },
+          {
+            "text": "                {activeStep === 1 &amp;&amp; isTriple &amp;&amp; (",
+            "lineNumber": 2826
+          },
+          {
+            "text": "                  tripleTeleportTo != null ? (",
+            "lineNumber": 2827
+          },
+          {
+            "text": "                    &lt;button",
+            "lineNumber": 2828
+          },
+          {
+            "text": "                      type=\"button\"",
+            "lineNumber": 2829
+          },
+          {
+            "text": "                      className={&#96;inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${",
+            "lineNumber": 2830
+          },
+          {
+            "text": "                        isTripleOnes",
+            "lineNumber": 2831
+          },
+          {
+            "text": "                          ? 'border-amber-500 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50'",
+            "lineNumber": 2832
+          },
+          {
+            "text": "                          : 'border-indigo-500 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'",
+            "lineNumber": 2833
+          },
+          {
+            "text": "                      }&#96;}",
+            "lineNumber": 2834
+          },
+          {
+            "text": "                      onClick={() =&gt; {",
+            "lineNumber": 2835
+          },
+          {
+            "text": "                        setTripleTeleportTo(null);",
+            "lineNumber": 2836
+          },
+          {
+            "text": "                        setPredictedTo(null);",
+            "lineNumber": 2837
+          },
+          {
+            "text": "                      }}",
+            "lineNumber": 2838
+          },
+          {
+            "text": "                    &gt;",
+            "lineNumber": 2839
+          },
+          {
+            "text": "                      &lt;span&gt;✓&lt;/span&gt;",
+            "lineNumber": 2840
+          },
+          {
+            "text": "                      🌀 to {getTileByIndex(tripleTeleportTo).name}{isTripleOnes ? ' (+$1000)' : ''}",
+            "lineNumber": 2841
+          },
+          {
+            "text": "                    &lt;/button&gt;",
+            "lineNumber": 2842
+          },
+          {
+            "text": "                  ) : (",
+            "lineNumber": 2843
+          },
+          {
+            "text": "                    &lt;button",
+            "lineNumber": 2844
+          },
+          {
+            "text": "                      type=\"button\"",
+            "lineNumber": 2845
+          },
+          {
+            "text": "                      disabled={busTeleportTo != null}",
+            "lineNumber": 2846
+          },
+          {
+            "text": "                      className={&#96;inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-semibold border disabled:opacity-50 disabled:cursor-not-allowed ${",
+            "lineNumber": 2847
+          },
+          {
+            "text": "                        isTripleOnes",
+            "lineNumber": 2848
+          },
+          {
+            "text": "                          ? 'border-amber-500 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30'",
+            "lineNumber": 2849
+          },
+          {
+            "text": "                          : 'border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'",
+            "lineNumber": 2850
+          },
+          {
+            "text": "                      }&#96;}",
+            "lineNumber": 2851
+          },
+          {
+            "text": "                      onClick={() =&gt; {",
+            "lineNumber": 2852
+          },
+          {
+            "text": "                        setBusTeleportTo(null);",
+            "lineNumber": 2853
+          },
+          {
+            "text": "                        setCenterOverlay({ type: 'tripleTeleport' });",
+            "lineNumber": 2854
+          },
+          {
+            "text": "                      }}",
+            "lineNumber": 2855
+          },
+          {
+            "text": "                    &gt;",
+            "lineNumber": 2856
+          },
+          {
+            "text": "                      Teleport (3-of-a-kind)",
+            "lineNumber": 2857
+          },
+          {
+            "text": "                    &lt;/button&gt;",
+            "lineNumber": 2858
+          },
+          {
+            "text": "                  )",
+            "lineNumber": 2859
+          },
+          {
+            "text": "                )}",
+            "lineNumber": 2860
+          },
+          {
+            "text": "              &lt;/div&gt;",
+            "lineNumber": 2861
+          },
+          {
+            "text": "              {activeStep &lt; 2 ? (",
+            "lineNumber": 2862
+          },
+          {
+            "text": "                &lt;button",
+            "lineNumber": 2863
+          },
+          {
+            "text": "                  type=\"button\"",
+            "lineNumber": 2864
+          },
+          {
+            "text": "        )",
+            "lineNumber": 2963
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.17876769602298737
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1145,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 1145,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1145,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 1145,
+                "column": 21
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const finalizeTurn = ",
+            "lineNumber": 766
+          },
+          {
+            "lineNumber": 1129
+          },
+          {
+            "lineNumber": 1130
+          },
+          {
+            "lineNumber": 1144
+          },
+          {
+            "text": "                })",
+            "lineNumber": 1145
+          },
+          {
+            "text": "              );",
+            "lineNumber": 1146
+          },
+          {
+            "text": "              // Pass consumed; skip rent transfer but continue turn finalization.",
+            "lineNumber": 1147
+          },
+          {
+            "text": "            }",
+            "lineNumber": 1148
+          },
+          {
+            "text": "            if (!(useRentPassSelected &amp;&amp; usablePass)) {",
+            "lineNumber": 1149
+          },
+          {
+            "text": "              const payerMoney = players.find((p) =&gt; p.id === pid)?.money ?? 0;",
+            "lineNumber": 1150
+          },
+          {
+            "text": "              if (payerMoney &lt; rent2) return;",
+            "lineNumber": 1151
+          },
+          {
+            "text": "              dispatch(adjustPlayerMoney({ id: pid, delta: -rent2 }));",
+            "lineNumber": 1152
+          },
+          {
+            "text": "              dispatch(adjustPlayerMoney({ id: ownerIdForTile2, delta: +rent2 }));",
+            "lineNumber": 1153
+          },
+          {
+            "text": "              dispatch(",
+            "lineNumber": 1154
+          },
+          {
+            "text": "                appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'RENT', actorPlayerId: pid, payload: { tileId: t2.id, from: pid, to: ownerIdForTile2, amount: rent2, message: &#96;Rent ${rent2}&#96; }, moneyDelta: -rent2, createdAt: new Date().toISOString() })",
+            "lineNumber": 1155
+          },
+          {
+            "text": "              );",
+            "lineNumber": 1156
+          },
+          {
+            "text": "            }",
+            "lineNumber": 1157
+          },
+          {
+            "text": "          }",
+            "lineNumber": 1158
+          },
+          {
+            "text": "        }",
+            "lineNumber": 1159
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1160
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1161
+          },
+          {
+            "lineNumber": 1162
+          },
+          {
+            "text": "    // If Tax was toggled, apply to Free Parking and log (skip on third doubles)",
+            "lineNumber": 1163
+          },
+          {
+            "text": "    if (!thirdDoubles &amp;&amp; taxSelected) {",
+            "lineNumber": 1164
+          },
+          {
+            "text": "      const idx3 = predictedTo ?? currentIndex;",
+            "lineNumber": 1165
+          },
+          {
+            "text": "      const t3 = getTileByIndex(idx3);",
+            "lineNumber": 1166
+          },
+          {
+            "text": "      if (t3 &amp;&amp; t3.type === 'tax' &amp;&amp; t3.taxAmount) {",
+            "lineNumber": 1167
+          },
+          {
+            "text": "        dispatch(adjustPlayerMoney({ id: pid, delta: -t3.taxAmount }));",
+            "lineNumber": 1168
+          },
+          {
+            "text": "        dispatch(addToFreeParking(t3.taxAmount));",
+            "lineNumber": 1169
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1170
+          },
+          {
+            "text": "          appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', actorPlayerId: pid, payload: { tileId: t3.id, from: pid, amount: t3.taxAmount, message: &#96;Tax ${t3.taxAmount}&#96; }, moneyDelta: -t3.taxAmount, createdAt: new Date().toISOString() })",
+            "lineNumber": 1171
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1172
+          },
+          {
+            "text": "      }",
+            "lineNumber": 1173
+          },
+          {
+            "text": "    }",
+            "lineNumber": 1174
+          },
+          {
+            "lineNumber": 1175
+          },
+          {
+            "text": "    // If we are resolving a queued Post (predictedTo set from queue), apply now but do not advance turn.",
+            "lineNumber": 1176
+          },
+          {
+            "text": "    if (queuedPostPending &amp;&amp; queuedPostActive &amp;&amp; predictedTo != null) {",
+            "lineNumber": 1177
+          },
+          {
+            "text": "      const fromIdx = players.find((p) =&gt; p.id === pid)?.positionIndex ?? 0;",
+            "lineNumber": 1178
+          },
+          {
+            "text": "      if (queuedPostActive.kind === 'goToJail') {",
+            "lineNumber": 1179
+          },
+          {
+            "text": "        // Card jail: move to Jail, mark inJail, reset attempts, end turn",
+            "lineNumber": 1180
+          },
+          {
+            "text": "        dispatch(setPlayerPosition({ id: pid, index: JAIL_INDEX }));",
+            "lineNumber": 1181
+          },
+          {
+            "text": "        (dispatch as any)({ type: 'players/setInJail', payload: { id: pid, value: true } });",
+            "lineNumber": 1182
+          },
+          {
+            "text": "        (dispatch as any)({ type: 'players/setJailAttempts', payload: { id: pid, attempts: 0 } });",
+            "lineNumber": 1183
+          },
+          {
+            "text": "        dispatch(",
+            "lineNumber": 1184
+          },
+          {
+            "text": "          appendEvent({",
+            "lineNumber": 1185
+          },
+          {
+            "text": "            id: crypto.randomUUID(),",
+            "lineNumber": 1186
+          },
+          {
+            "text": "            gameId: 'local',",
+            "lineNumber": 1187
+          },
+          {
+            "text": "            type: 'JAIL',",
+            "lineNumber": 1188
+          },
+          {
+            "text": "            actorPlayerId: pid,",
+            "lineNumber": 1189
+          },
+          {
+            "text": "            payload: { playerId: pid, reason: 'CARD', from: fromIdx, to: JAIL_INDEX, message: 'Go to Jail' },",
+            "lineNumber": 1190
+          },
+          {
+            "text": "            createdAt: new Date().toISOString(),",
+            "lineNumber": 1191
+          },
+          {
+            "text": "          })",
+            "lineNumber": 1192
+          },
+          {
+            "text": "        );",
+            "lineNumber": 1193
+          },
+          {
+            "text": "        // Record movement for stats",
+            "lineNumber": 1194
+          },
+          {
+            "text": "        dispatch",
+            "lineNumber": 1195
+          },
+          {
+            "lineNumber": 1214
+          },
+          {
+            "text": ";",
+            "lineNumber": 1409
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.17775920033454895
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "type ApplyMoveMeta = ",
+            "lineNumber": 92
+          },
+          {
+            "text": " awardGoIfPassed?: boolean };",
+            "lineNumber": 96
+          },
+          {
+            "text": "  };",
+            "lineNumber": 97
+          },
+          {
+            "lineNumber": 98
+          },
+          {
+            "text": "  type PendingLiquidationPlan = {",
+            "lineNumber": 99
+          },
+          {
+            "text": "    payerId: string;",
+            "lineNumber": 100
+          },
+          {
+            "text": "    payeeId: string;",
+            "lineNumber": 101
+          },
+          {
+            "text": "    tileId: string;",
+            "lineNumber": 102
+          },
+          {
+            "text": "    rentDue: number;",
+            "lineNumber": 103
+          },
+          {
+            "text": "    targets: Record&lt;string, number&gt;;",
+            "lineNumber": 104
+          },
+          {
+            "text": "    desiredMortgaged: Record&lt;string, boolean&gt;;",
+            "lineNumber": 105
+          },
+          {
+            "text": "    desiredDepotInstalled: Record&lt;string, boolean&gt;;",
+            "lineNumber": 106
+          },
+          {
+            "text": "    projectedNetNow: number;",
+            "lineNumber": 107
+          },
+          {
+            "text": "    projectedCashAfter: number;",
+            "lineNumber": 108
+          },
+          {
+            "text": "  };",
+            "lineNumber": 109
+          },
+          {
+            "lineNumber": 110
+          },
+          {
+            "text": "  const [currentIndex, setCurrentIndex] = useState&lt;number&gt;(0);",
+            "lineNumber": 111
+          },
+          {
+            "text": "  const [d6A, setD6A] = useState&lt;number | null&gt;(null);",
+            "lineNumber": 112
+          },
+          {
+            "text": "  const [d6B, setD6B] = useState&lt;number | null&gt;(null);",
+            "lineNumber": 113
+          },
+          {
+            "text": "  const [special, setSpecial] = useState&lt;SpecialDieFace | null&gt;(null);",
+            "lineNumber": 114
+          },
+          {
+            "text": "  const [rollConfirmed, setRollConfirmed] = useState&lt;boolean&gt;(false);",
+            "lineNumber": 115
+          },
+          {
+            "text": "  const [activeStep, setActiveStep] = useState&lt;0 | 1 | 2&gt;(0); // 0=pre,1=roll,2=post",
+            "lineNumber": 116
+          },
+          {
+            "text": "  const [moneyDelta, setMoneyDelta] = useState&lt;number&gt;(0);",
+            "lineNumber": 117
+          },
+          {
+            "text": "  const [moneyPlayerId, setMoneyPlayerId] = useState&lt;string&gt;('');",
+            "lineNumber": 118
+          },
+          {
+            "text": "  const [preActions, setPreActions] = useState&lt;string[]&gt;([]);",
+            "lineNumber": 119
+          },
+          {
+            "text": "  const [postAction, setPostAction] = useState&lt;string&gt;('None');",
+            "lineNumber": 120
+          },
+          {
+            "text": "  const [highestStep, setHighestStep] = useState&lt;0 | 1 | 2&gt;(0);",
+            "lineNumber": 121
+          },
+          {
+            "text": "  const [predictedTo, setPredictedTo] = useState&lt;number | null&gt;(null);",
+            "lineNumber": 122
+          },
+          {
+            "text": "  const [buySelected, setBuySelected] = useState&lt;boolean&gt;(false);",
+            "lineNumber": 123
+          },
+          {
+            "text": "  const [rentSelected, setRentSelected] = useState&lt;boolean&gt;(false);",
+            "lineNumber": 124
+          },
+          {
+            "text": "  const [useRentPassSelected, setUseRentPassSelected] = useState&lt;boolean&gt;(false);",
+            "lineNumber": 125
+          },
+          {
+            "text": "  const [taxSelected, setTaxSelected] = useState&lt;boolean&gt;(false);",
+            "lineNumber": 126
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.17693734169006348
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 1776,
+                "column": 28
+              },
+              "endPosition": {
+                "line": 1777,
+                "column": 11
+              }
+            },
+            {
+              "startPosition": {
+                "line": 2257,
+                "column": 17
+              },
+              "endPosition": {
+                "line": 2257,
+                "column": 17
+              }
+            },
+            {
+              "startPosition": {
+                "line": 2257,
+                "column": 18
+              },
+              "endPosition": {
+                "line": 2258,
+                "column": 19
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "(p) =&gt; (",
+            "lineNumber": 2295
+          },
+          {
+            "text": " (",
+            "lineNumber": 2298
+          },
+          {
+            "text": "              &lt;TurnRibbon",
+            "lineNumber": 2299
+          },
+          {
+            "text": "                segments={turnSegments}",
+            "lineNumber": 2300
+          },
+          {
+            "text": "                currentDraft={{ roll: rollCount, d6A, d6B, special, busUsed: busTeleportTo != null, from: players[turnIndex]?.positionIndex ?? 0, to: predictedTo ?? (players[turnIndex]?.positionIndex ?? 0), tileName: (predictedTo != null ? getTileByIndex(predictedTo).name : getTileByIndex(players[turnIndex]?.positionIndex ?? 0).name) }}",
+            "lineNumber": 2301
+          },
+          {
+            "text": "              /&gt;",
+            "lineNumber": 2302
+          },
+          {
+            "text": "            )}",
+            "lineNumber": 2303
+          },
+          {
+            "text": "            {/* Jail attempts ribbon (only when in jail) */}",
+            "lineNumber": 2304
+          },
+          {
+            "text": "            {(() =&gt; {",
+            "lineNumber": 2305
+          },
+          {
+            "text": "              const pid = players[turnIndex]?.id || players[0]?.id;",
+            "lineNumber": 2306
+          },
+          {
+            "text": "              const pl = players.find((x) =&gt; x.id === pid);",
+            "lineNumber": 2307
+          },
+          {
+            "text": "              if (!pl?.inJail) return null;",
+            "lineNumber": 2308
+          },
+          {
+            "text": "              return &lt;JailAttemptRibbon attemptsCompleted={pl.jailAttempts ?? 0} /&gt;;",
+            "lineNumber": 2309
+          },
+          {
+            "text": "            })()}",
+            "lineNumber": 2310
+          },
+          {
+            "lineNumber": 2311
+          },
+          {
+            "text": "            {/* Stepper navigation */}",
+            "lineNumber": 2312
+          },
+          {
+            "text": "            &lt;StepNavigator items={stepItems} activeStep={activeStep} highestStep={highestStep} onSelect={(s) =&gt; setActiveStep(s)} /&gt;",
+            "lineNumber": 2313
+          },
+          {
+            "lineNumber": 2314
+          },
+          {
+            "text": "            {/* Property management quick access (pre-roll only) */}",
+            "lineNumber": 2315
+          },
+          {
+            "text": "            {(() =&gt; {",
+            "lineNumber": 2316
+          },
+          {
+            "text": "              if (activeStep !== 0) return null;",
+            "lineNumber": 2317
+          },
+          {
+            "text": "              const pid = players[turnIndex]?.id || players[0]?.id;",
+            "lineNumber": 2318
+          },
+          {
+            "text": "              if (!pid) return null;",
+            "lineNumber": 2319
+          },
+          {
+            "text": "              const pl = players.find((x) =&gt; x.id === pid);",
+            "lineNumber": 2320
+          },
+          {
+            "text": "              if (pl?.inJail) return null;",
+            "lineNumber": 2321
+          },
+          {
+            "text": "              const ownsAnyMortgageable = BOARD_TILES.some((t) =&gt; {",
+            "lineNumber": 2322
+          },
+          {
+            "text": "                if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) return false;",
+            "lineNumber": 2323
+          },
+          {
+            "text": "                return propsState.byTileId[t.id]?.ownerId === pid;",
+            "lineNumber": 2324
+          },
+          {
+            "text": "              });",
+            "lineNumber": 2325
+          },
+          {
+            "text": "              if (!ownsAnyMortgageable) return null;",
+            "lineNumber": 2326
+          },
+          {
+            "text": "              return (",
+            "lineNumber": 2327
+          },
+          {
+            "text": "                &lt;div className=\"flex justify-left p-4 pt-1\"&gt;",
+            "lineNumber": 2328
+          },
+          {
+            "text": "                  &lt;IconLabelButton",
+            "lineNumber": 2329
+          },
+          {
+            "text": "                    iconSrc=\"/icons/house.webp\"",
+            "lineNumber": 2330
+          },
+          {
+            "text": "                    label=\"Manage\"",
+            "lineNumber": 2331
+          },
+          {
+            "text": "                    className=\"border border-sky-500 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-900/30\"",
+            "lineNumber": 2332
+          },
+          {
+            "text": "                    onClick={() =&gt; {",
+            "lineNumber": 2333
+          },
+          {
+            "text": "                      setBuildOverlayMode('manage');",
+            "lineNumber": 2334
+          },
+          {
+            "text": "                      setLiquidationContext(null);",
+            "lineNumber": 2335
+          },
+          {
+            "text": "                      setBuildOverlayOpen(true);",
+            "lineNumber": 2336
+          },
+          {
+            "text": "                    }}",
+            "lineNumber": 2337
+          },
+          {
+            "text": "                  /&gt;",
+            "lineNumber": 2338
+          },
+          {
+            "text": "                &lt;/div&gt;",
+            "lineNumber": 2339
+          },
+          {
+            "text": "              );",
+            "lineNumber": 2340
+          },
+          {
+            "text": "            })()}",
+            "lineNumber": 2341
+          },
+          {
+            "text": "        )",
+            "lineNumber": 2963
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.17445224523544312
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const purchaseOrAuctionRequiredButNotResolved = ",
+            "lineNumber": 1725
+          },
+          {
+            "text": "const isBuyable = ( || t.type === 'railroad' || t.type === 'utility');",
+            "lineNumber": 1733
+          },
+          {
+            "text": "    if (!isBuyable) return false;",
+            "lineNumber": 1734
+          },
+          {
+            "text": "    const owner = propsState.byTileId[t.id]?.ownerId as string | null;",
+            "lineNumber": 1735
+          },
+          {
+            "text": "    const unowned = !owner;",
+            "lineNumber": 1736
+          },
+          {
+            "text": "    if (!unowned) return false;",
+            "lineNumber": 1737
+          },
+          {
+            "text": "    const fromPos = players.find((x) =&gt; x.id === pid)?.positionIndex ?? 0;",
+            "lineNumber": 1738
+          },
+          {
+            "text": "    const willPassGoThisMove = (() =&gt; {",
+            "lineNumber": 1739
+          },
+          {
+            "text": "      if (predictedTo == null) return false;",
+            "lineNumber": 1740
+          },
+          {
+            "text": "      const fromW = wrapIndex(fromPos);",
+            "lineNumber": 1741
+          },
+          {
+            "text": "      const toW = wrapIndex(predictedTo);",
+            "lineNumber": 1742
+          },
+          {
+            "text": "      const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);",
+            "lineNumber": 1743
+          },
+          {
+            "text": "      if (isTeleportPreview &amp;&amp; toW === fromW) return true; // teleport-to-same counts as lap",
+            "lineNumber": 1744
+          },
+          {
+            "text": "      return passedGo(fromW, toW);",
+            "lineNumber": 1745
+          },
+          {
+            "text": "    })();",
+            "lineNumber": 1746
+          },
+          {
+            "text": "    const pl = players.find((x) =&gt; x.id === pid);",
+            "lineNumber": 1747
+          },
+          {
+            "text": "    const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);",
+            "lineNumber": 1748
+          },
+          {
+            "text": "    if (firstRoundLocked) return false;",
+            "lineNumber": 1749
+          },
+          {
+            "text": "    // require either Buy toggle OR a staged/confirmed auction-it for this tile",
+            "lineNumber": 1750
+          },
+          {
+            "text": "    const auctionResolved = stagedAuction &amp;&amp; stagedAuction.tileId === t.id;",
+            "lineNumber": 1751
+          },
+          {
+            "text": "    return !(buySelected || auctionResolved);",
+            "lineNumber": 1752
+          },
+          {
+            "text": "  };",
+            "lineNumber": 1753
+          },
+          {
+            "lineNumber": 1754
+          },
+          {
+            "text": "  // Map board tile to buy button style with good contrast",
+            "lineNumber": 1755
+          },
+          {
+            "text": "  function getBuyStyle(tile: ReturnType&lt;typeof getTileByIndex&gt;): { bgClass: string; textClass: string; borderClass: string; textStrongClass: string } {",
+            "lineNumber": 1756
+          },
+          {
+            "text": "    if (tile.type === 'utility') return { bgClass: 'bg-zinc-200', textClass: 'text-neutral-900', borderClass: 'border-zinc-300', textStrongClass: 'text-neutral-900' };",
+            "lineNumber": 1757
+          },
+          {
+            "text": "    if (tile.type === 'property') {",
+            "lineNumber": 1758
+          },
+          {
+            "text": "      switch (tile.group) {",
+            "lineNumber": 1759
+          },
+          {
+            "text": "        case 'brown':",
+            "lineNumber": 1760
+          },
+          {
+            "text": "          return { bgClass: 'bg-amber-800', textClass: 'text-white', borderClass: 'border-amber-800', textStrongClass: 'text-amber-800' };",
+            "lineNumber": 1761
+          },
+          {
+            "text": "        case 'lightBlue':",
+            "lineNumber": 1762
+          },
+          {
+            "text": "          return { bgClass: 'bg-sky-300', textClass: 'text-neutral-900', borderClass: 'border-sky-300', textStrongClass: 'text-sky-400' };",
+            "lineNumber": 1763
+          },
+          {
+            "text": "        case 'pink':",
+            "lineNumber": 1764
+          },
+          {
+            "text": "          return { bgClass: 'bg-pink-400', textClass: 'text-neutral-900', borderClass: 'border-pink-400', textStrongClass: 'text-pink-400' };",
+            "lineNumber": 1765
+          },
+          {
+            "text": "        case 'orange':",
+            "lineNumber": 1766
+          },
+          {
+            "text": "          return { bgClass: 'bg-orange-400', textClass: 'text-neutral-900',",
+            "lineNumber": 1767
+          },
+          {
+            "text": "  }",
+            "lineNumber": 1782
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.17386794090270996
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "}",
+            "lineNumber": 3243
+          },
+          {
+            "text": "      &lt;/AnimatePresence&gt;",
+            "lineNumber": 3244
+          },
+          {
+            "lineNumber": 3245
+          },
+          {
+            "text": "      {/* New Game confirmation */}",
+            "lineNumber": 3246
+          },
+          {
+            "text": "      &lt;AnimatePresence&gt;",
+            "lineNumber": 3247
+          },
+          {
+            "text": "        {newGameConfirmOpen &amp;&amp; (",
+            "lineNumber": 3248
+          },
+          {
+            "text": "          &lt;motion.div",
+            "lineNumber": 3249
+          },
+          {
+            "text": "            key=\"new-game\"",
+            "lineNumber": 3250
+          },
+          {
+            "text": "            initial={{ opacity: 0 }}",
+            "lineNumber": 3251
+          },
+          {
+            "text": "            animate={{ opacity: 1 }}",
+            "lineNumber": 3252
+          },
+          {
+            "text": "            exit={{ opacity: 0 }}",
+            "lineNumber": 3253
+          },
+          {
+            "text": "            className=\"fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4\"",
+            "lineNumber": 3254
+          },
+          {
+            "text": "            onClick={() =&gt; setNewGameConfirmOpen(false)}",
+            "lineNumber": 3255
+          },
+          {
+            "text": "          &gt;",
+            "lineNumber": 3256
+          },
+          {
+            "text": "            &lt;div",
+            "lineNumber": 3257
+          },
+          {
+            "text": "              className=\"w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700\"",
+            "lineNumber": 3258
+          },
+          {
+            "text": "              onClick={(e) =&gt; e.stopPropagation()}",
+            "lineNumber": 3259
+          },
+          {
+            "text": "            &gt;",
+            "lineNumber": 3260
+          },
+          {
+            "text": "              &lt;OverlayHeader title=\"Start a new game?\" onClose={() =&gt; setNewGameConfirmOpen(false)} className=\"mb-1\" /&gt;",
+            "lineNumber": 3261
+          },
+          {
+            "text": "              &lt;div className=\"mt-1 text-sm text-neutral-600 dark:text-neutral-300\"&gt;",
+            "lineNumber": 3262
+          },
+          {
+            "text": "                This will clear players, properties, decks, and the event log saved on this device and return you to Setup.",
+            "lineNumber": 3263
+          },
+          {
+            "text": "              &lt;/div&gt;",
+            "lineNumber": 3264
+          },
+          {
+            "text": "              &lt;div className=\"mt-4 flex items-center justify-end gap-2\"&gt;",
+            "lineNumber": 3265
+          },
+          {
+            "text": "                &lt;button",
+            "lineNumber": 3266
+          },
+          {
+            "text": "                  type=\"button\"",
+            "lineNumber": 3267
+          },
+          {
+            "text": "                  onClick={() =&gt; setNewGameConfirmOpen(false)}",
+            "lineNumber": 3268
+          },
+          {
+            "text": "                  className=\"rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm\"",
+            "lineNumber": 3269
+          },
+          {
+            "text": "                &gt;",
+            "lineNumber": 3270
+          },
+          {
+            "text": "                  Cancel",
+            "lineNumber": 3271
+          },
+          {
+            "text": "                &lt;/button&gt;",
+            "lineNumber": 3272
+          },
+          {
+            "text": "                &lt;button",
+            "lineNumber": 3273
+          },
+          {
+            "text": "                  type=\"button\"",
+            "lineNumber": 3274
+          },
+          {
+            "text": "                  onClick={onConfirmNewGame}",
+            "lineNumber": 3275
+          },
+          {
+            "text": "                  className=\"rounded-md bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-rose-400\"",
+            "lineNumber": 3276
+          },
+          {
+            "text": "                &gt;",
+            "lineNumber": 3277
+          },
+          {
+            "text": "                  New Game",
+            "lineNumber": 3278
+          },
+          {
+            "text": "                &lt;/button&gt;",
+            "lineNumber": 3279
+          },
+          {
+            "text": "              &lt;/div&gt;",
+            "lineNumber": 3280
+          },
+          {
+            "text": "            &lt;/div&gt;",
+            "lineNumber": 3281
+          },
+          {
+            "text": "          &lt;/motion.div&gt;",
+            "lineNumber": 3282
+          },
+          {
+            "text": "        )}",
+            "lineNumber": 3283
+          },
+          {
+            "text": "      &lt;/AnimatePresence&gt;",
+            "lineNumber": 3284
+          },
+          {
+            "lineNumber": 3285
+          },
+          {
+            "text": "      {/* Centered board picker for teleports */}",
+            "lineNumber": 3286
+          },
+          {
+            "text": "      &lt;AnimatePresence&gt;",
+            "lineNumber": 3287
+          },
+          {
+            "text": "        {centerOverlay.type &amp;&amp;",
+            "lineNumber": 3288
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.16953900456428528
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {
+            "line": 51
+          },
+          "endPosition": {
+            "line": 3862,
+            "column": 1
+          }
+        },
+        "signatures": {
+          "ranges": [
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 1
+              },
+              "endPosition": {
+                "line": 51,
+                "column": 16
+              }
+            },
+            {
+              "startPosition": {
+                "line": 51,
+                "column": 16
+              },
+              "endPosition": {
+                "line": 52,
+                "column": 3
+              }
+            },
+            {
+              "startPosition": {
+                "line": 410,
+                "column": 3
+              },
+              "endPosition": {
+                "line": 410,
+                "column": 9
+              }
+            },
+            {
+              "startPosition": {
+                "line": 410,
+                "column": 9
+              },
+              "endPosition": {
+                "line": 410,
+                "column": 23
+              }
+            }
+          ]
+        },
+        "detailedLines": [
+          {
+            "text": "export default function PlayConsole(): JSX.Element {",
+            "lineNumber": 52,
+            "isSignature": true
+          },
+          {
+            "text": "const isTriple =  &amp;&amp; special === d6A;",
+            "lineNumber": 531
+          },
+          {
+            "text": "  const isTripleOnes = isTriple &amp;&amp; d6A === 1;",
+            "lineNumber": 532
+          },
+          {
+            "lineNumber": 533
+          },
+          {
+            "text": "  const bankUnownedLots = useMemo(() =&gt; {",
+            "lineNumber": 534
+          },
+          {
+            "text": "    return BOARD_TILES.filter((tile) =&gt; tile.type === 'property' &amp;&amp; tile.group != null &amp;&amp; propsState.byTileId[tile.id]?.ownerId === null).map((tile) =&gt; ({",
+            "lineNumber": 535
+          },
+          {
+            "text": "      id: tile.id,",
+            "lineNumber": 536
+          },
+          {
+            "text": "      name: tile.name,",
+            "lineNumber": 537
+          },
+          {
+            "text": "      group: tile.group as ColorGroup,",
+            "lineNumber": 538
+          },
+          {
+            "text": "    }));",
+            "lineNumber": 539
+          },
+          {
+            "text": "  }, [propsState.byTileId]);",
+            "lineNumber": 540
+          },
+          {
+            "lineNumber": 541
+          },
+          {
+            "text": "  const depotsInstalled = useMemo(() =&gt; {",
+            "lineNumber": 542
+          },
+          {
+            "text": "    return BOARD_TILES.filter((t) =&gt; t.type === 'railroad').reduce((acc, t) =&gt; (propsState.byTileId[t.id]?.depotInstalled ? acc + 1 : acc), 0);",
+            "lineNumber": 543
+          },
+          {
+            "text": "  }, [propsState.byTileId]);",
+            "lineNumber": 544
+          },
+          {
+            "text": "  const DEPOT_MAX = 4;",
+            "lineNumber": 545
+          },
+          {
+            "text": "  const depotsLeft = Math.max(0, DEPOT_MAX - depotsInstalled);",
+            "lineNumber": 546
+          },
+          {
+            "lineNumber": 547
+          },
+          {
+            "text": "  const chanceLeft = cardsState.decks.chance.drawPile.length;",
+            "lineNumber": 548
+          },
+          {
+            "text": "  const communityLeft = cardsState.decks.community.drawPile.length;",
+            "lineNumber": 549
+          },
+          {
+            "text": "  const busLeft = cardsState.decks.bus.drawPile.length;",
+            "lineNumber": 550
+          },
+          {
+            "text": "  const liquidationPotentialByPlayerId = useMemo(() =&gt; {",
+            "lineNumber": 551
+          },
+          {
+            "text": "    const totals: Record&lt;string, number&gt; = {};",
+            "lineNumber": 552
+          },
+          {
+            "text": "    for (const p of players) totals[p.id] = 0;",
+            "lineNumber": 553
+          },
+          {
+            "lineNumber": 554
+          },
+          {
+            "text": "    for (const t of BOARD_TILES) {",
+            "lineNumber": 555
+          },
+          {
+            "text": "      if (!(t.type === 'property' || t.type === 'railroad' || t.type === 'utility')) continue;",
+            "lineNumber": 556
+          },
+          {
+            "text": "      const ps = propsState.byTileId[t.id];",
+            "lineNumber": 557
+          },
+          {
+            "text": "      const ownerId = ps?.ownerId;",
+            "lineNumber": 558
+          },
+          {
+            "text": "      if (!ownerId) continue;",
+            "lineNumber": 559
+          },
+          {
+            "lineNumber": 560
+          },
+          {
+            "text": "      let tileLiquidation = 0;",
+            "lineNumber": 561
+          },
+          {
+            "lineNumber": 562
+          },
+          {
+            "text": "      if (t.type === 'property') {",
+            "lineNumber": 563
+          },
+          {
+            "text": "        const level = ps?.improvements ?? 0;",
+            "lineNumber": 564
+          },
+          {
+            "text": "        const unitCost = t.property?.houseCost ?? 0;",
+            "lineNumber": 565
+          },
+          {
+            "text": "        tileLiquidation += level * (unitCost / 2);",
+            "lineNumber": 566
+          },
+          {
+            "text": "      }",
+            "lineNumber": 567
+          },
+          {
+            "lineNumber": 568
+          },
+          {
+            "text": "      // After improvements are sold down, the tile can be mortgaged if not already mortgaged.",
+            "lineNumber": 569
+          },
+          {
+            "text": "      if (ps?.mortgaged !== true) {",
+            "lineNumber": 570
+          },
+          {
+            "text": "        tileLiquidation += t.property?.mortgageValue ?? t.railroad?.mortgageValue ?? t.utility?.mortgageValue ?? 0;",
+            "lineNumber": 571
+          },
+          {
+            "text": "      }",
+            "lineNumber": 572
+          },
+          {
+            "lineNumber": 573
+          },
+          {
+            "text": "      totals[ownerId] = (totals[ownerId] ?? 0) + tileLiquidation;",
+            "lineNumber": 574
+          },
+          {
+            "text": "    }",
+            "lineNumber": 575
+          },
+          {
+            "lineNumber": 576
+          },
+          {
+            "text": "    return totals;",
+            "lineNumber": 577
+          },
+          {
+            "text": "  }, [players, propsState.byTileId]);",
+            "lineNumber": 578
+          },
+          {
+            "text": "  const turnCardPlayers = useMemo",
+            "lineNumber": 579
+          },
+          {
+            "text": ";",
+            "lineNumber": 586
+          },
+          {
+            "text": "}",
+            "lineNumber": 3863,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.1691773533821106
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/molecules/PurchaseActionsRow.tsx",
+        "range": {
+          "startPosition": {
+            "line": 22,
+            "column": 1
+          },
+          "endPosition": {
+            "line": 88,
+            "column": 1
+          }
+        },
+        "signatures": {},
+        "detailedLines": [
+          {
+            "text": "export default function PurchaseActionsRow({ tileName, price, firstRoundLocked, isUnownedBuyable, isAuctionTile, groupVariant, buySelected, onToggleBuy, canAffordBuy, auctionItSelected, onToggleAuctionIt }: PurchaseActionsRowProps): JSX.Element | null {",
+            "lineNumber": 25,
+            "isSignature": true
+          },
+          {
+            "text": "  // This row is for resolving purchase decisions on an unowned buyable tile.",
+            "lineNumber": 26
+          },
+          {
+            "text": "  // Auction tiles are handled elsewhere.",
+            "lineNumber": 27
+          },
+          {
+            "text": "  if (!isUnownedBuyable) return null;",
+            "lineNumber": 28
+          },
+          {
+            "text": "  const lockedTip = 'First Round Locked';",
+            "lineNumber": 29
+          },
+          {
+            "text": "  // Hide the alternative action once one is selected.",
+            "lineNumber": 30
+          },
+          {
+            "text": "  // When locked, show both options (both locked) so the DM can see available actions.",
+            "lineNumber": 31
+          },
+          {
+            "text": "  const showBuy = firstRoundLocked || !auctionItSelected;",
+            "lineNumber": 32
+          },
+          {
+            "text": "  const showAuction = firstRoundLocked || !buySelected;",
+            "lineNumber": 33
+          },
+          {
+            "text": "  return (",
+            "lineNumber": 34
+          },
+          {
+            "text": "    &lt;div data-cmp=\"m/PurchaseActionsRow\" className=\"space-y-1\"&gt;",
+            "lineNumber": 35
+          },
+          {
+            "text": "      &lt;div className=\"flex items-center gap-2\"&gt;",
+            "lineNumber": 36
+          },
+          {
+            "text": "        {showBuy &amp;&amp; (",
+            "lineNumber": 37
+          },
+          {
+            "text": "          firstRoundLocked ? (",
+            "lineNumber": 38
+          },
+          {
+            "text": "            &lt;Tooltip content={lockedTip}&gt;",
+            "lineNumber": 39
+          },
+          {
+            "text": "              &lt;IconLabelButton",
+            "lineNumber": 40
+          },
+          {
+            "text": "                icon={&lt;FaLock className=\"h-4 w-4 text-current\" /&gt;}",
+            "lineNumber": 41
+          },
+          {
+            "text": "                label={",
+            "lineNumber": 42
+          },
+          {
+            "text": "                  &lt;span className=\"inline-flex items-center gap-2\"&gt;",
+            "lineNumber": 43
+          },
+          {
+            "text": "                    &lt;span&gt;Buy {tileName}&lt;/span&gt;",
+            "lineNumber": 44
+          },
+          {
+            "text": "                    &lt;span className=\"opacity-80\"&gt;· ${price}&lt;/span&gt;",
+            "lineNumber": 45
+          },
+          {
+            "text": "                  &lt;/span&gt;",
+            "lineNumber": 46
+          },
+          {
+            "text": "                }",
+            "lineNumber": 47
+          },
+          {
+            "text": "                className=\"border border-neutral-300 text-neutral-500 bg-neutral-100 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 cursor-not-allowed\"",
+            "lineNumber": 48
+          },
+          {
+            "text": "                onClick={(e) =&gt; e.preventDefault()}",
+            "lineNumber": 49
+          },
+          {
+            "text": "              /&gt;",
+            "lineNumber": 50
+          },
+          {
+            "text": "            &lt;/Tooltip&gt;",
+            "lineNumber": 51
+          },
+          {
+            "text": "          ) : (",
+            "lineNumber": 52
+          },
+          {
+            "text": "            &lt;TogglePillButton",
+            "lineNumber": 53
+          },
+          {
+            "text": "              label={&lt;span className=\"inline-flex items-center gap-2\"&gt;&lt;span&gt;Buy {tileName}&lt;/span&gt;&lt;span className=\"opacity-80\"&gt;· ${price}&lt;/span&gt;&lt;/span&gt;}",
+            "lineNumber": 54
+          },
+          {
+            "text": "              active={buySelected}",
+            "lineNumber": 55
+          },
+          {
+            "text": "              onToggle={onToggleBuy}",
+            "lineNumber": 56
+          },
+          {
+            "text": "              disabled={!canAffordBuy}",
+            "lineNumber": 57
+          },
+          {
+            "text": "              variant={groupVariant}",
+            "lineNumber": 58
+          },
+          {
+            "text": "            /&gt;",
+            "lineNumber": 59
+          },
+          {
+            "text": "          )",
+            "lineNumber": 60
+          },
+          {
+            "text": "        )}",
+            "lineNumber": 61
+          },
+          {
+            "text": "        {showBuy &amp;&amp; showAuction &amp;&amp; (",
+            "lineNumber": 62
+          },
+          {
+            "text": "          &lt;span className=\"font-bold text-sm text-subtle\"&gt;",
+            "lineNumber": 63
+          },
+          {
+            "text": "}",
+            "lineNumber": 89,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.16670364141464233
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/organisms/PlayConsole.tsx",
+        "range": {
+          "startPosition": {},
+          "endPosition": {
+            "line": 27,
+            "column": 67
+          }
+        },
+        "signatures": {},
+        "detailedLines": [
+          {
+            "text": "// #index",
+            "lineNumber": 1
+          },
+          {
+            "text": "// - //#imports: libraries and app modules",
+            "lineNumber": 2
+          },
+          {
+            "text": "// - //#local-state: GM inputs and UI selections",
+            "lineNumber": 3
+          },
+          {
+            "text": "// - //#derived: last drawn cards for quick reference",
+            "lineNumber": 4
+          },
+          {
+            "text": "// - //#handlers: core GM actions (evaluate, move, buy, money adjust, rent/tax, mortgage, build/sell, draw)",
+            "lineNumber": 5
+          },
+          {
+            "text": "// - //#render: layout with HUD, player turn cards, inputs/actions, cards preview, advisories, and event log",
+            "lineNumber": 6
+          },
+          {
+            "lineNumber": 7
+          },
+          {
+            "text": "// //#imports",
+            "lineNumber": 8
+          },
+          {
+            "text": "import React, { useMemo, useState, useRef } from 'react';",
+            "lineNumber": 9
+          },
+          {
+            "text": "import type { DieRoll, SpecialDieFace, GameEvent } from '@/types/monopoly-schema';",
+            "lineNumber": 10
+          },
+          {
+            "text": "import EventLog from '@/components/molecules/EventLog';",
+            "lineNumber": 11
+          },
+          {
+            "text": "import { useDispatch, useSelector, useStore } from 'react-redux';",
+            "lineNumber": 12
+          },
+          {
+            "text": "import { appendEvent } from '@/features/events/eventsSlice';",
+            "lineNumber": 13
+          },
+          {
+            "text": "import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';",
+            "lineNumber": 14
+          },
+          {
+            "text": "import { BOARD_TILES, BOARD_SIZE, FREE_PARKING_INDEX, GO_TO_JAIL_INDEX, getTileByIndex, getForwardDistance, passedGo, wrapIndex, JAIL_INDEX, type ColorGroup } from '@/data/board';",
+            "lineNumber": 15
+          },
+          {
+            "text": "import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';",
+            "lineNumber": 16
+          },
+          {
+            "text": "import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';",
+            "lineNumber": 17
+          },
+          {
+            "text": "import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';",
+            "lineNumber": 18
+          },
+          {
+            "text": "import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearBusTicketsExcept, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';",
+            "lineNumber": 19
+          },
+          {
+            "text": "import { consumeBusTicket } from '@/features/players/playersSlice';",
+            "lineNumber": 20
+          },
+          {
+            "text": "import { persistor, type RootState } from '@/app/store';",
+            "lineNumber": 21
+          },
+          {
+            "text": "import { computeRent } from '@/features/selectors/rent';",
+            "lineNumber": 22
+          },
+          {
+            "text": "import AvatarToken from '@/components/atoms/AvatarToken';",
+            "lineNumber": 23
+          },
+          {
+            "text": "import AnimatedNumber from '@/components/atoms/AnimatedNumber';",
+            "lineNumber": 24
+          },
+          {
+            "text": "import HudBadge from '@/components/atoms/HudBadge';",
+            "lineNumber": 25
+          },
+          {
+            "text": "import Tooltip from '@/components/atoms/Tooltip';",
+            "lineNumber": 26
+          },
+          {
+            "text": "import { AVATARS } from '@/data/avatars';",
+            "lineNumber": 27
+          },
+          {
+            "text": "import TogglePillButton from '@/components/atoms/TogglePillButton';",
+            "lineNumber": 28
+          }
+        ]
+      },
+      "score": 0.16668015718460083
+    },
+    {
+      "codeBlock": {
+        "relativeWorkspacePath": "./src/components/molecules/PostActionsBar.tsx",
+        "range": {
+          "startPosition": {
+            "line": 3
+          },
+          "endPosition": {
+            "line": 52,
+            "column": 1
+          }
+        },
+        "signatures": {},
+        "detailedLines": [
+          {
+            "text": ";",
+            "lineNumber": 26,
+            "isSignature": true
+          },
+          {
+            "text": "}",
+            "lineNumber": 27,
+            "isSignature": true
+          },
+          {
+            "lineNumber": 28
+          },
+          {
+            "text": "export default function PostActionsBar({ children, rentLabel, rentSelected, onToggleRent, rentShake, taxLabel, taxSelected, onToggleTax, taxShake, busVisible, busActive, onDrawBus, busShake, chanceVisible, chanceActive, onToggleChance, communityVisible, communityActive, onToggleCommunity, auctionVisible, auctionActive, onAuction }: PostActionsBarProps): JSX.Element {",
+            "lineNumber": 29,
+            "isSignature": true
+          },
+          {
+            "text": "  return (",
+            "lineNumber": 30
+          },
+          {
+            "text": "    &lt;div data-cmp=\"m/PostActionsBar\" className=\"flex flex-wrap gap-2 pt-1\"&gt;",
+            "lineNumber": 31
+          },
+          {
+            "text": "      {children}",
+            "lineNumber": 32
+          },
+          {
+            "text": "      {rentLabel &amp;&amp; onToggleRent &amp;&amp; (",
+            "lineNumber": 33
+          },
+          {
+            "text": "        &lt;TogglePillButton label={rentLabel} active={!!rentSelected} onToggle={onToggleRent} variant=\"rose\" shake={!!rentShake} /&gt;",
+            "lineNumber": 34
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 35
+          },
+          {
+            "text": "      {taxLabel &amp;&amp; onToggleTax &amp;&amp; (",
+            "lineNumber": 36
+          },
+          {
+            "text": "        &lt;TogglePillButton label={taxLabel} active={!!taxSelected} onToggle={onToggleTax} variant=\"orange\" shake={!!taxShake} /&gt;",
+            "lineNumber": 37
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 38
+          },
+          {
+            "text": "      {busVisible &amp;&amp; onDrawBus &amp;&amp; (",
+            "lineNumber": 39
+          },
+          {
+            "text": "        &lt;TogglePillButton label={busActive ? 'Bus ticket added' : 'Draw Bus'} active={!!busActive} onToggle={onDrawBus} variant=\"blue\" shake={!!busShake} /&gt;",
+            "lineNumber": 40
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 41
+          },
+          {
+            "text": "      {auctionVisible &amp;&amp; onAuction &amp;&amp; (",
+            "lineNumber": 42
+          },
+          {
+            "text": "        &lt;TogglePillButton label={auctionActive ? 'Auction done' : 'Auction'} active={!!auctionActive} onToggle={onAuction} variant=\"emerald\" /&gt;",
+            "lineNumber": 43
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 44
+          },
+          {
+            "text": "      {chanceVisible &amp;&amp; onToggleChance &amp;&amp; (",
+            "lineNumber": 45
+          },
+          {
+            "text": "        &lt;TogglePillButton label={chanceActive ? 'Chance drawn' : 'Draw Chance'} active={!!chanceActive} onToggle={onToggleChance} variant=\"slate\" /&gt;",
+            "lineNumber": 46
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 47
+          },
+          {
+            "text": "      {communityVisible &amp;&amp; onToggleCommunity &amp;&amp; (",
+            "lineNumber": 48
+          },
+          {
+            "text": "        &lt;TogglePillButton label={communityActive ? 'Community drawn' : 'Draw Community'} active={!!communityActive} onToggle={onToggleCommunity} variant=\"slate\" /&gt;",
+            "lineNumber": 49
+          },
+          {
+            "text": "      )}",
+            "lineNumber": 50
+          },
+          {
+            "text": "    &lt;/div&gt;",
+            "lineNumber": 51
+          },
+          {
+            "text": "  );",
+            "lineNumber": 52
+          },
+          {
+            "text": "}",
+            "lineNumber": 53,
+            "isSignature": true
+          }
+        ]
+      },
+      "score": 0.1665147989988327
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "liquidat|bankrupt|insolv",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "glob": "*.{tsx,ts}",
+  "caseInsensitive": true
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "liquidat|bankrupt|insolv",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "outputMode": "content",
+  "totalFiles": 3,
+  "totalMatches": 121,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/PlayerTurnCards.tsx",
+      "matchCount": 3
+    },
+    {
+      "uri": "src/components/molecules/BuildSellOverlay.tsx",
+      "matchCount": 18
+    },
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 100
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Updating team brief**
+
+I'm adding liquidation and bankruptcy sections to the team brief with specific UI elements and flow details. </details></think>
+
+---
+
+
+Here’s an **updated team brief** that includes liquidation and bankruptcy:
+
+---
+
+### Monopoly tracker — recent UI & play updates
+
+- **HUD** — Event log opens from the HUD (**Logs**), not embedded in the main play layout.
+- **Settings** — GM-oriented controls live under **Settings** (gear / settings flow).
+- **Modals / overlays** — Shared **`OverlayHeader`** for consistent titles and close behavior (settings, rules, trade, auction, board picker, build/sell, etc.).
+- **Rent insolvency & liquidation** — When a player **can’t pay rent from cash alone**, the flow surfaces **liquidation value** (sell buildings, mortgage, etc.). If they **can** raise enough, **“Liquidate & Pay”** opens **Build/Sell** in **liquidation-for-rent** mode, stages a plan, and on **End Turn** applies it and pays rent (with feedback / banners).
+- **Bankruptcy** — If **even max liquidation** can’t cover the rent (**insolvent**), the UI shows **Bankrupt** / insolvency messaging; **End Turn** runs the **bankruptcy settlement** (cash, properties, bus tickets / GOJF transfer to creditor, player removal, turn handling, event log entry).
+- **Player turn cards** — Shows **liquidation potential** (rough max raise from assets) to support the above decisions.
+- **Play console** — Removed the **“Last Chance / Last Community / Last Bus”** strip from the main screen (can move to **Logs** later).
+- **New building blocks** — **`MoneyInput`**, **`OverlayHeader`**.
+- **Visual polish** — Player turn cards, mortgage control, global **CSS** / Tailwind where touched.
+- **State & flows** — Updates in **`session`**, **`players`**, and **`properties`** plus **`PlayConsole`** / **`BuildSellOverlay`** for trades, overlays, rent, liquidation, and bankruptcy.
+
+---
+
+*Dev note:* `.specstory` history churn is local session capture, not product behavior.
+
+---
+
+You can drop or shorten the last bullet if the team only cares about user-visible behavior.
+
+---
+
+_**User**_
+
+for the top hud i want add some icons for the dropdown.
+ [pi/PiCardsThree] Cards [chevron]
+ [pi/PiBuildingsBold] Building [chevron]
+ [ lu/LuLandPlot]Lots [chevron]
+
+and for mobile lets just show the icons and sm or greater show both label and icon
+ DOM Path: div#root > div.relative min-h-dvh flex item.-center ju.tify-center p-6 bg-.urface-0 text-fg > div.w-full max-w-5xl .pace-y-6 > div.flex item.-center flex-col .m:flex-row .m:item.-.tart ju.tify-between > div.mt-2 .m:mt-0 flex w-full .m:w-auto item.-center ju.tify-end gap-2 > div.flex flex-wrap item.-center gap-3 text-.m
+Position: top=133px, left=24px, width=218px, height=88px
+React Component: HudBar
+HTML Element: <div data-qa="hud-bank" data-cmp="m/HudBar" class="flex flex-wrap items-center gap-3 text-sm" data-cursor-element-id="cursor-el-9">$1000 Cards Buildings Lots 8</div> DOM Path: div#root > div.relative min-h-dvh flex item.-center ju.tify-center p-6 bg-.urface-0 text-fg > div.w-full max-w-5xl .pace-y-6 > div.flex item.-center flex-col .m:flex-row .m:item.-.tart ju.tify-between > div.mt-2 .m:mt-0 flex w-full .m:w-auto item.-center ju.tify-end gap-2 > div.flex flex-wrap item.-center gap-3 text-.m > div.relative[0] > button.inline-flex item.-center gap-1 rounded-[18px] border border-.urface bg-.urface-0 pl-3 pr-2 py-2 text-.m font-normal text-fg > svg
+Position: top=146px, left=184px, width=12px, height=12px
+React Component: IconBase
+HTML Element: <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 448 512" class="h-3 w-3 transition-transform text-faint" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" data-cursor-element-id="cursor-el-15"></svg> DOM Path: div#root > div.relative min-h-dvh flex item.-center ju.tify-center p-6 bg-.urface-0 text-fg > div.w-full max-w-5xl .pace-y-6 > div.flex item.-center flex-col .m:flex-row .m:item.-.tart ju.tify-between > div.mt-2 .m:mt-0 flex w-full .m:w-auto item.-center ju.tify-end gap-2 > div.flex flex-wrap item.-center gap-3 text-.m > div.relative[0] > button.inline-flex item.-center gap-1 rounded-[18px] border border-.urface bg-.urface-0 pl-3 pr-2 py-2 text-.m font-normal text-fg > span
+Position: top=142px, left=142px, width=38px, height=20px
+React Component: GroupPanel
+HTML Element: <span data-cursor-element-id="cursor-el-1">Cards</span> 
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+
+
+---
+
+
+Inspecting how `HudBar` and `GroupPanel` render the bank controls so we can give accurate guidance.
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "GroupPanel",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "GroupPanel",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 7,
+  "topFiles": [
+    {
+      "uri": "src/components/molecules/HudBar.tsx",
+      "matchCount": 7
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "PiCardsThree|PiBuildingsBold|LuLandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons",
+  "glob": "*.d.ts",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "PiCardsThree|PiBuildingsBold|LuLandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "CardsThree|BuildingsBold|LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi",
+  "glob": "index.d.ts",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "CardsThree|BuildingsBold|LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "undefined" • **0** result in **1** directory</summary>
+
+Directory: **/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons** (0 file)
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "react-icons",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/package.json",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "react-icons",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/package.json",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 1,
+  "topFiles": [
+    {
+      "uri": "package.json",
+      "matchCount": 1
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="generic" data-tool-name="glob_file_search">
+<details>
+<summary>Tool use: **glob_file_search** • Searched codebase "undefined" • **0** result in **1** directory</summary>
+
+Directory: **/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons** (0 file)
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "PiCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons",
+  "glob": "*.js",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "PiCards",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: ls /Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons 2>/dev/null | head -40</summary>
+
+```bash
+ls /Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons 2>/dev/null | head -40
+```
+
+```
+LICENSE
+README.md
+ai
+bi
+bs
+cg
+ci
+di
+fa
+fa6
+fc
+fi
+gi
+go
+gr
+hi
+hi2
+im
+index.d.ts
+index.js
+index.mjs
+io
+io5
+lia
+lib
+lu
+md
+package.json
+pi
+ri
+rx
+si
+sl
+tb
+tfi
+ti
+vsc
+wi
+
+```
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "CardsThree|BuildingsBold",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "CardsThree|BuildingsBold",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/lu",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/lu",
+  "outputMode": "content",
+  "totalFiles": 0,
+  "totalMatches": 0,
+  "topFiles": []
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi/index.js</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "PiCardsThree|PiBuildingsBold|LuLandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi/index.js",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "PiCardsThree|PiBuildingsBold|LuLandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/pi/index.js",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 7,
+  "topFiles": [
+    {
+      "uri": "node_modules/react-icons/pi/index.js",
+      "matchCount": 7
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/lu/index.js",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "LandPlot",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/node_modules/react-icons/lu/index.js",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 1,
+  "topFiles": [
+    {
+      "uri": "node_modules/react-icons/lu/index.js",
+      "matchCount": 1
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Checking icon variants**
+
+I confirmed PiCardsThree exists and noted PiCardsThreeBold as potential variant, though user specified PiCardsThree. I found PiCardsThreeBold as a potential variant but user specified PiCardsThree. 
+
+I'm adjusting the mobile layout to show only icons and chevrons, hiding text labels on mobile per user spec. </details></think>
+
+---
+
+
+Here’s a concise implementation guide that matches your current `HudBar` (`GroupPanel` at lines 76–114, usage at 129–169).
+
+### Icons in this project
+
+`react-icons` already includes what you named:
+
+- `PiCardsThree` and `PiBuildingsBold` from `react-icons/pi`
+- `LuLandPlot` from `react-icons/lu`
+
+(There is also `PiCardsThreeBold` if you want all three “bold” weight; you asked for `PiCardsThree` specifically.)
+
+### Where to change things
+
+All of this lives in **`GroupPanel`**’s `<button>`: it currently renders `<span>{title}</span>` + chevron. You want **leading icon + optional label + chevron**, with labels gated by breakpoint.
+
+### Responsive pattern (Tailwind)
+
+Use the same breakpoint you asked for: **`sm:`** (≥640px).
+
+- **Always:** icon + `FaChevronDown` (you already have the chevron).
+- **`sm` and up:** show the text (and for Lots, the count pill).
+
+Example structure for one trigger (conceptually):
+
+```tsx
+<button
+  type="button"
+  aria-expanded={open}
+  aria-haspopup="menu"
+  aria-label="Cards"  // important when label is hidden on narrow screens
+  className="inline-flex items-center gap-1 rounded-[18px] border ... pl-2 pr-2 py-2 sm:pl-3"
+>
+  <PiCardsThree className="h-4 w-4 shrink-0" aria-hidden />
+  <span className="hidden sm:inline">Cards</span>
+  <FaChevronDown className="..." aria-hidden />
+</button>
+```
+
+- Use **`hidden sm:inline`** (or `sm:inline-flex` if you need flex children) on the label span(s).
+- For **Lots**, wrap **“Lots” + count badge** in one `hidden sm:inline-flex` container so mobile stays icon-only; if you still need the count on mobile, either show a **small numeric badge** on/near the icon on `< sm` or accept that the count only appears from `sm` up (product choice).
+
+### API shape
+
+You can keep passing `title` as `ReactNode` and build each title in the three call sites:
+
+1. **Cards** — `PiCardsThree` + `hidden sm:inline` “Cards”
+2. **Buildings** — `PiBuildingsBold` + “Buildings”
+3. **Lots** — `LuLandPlot` + existing fragment with “Lots” + badge, wrapped so the fragment is `hidden sm:inline-flex` on the text+badge part
+
+Alternatively, extend `GroupPanel` with optional `icon` + `label` + `ariaLabel` props so `aria-label` stays correct and you don’t duplicate markup.
+
+### Accessibility
+
+When the visible word is hidden below `sm`, set **`aria-label`** on the button (e.g. `"Cards"`, `"Buildings"`, `"Lots"`) or a visually hidden span, so screen readers still get a name.
+
+### Touch targets
+
+If icon-only buttons feel tight, keep **`min-h` / `min-w`** or slightly larger horizontal padding on the icon-only state (`pl-2 pr-2` vs `sm:pl-3`).
+
+---
+
+I’m in **Ask mode**, so I can’t edit `HudBar.tsx` for you. If you want this applied in-repo, switch to **Agent mode** and we can wire it up end-to-end (including the Lots count behavior on mobile).
+
+---
+
+_**User**_
+
+make lets make the change
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+
+
+---
+
+
+Implementing HUD dropdown icons and responsive labels in `HudBar.tsx`.
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Refactoring group panel**
+
+I'm refactoring GroupPanel to accept icon, label, and ariaLabel props for better accessibility. I'm adjusting the GroupPanel component to handle non-string label values like count badges for better flexibility. </details></think>
+
+---
+
+
+Refactoring `GroupPanel` to accept an icon, responsive label, and `aria-label`, and adding the Phosphor/Lucide imports.
+
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Fixing screen reader duplication**
+
+I'm removing the visible 'Cards' text on sm+ screens to prevent duplicate announcements with aria-label. I'll remove aria-label on desktop to prevent duplicate announcements. </details></think>
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/molecules/HudBar.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+<tool-use data-tool-type="shell" data-tool-name="run_terminal_command_v2">
+<details><summary>Tool use: **run_terminal_command_v2** • Run command: cd /Users/pabloaguilar/Dropbox/code/monopolytracker && npm run build</summary>
+
+```bash
+cd /Users/pabloaguilar/Dropbox/code/monopolytracker && npm run build
+```
+
+```
+
+&gt; monopolytracker@0.1.0 build
+&gt; tsc -b &amp;&amp; vite build
+
+vite v7.1.1 building for production...
+transforming...
+✓ 518 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.40 kB │ gzip:   0.27 kB
+dist/assets/index-LheT-01W.css   78.96 kB │ gzip:  12.88 kB
+dist/assets/index-CvO5T0Hi.js   623.89 kB │ gzip: 189.11 kB
+✓ built in 2.79s
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+```
+</details>
+</tool-use>
+
+---
+
+<think><details><summary>Thought Process</summary>
+**Reviewing a11y concerns**
+
+I'm noting potential a11y issues with duplicate labeling when using both aria-label and visible text on sm+ screens. </details></think>
+
+---
+
+
+Here’s what was implemented:
+
+### `HudBar.tsx`
+
+1. **Imports** — `PiCardsThree`, `PiBuildingsBold` from `react-icons/pi`, and `LuLandPlot` from `react-icons/lu`.
+
+2. **`GroupPanel`** — Takes **`icon`**, **`label`** (node), and **`ariaLabel`** instead of a single `title`:
+   - Trigger: **icon** (16×16 via `[&>svg]:h-4 [&>svg]:w-4`) + **label** in a `hidden sm:inline-flex` wrapper + **chevron**.
+   - **Padding:** `pl-2 sm:pl-3` so icon-only stays a bit tighter.
+   - **`aria-label={ariaLabel}`** so icon-only controls still have a name (Lots uses `` `Lots, ${count} unowned` ``).
+
+3. **Panels**
+   - **Cards** — `PiCardsThree` + “Cards”
+   - **Buildings** — `PiBuildingsBold` + “Buildings”
+   - **Lots** — `LuLandPlot` + “Lots” + count badge (same as before, only from `sm` up)
+
+Below the `sm` breakpoint you get **icon + chevron**; from **`sm` and up**, **icon + label** (and for Lots, the count pill). Build completes successfully.
+
+---
+
+_**User**_
+
+can w also hide the label "Logs" saem os others 
+
+---
+
+_**Agent (model composer-2, mode Agent)**_
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="ripgrep_raw_search">
+<details>
+<summary>Tool use: **ripgrep_raw_search**</summary>
+
+
+Parameters:
+
+```json
+{
+  "pattern": "Logs",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "glob": "*.{tsx,ts}",
+  "caseInsensitive": false
+}
+```
+Additional data:
+
+```json
+{
+  "isPruned": true,
+  "pattern": "Logs",
+  "path": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src",
+  "outputMode": "content",
+  "totalFiles": 1,
+  "totalMatches": 2,
+  "topFiles": [
+    {
+      "uri": "src/components/organisms/PlayConsole.tsx",
+      "matchCount": 2
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="read" data-tool-name="read_file_v2">
+<details><summary>Tool use: **read_file_v2** • Read file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Updating the Logs button in `PlayConsole.tsx` to match the HUD: icon-only on small screens, show "Logs" from `sm` up, with `aria-label="Logs"`.
+
+
+
+---
+
+<tool-use data-tool-type="write" data-tool-name="edit_file_v2">
+
+<details><summary>Tool use: **edit_file_v2** • Edit file: /Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx</summary>
+
+</details>
+
+</tool-use>
+
+---
+
+
+
+---
+
+
+
+
+
+
+---
+
+<tool-use data-tool-type="unknown" data-tool-name="read_lints">
+<details>
+<summary>Tool use: **read_lints**</summary>
+
+
+Parameters:
+
+```json
+{
+  "paths": [
+    "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+  ]
+}
+```
+Result:
+
+```json
+{
+  "linterErrorsByFile": [
+    {
+      "relativeWorkspacePath": "/Users/pabloaguilar/Dropbox/code/monopolytracker/src/components/organisms/PlayConsole.tsx"
+    }
+  ]
+}
+```
+Status: **completed**
+
+
+</details>
+</tool-use>
+
+---
+
+
+
+---
+
+
+Here’s what changed in `PlayConsole.tsx` for the Logs control:
+
+- **`aria-label="Logs"`** — Keeps an accessible name when the text is hidden on narrow screens.
+- **`hidden sm:inline`** on the **“Logs”** span — Same breakpoint pattern as the bank dropdowns.
+- **Padding** — `px-2 sm:px-3` so the icon-only control isn’t overly wide; `shrink-0` on the icon.
+
+From **`sm` and up** you still see the icon + **Logs**; below that, icon only.
+
+---
+
