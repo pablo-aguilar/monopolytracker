@@ -121,7 +121,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
         to: number;
         source: Exclude<MoveSource, 'jail_three_doubles' | 'jail_go_to_jail_tile' | 'jail_card'>;
         direction: MoveDirection;
-        card?: { deck: 'chance' | 'community'; cardId: string; effectType: 'moveTo' | 'moveSteps'; rawSteps?: number; awardGoIfPassed?: boolean };
+        card?: { deck: 'chance' | 'community'; cardId: string; effectType: 'moveTo' | 'moveToNearest' | 'moveSteps'; rawSteps?: number; awardGoIfPassed?: boolean; ownerRentMultiplier?: number };
       }
     | {
         kind: 'goToJail';
@@ -133,7 +133,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     source: MoveSource;
     direction: MoveDirection;
     rawSteps?: number;
-    card?: { deck: 'chance' | 'community'; cardId: string; effectType: string; rawSteps?: number; awardGoIfPassed?: boolean };
+    card?: { deck: 'chance' | 'community'; cardId: string; effectType: string; rawSteps?: number; awardGoIfPassed?: boolean; ownerRentMultiplier?: number };
     /** Use Redux store position after a prior synchronous dispatch in the same tick. */
     readPlayerPositionFromStore?: boolean;
   };
@@ -216,6 +216,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
   const [postActionQueue, setPostActionQueue] = useState<QueuedMovement[]>([]);
   const [queuedPostPending, setQueuedPostPending] = useState<boolean>(false);
   const [queuedPostActive, setQueuedPostActive] = useState<QueuedMovement | null>(null);
+  const [activeCardRentMultiplier, setActiveCardRentMultiplier] = useState<number | null>(null);
   const events = useSelector((s: RootState) => s.events.events);
 
   const closeBuildOverlay = React.useCallback(() => {
@@ -970,30 +971,35 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
       const currentMoney = players.find((x) => x.id === pid)?.money ?? 0;
       const pendingJackpot = isTripleOnes && tripleTeleportTo != null ? 1000 : 0;
-      if (currentMoney + pendingJackpot < price) {
+      const firstRoundLocked = isFirstRoundPurchaseLocked(pid, predictedTo);
+      if (firstRoundLocked || currentMoney + pendingJackpot < price) {
         setBuySelected(false);
       } else {
-      dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
-      if (price > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -price }));
-      dispatch(
-        appendEvent({
-          id: crypto.randomUUID(),
-          gameId: 'local',
-          type: 'PURCHASE',
-          actorPlayerId: pid,
-          payload: { tileId: t.id, ownerId: pid, amount: price, message: `Purchased ${t.name}` },
-          moneyDelta: -price,
-          createdAt: new Date().toISOString(),
-        })
-      );
+        dispatch(assignOwner({ tileId: t.id, ownerId: pid }));
+        if (price > 0) dispatch(adjustPlayerMoney({ id: pid, delta: -price }));
+        dispatch(
+          appendEvent({
+            id: crypto.randomUUID(),
+            gameId: 'local',
+            type: 'PURCHASE',
+            actorPlayerId: pid,
+            payload: { tileId: t.id, ownerId: pid, amount: price, message: `Purchased ${t.name}` },
+            moneyDelta: -price,
+            createdAt: new Date().toISOString(),
+          })
+        );
       }
     }
     // If Auction (property-tied or tile) was staged and confirmed, apply before movement
     if (stagedAuction) {
       const t = BOARD_TILES.find((x) => x.id === stagedAuction.tileId)!;
-      dispatch(assignOwner({ tileId: t.id, ownerId: stagedAuction.winnerId }));
-      if (stagedAuction.amount > 0) dispatch(adjustPlayerMoney({ id: stagedAuction.winnerId, delta: -stagedAuction.amount }));
-      dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'AUCTION', actorPlayerId: stagedAuction.winnerId, payload: { tileId: t.id, ownerId: stagedAuction.winnerId, amount: stagedAuction.amount, message: `Auction: ${t.name} sold for $${stagedAuction.amount}` }, moneyDelta: -stagedAuction.amount, createdAt: new Date().toISOString() }));
+      const isBuyable = t.type === 'property' || t.type === 'railroad' || t.type === 'utility';
+      const firstRoundLocked = isBuyable ? isFirstRoundPurchaseLocked(stagedAuction.winnerId, t.index) : false;
+      if (!firstRoundLocked) {
+        dispatch(assignOwner({ tileId: t.id, ownerId: stagedAuction.winnerId }));
+        if (stagedAuction.amount > 0) dispatch(adjustPlayerMoney({ id: stagedAuction.winnerId, delta: -stagedAuction.amount }));
+        dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'AUCTION', actorPlayerId: stagedAuction.winnerId, payload: { tileId: t.id, ownerId: stagedAuction.winnerId, amount: stagedAuction.amount, message: `Auction: ${t.name} sold for $${stagedAuction.amount}` }, moneyDelta: -stagedAuction.amount, createdAt: new Date().toISOString() }));
+      }
       setStagedAuction(null);
       setAuctionCompleted(false);
       setAuctionItSelected(false);
@@ -1014,7 +1020,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck, cardId, message: `Drew ${deck}` }, createdAt: new Date().toISOString() }));
       // Apply effects based on the known definition for the selected card id
       const def = (deck === 'chance' ? CHANCE : COMMUNITY_CHEST).find((c) => c.id === cardId);
-      const effect = def?.effect as { type: string; amount?: number; amountPerPlayer?: number; steps?: number; tileId?: string; awardGoIfPassed?: boolean } | undefined;
+      const effect = def?.effect as CardEffect | undefined;
       if (effect && pid) {
         if (effect.type === 'payBank' && typeof effect.amount === 'number' && effect.amount > 0) {
           dispatch(adjustPlayerMoney({ id: pid, delta: -effect.amount }));
@@ -1048,7 +1054,22 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                 to: dest,
                 source: deck === 'chance' ? 'card_chance' : 'card_community',
                 direction: 'forward',
-                card: { deck, cardId, effectType: 'moveTo', awardGoIfPassed: effect.awardGoIfPassed },
+                card: { deck, cardId, effectType: 'moveTo', awardGoIfPassed: effect.awardGoIfPassed, ownerRentMultiplier: effect.ownerRentMultiplier },
+              },
+            ]);
+          }
+        } else if (effect.type === 'moveToNearest') {
+          const from = players.find((x) => x.id === pid)?.positionIndex ?? 0;
+          const dest = findNearestTileIndex(from, effect.target);
+          if (typeof dest === 'number') {
+            setPostActionQueue((q) => [
+              ...q,
+              {
+                kind: 'move',
+                to: dest,
+                source: deck === 'chance' ? 'card_chance' : 'card_community',
+                direction: 'forward',
+                card: { deck, cardId, effectType: 'moveToNearest', awardGoIfPassed: effect.awardGoIfPassed, ownerRentMultiplier: effect.ownerRentMultiplier },
               },
             ]);
           }
@@ -1097,8 +1118,10 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       setPostActionQueue((q) => q.slice(1));
       if (nextMove.kind === 'move') {
         setPredictedTo(nextMove.to);
+        setActiveCardRentMultiplier(nextMove.card?.ownerRentMultiplier ?? null);
       } else {
         setPredictedTo(JAIL_INDEX);
+        setActiveCardRentMultiplier(null);
       }
       setQueuedPostActive(nextMove);
       setActiveStep(2);
@@ -1265,7 +1288,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
         if (ownerIdForTile2 && ownerIdForTile2 !== pid && !mortgaged2 && !alreadySettled && !pendingForThisRent) {
           const diceTotal2 = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
           const state2 = (window as any).__store__?.getState?.() as RootState | undefined;
-          const rent2 = computeRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
+          const rent2 = computeLandingRent({ ...(state2 as any), properties: propsState } as RootState, t2.id, diceTotal2);
           if (rent2 > 0) {
             const usablePass = findUsablePass(pid, ownerIdForTile2, t2.id);
             if (useRentPassSelected && usablePass) {
@@ -1393,6 +1416,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
         setPredictedTo(null);
         setQueuedPostPending(false);
         setQueuedPostActive(null);
+        setActiveCardRentMultiplier(null);
         setPostActionQueue([]);
         return;
       }
@@ -1411,8 +1435,13 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       if (postActionQueue.length > 0) {
         const nextMove2 = postActionQueue[0];
         setPostActionQueue((q) => q.slice(1));
-        if (nextMove2.kind === 'move') setPredictedTo(nextMove2.to);
-        else setPredictedTo(JAIL_INDEX);
+        if (nextMove2.kind === 'move') {
+          setPredictedTo(nextMove2.to);
+          setActiveCardRentMultiplier(nextMove2.card?.ownerRentMultiplier ?? null);
+        } else {
+          setPredictedTo(JAIL_INDEX);
+          setActiveCardRentMultiplier(null);
+        }
         setQueuedPostActive(nextMove2);
         setActiveStep(2);
         setHighestStep(2);
@@ -1731,7 +1760,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     const tile = getTileByIndex(currentIndex);
     const state = (window as any).__store__?.getState?.() as RootState | undefined;
     const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
-    const rent = computeRent({ ...(state as any), properties: propsState } as RootState, tile.id, diceTotal);
+    const rent = computeLandingRent({ ...(state as any), properties: propsState } as RootState, tile.id, diceTotal);
     const ps = propsState.byTileId[tile.id];
     const ownerIdForTile = ps?.ownerId as string | null;
     const mortgaged = ps?.mortgaged === true;
@@ -1989,6 +2018,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       // Jail attempt resolution
       const pl = players.find((x) => x.id === pid);
       setJailReleaseDoublesRoll(false);
+      setActiveCardRentMultiplier(null);
       if (pl?.inJail && jailChoice === 'roll') {
         const isDbl = (d6A !== null && d6B !== null && d6A === d6B);
         if (isDbl) {
@@ -2069,6 +2099,30 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     }
     return false;
   };
+  const isFirstRoundPurchaseLocked = (pid: string, targetIndex: number): boolean => {
+    const pl = players.find((x) => x.id === pid);
+    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
+    const fromW = wrapIndex(fromPos);
+    const toW = wrapIndex(targetIndex);
+    const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
+    const willPassGoThisMove = (isTeleportPreview && toW === fromW) || passedGo(fromW, toW);
+    return !(pl?.hasPassedGo || willPassGoThisMove);
+  };
+  const findNearestTileIndex = (fromIndex: number, target: 'railroad' | 'utility'): number | null => {
+    const len = BOARD_TILES.length;
+    for (let step = 1; step <= len; step += 1) {
+      const idx = (fromIndex + step) % len;
+      const t = getTileByIndex(idx);
+      if ((target === 'railroad' && t.type === 'railroad') || (target === 'utility' && t.type === 'utility')) return idx;
+    }
+    return null;
+  };
+  const computeLandingRent = (state: RootState, tileId: string, diceTotalForUtility = 0): number => {
+    const base = computeRent(state, tileId, diceTotalForUtility);
+    if (base <= 0) return base;
+    const mult = activeCardRentMultiplier ?? 1;
+    return Math.round(base * mult);
+  };
   // Require purchase or auction resolution when applicable
   const purchaseOrAuctionRequiredButNotResolved = (): boolean => {
     const idx = predictedTo ?? currentIndex;
@@ -2083,17 +2137,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     const owner = propsState.byTileId[t.id]?.ownerId as string | null;
     const unowned = !owner;
     if (!unowned) return false;
-    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
-    const willPassGoThisMove = (() => {
-      if (predictedTo == null) return false;
-      const fromW = wrapIndex(fromPos);
-      const toW = wrapIndex(predictedTo);
-      const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
-      if (isTeleportPreview && toW === fromW) return true; // teleport-to-same counts as lap
-      return passedGo(fromW, toW);
-    })();
-    const pl = players.find((x) => x.id === pid);
-    const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+    const firstRoundLocked = isFirstRoundPurchaseLocked(pid, idx);
     if (firstRoundLocked) return false;
     // require either Buy toggle OR a staged/confirmed auction-it for this tile
     const auctionResolved = stagedAuction && stagedAuction.tileId === t.id;
@@ -2300,17 +2344,20 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
   const stagedCardStepMeta = useMemo((): {
     deck: 'chance' | 'community';
     cardId: string;
-    effect: { type: 'moveTo'; tileId: string; awardGoIfPassed?: boolean } | { type: 'goToJail' };
+    effect:
+      | { type: 'moveTo'; tileId: string; awardGoIfPassed?: boolean; ownerRentMultiplier?: number }
+      | { type: 'moveToNearest'; target: 'railroad' | 'utility'; awardGoIfPassed?: boolean; ownerRentMultiplier?: number }
+      | { type: 'goToJail' };
   } | null => {
     if (stagedChanceCardId) {
       const def = CHANCE.find((c) => c.id === stagedChanceCardId);
-      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'goToJail')) {
+      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'moveToNearest' || def.effect.type === 'goToJail')) {
         return { deck: 'chance', cardId: stagedChanceCardId, effect: def.effect };
       }
     }
     if (stagedCommunityCardId) {
       const def = COMMUNITY_CHEST.find((c) => c.id === stagedCommunityCardId);
-      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'goToJail')) {
+      if (def && (def.effect.type === 'moveTo' || def.effect.type === 'moveToNearest' || def.effect.type === 'goToJail')) {
         return { deck: 'community', cardId: stagedCommunityCardId, effect: def.effect };
       }
     }
@@ -2337,8 +2384,13 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     if (activeStep === 3) return abbreviateAvenueInTileName(getTileByIndex(predictedTo ?? currentIndex).name);
     if (!stagedCardStepMeta) return '';
     if (stagedCardStepMeta.effect.type === 'goToJail') return 'Jail';
-    const moveToEffect = stagedCardStepMeta.effect as Extract<CardEffect, { type: 'moveTo' }>;
-    return abbreviateAvenueInTileName(BOARD_TILES.find((t) => t.id === moveToEffect.tileId)?.name ?? '');
+    if (stagedCardStepMeta.effect.type === 'moveTo') {
+      const moveToEffect = stagedCardStepMeta.effect as Extract<CardEffect, { type: 'moveTo' }>;
+      return abbreviateAvenueInTileName(BOARD_TILES.find((t) => t.id === moveToEffect.tileId)?.name ?? '');
+    }
+    const from = players[turnIndex]?.positionIndex ?? players[0]?.positionIndex ?? 0;
+    const nearest = findNearestTileIndex(from, stagedCardStepMeta.effect.target);
+    return nearest != null ? abbreviateAvenueInTileName(getTileByIndex(nearest).name) : '';
   })();
   const stepItems = [
     { id: 0 as const, title: 'Pre', desc: preDesc },
@@ -2359,7 +2411,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     if (!payeeId || payeeId === payerId || mortgaged) return null;
     const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
     const state = (window as any).__store__?.getState?.() as RootState | undefined;
-    const rentDue = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+    const rentDue = computeLandingRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
     if (rentDue <= 0) return null;
     const payerCash = players.find((p) => p.id === payerId)?.money ?? 0;
     const shortfall = Math.max(0, rentDue - payerCash);
@@ -2376,7 +2428,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       canLiquidate,
       isInsolvent,
     };
-  }, [players, turnIndex, predictedTo, currentIndex, propsState, d6A, d6B, specialNumeric, liquidationPotentialByPlayerId]);
+  }, [players, turnIndex, predictedTo, currentIndex, propsState, d6A, d6B, specialNumeric, liquidationPotentialByPlayerId, activeCardRentMultiplier]);
 
   const usablePassForPost = (() => {
     const idx = predictedTo ?? currentIndex;
@@ -2457,7 +2509,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     if (!ownerIdForTile || ownerIdForTile === pid || mortgaged) return;
     const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
     const state = (window as any).__store__?.getState?.() as RootState | undefined;
-    const rent = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+    const rent = computeLandingRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
     if (rent <= 0) return;
     const payerMoney = players.find((p) => p.id === pid)?.money ?? 0;
     if (payerMoney < rent) return;
@@ -2505,6 +2557,9 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     if (meta.effect.type === 'moveTo') {
       const moveToEffect = meta.effect as Extract<CardEffect, { type: 'moveTo' }>;
       dest = BOARD_TILES.find((t) => t.id === moveToEffect.tileId)?.index;
+    } else if (meta.effect.type === 'moveToNearest') {
+      const from = players.find((x) => x.id === pid)?.positionIndex ?? currentIndex;
+      dest = findNearestTileIndex(from, meta.effect.target) ?? undefined;
     } else {
       dest = JAIL_INDEX;
     }
@@ -2578,10 +2633,17 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
         })
       );
     } else {
+      setActiveCardRentMultiplier(meta.effect.ownerRentMultiplier ?? null);
       onApplyMove(pid, dest, false, {
         source: moveSrc,
         direction: 'forward',
-        card: { deck: meta.deck, cardId, effectType: 'moveTo', awardGoIfPassed: meta.effect.awardGoIfPassed },
+        card: {
+          deck: meta.deck,
+          cardId,
+          effectType: meta.effect.type,
+          awardGoIfPassed: meta.effect.awardGoIfPassed,
+          ownerRentMultiplier: meta.effect.ownerRentMultiplier,
+        },
         readPlayerPositionFromStore: true,
       });
     }
@@ -3124,7 +3186,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                       const ownerPlayer = players.find((pl) => pl.id === owner);
                       const diceTotal = (d6A ?? 0) + (d6B ?? 0) + specialNumeric;
                       const state = (window as any).__store__?.getState?.() as RootState | undefined;
-                      const rentAmount = computeRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
+                      const rentAmount = computeLandingRent({ ...(state as any), properties: propsState } as RootState, t.id, diceTotal);
                       const imp = propsState.byTileId[t.id]?.improvements ?? 0;
                       const ownerEmoji = AVATARS.find((a) => a.key === ownerPlayer?.avatarKey)?.emoji ?? '🙂';
                       return {
@@ -3207,17 +3269,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                       isAuctionTile ||
                       birthdayGiftVisible;
 
-                    const pl = players.find((x) => x.id === pid);
-                    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
-                    const willPassGoThisMove = (() => {
-                      if (predictedTo == null) return false;
-                      const fromW = wrapIndex(fromPos);
-                      const toW = wrapIndex(predictedTo);
-                      const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
-                      if (isTeleportPreview && toW === fromW) return true;
-                      return passedGo(fromW, toW);
-                    })();
-                    const firstRoundLocked = !(pl?.hasPassedGo || willPassGoThisMove);
+                    const firstRoundLocked = isFirstRoundPurchaseLocked(pid, predictedTo ?? currentIndex);
                     const price = t.property?.purchasePrice ?? t.railroad?.purchasePrice ?? t.utility?.purchasePrice ?? 0;
                     const pendingJackpot = isTripleOnes && tripleTeleportTo != null ? 1000 : 0;
                     const effectivePreviewMoney = p.money + pendingJackpot;

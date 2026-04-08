@@ -7,7 +7,8 @@
 export type CardDeck = 'chance' | 'community' | 'bus';
 
 export type CardEffect =
-  | { type: 'moveTo'; tileId: string; awardGoIfPassed?: boolean }
+  | { type: 'moveTo'; tileId: string; awardGoIfPassed?: boolean; ownerRentMultiplier?: number }
+  | { type: 'moveToNearest'; target: 'railroad' | 'utility'; awardGoIfPassed?: boolean; ownerRentMultiplier?: number }
   | { type: 'moveSteps'; steps: number; awardGoIfPassed?: boolean }
   | { type: 'goToJail' }
   | { type: 'getOutOfJail' }
@@ -53,15 +54,15 @@ export const CHANCE: CardDefinition[] = [
   { id: 'h5', deck: 'chance', text: 'Bank pays you dividend of $50', effect: { type: 'receiveBank', amount: 50 } },
   { id: 'h6', deck: 'chance', text: 'Pay poor tax of $15', effect: { type: 'payBank', amount: 15 } },
   { id: 'h7', deck: 'chance', text: 'Get Out of Jail Free', effect: { type: 'getOutOfJail' } },
-  { id: 'h8', deck: 'chance', text: 'Advance token to nearest Utility', effect: { type: 'moveTo', tileId: 'electric-company', awardGoIfPassed: true } },
-  { id: 'h9', deck: 'chance', text: 'Advance token to nearest Railroad', effect: { type: 'moveTo', tileId: 'reading-railroad', awardGoIfPassed: true } },
+  { id: 'h8', deck: 'chance', text: 'Advance token to nearest Utility', effect: { type: 'moveToNearest', target: 'utility', awardGoIfPassed: true, ownerRentMultiplier: 2 } },
+  { id: 'h9', deck: 'chance', text: 'Advance token to nearest Railroad', effect: { type: 'moveToNearest', target: 'railroad', awardGoIfPassed: true, ownerRentMultiplier: 2 } },
   { id: 'h10', deck: 'chance', text: 'Your building loan matures. Receive $150', effect: { type: 'receiveBank', amount: 150 } },
   { id: 'h11', deck: 'chance', text: 'Make general repairs on all your property. Pay $25 per house, $100 per hotel', effect: { type: 'payBank', amount: 0 } },
   { id: 'h12', deck: 'chance', text: 'Speeding fine $15', effect: { type: 'payBank', amount: 15 } },
   { id: 'h13', deck: 'chance', text: 'Advance to Boardwalk', effect: { type: 'moveTo', tileId: 'boardwalk', awardGoIfPassed: true } },
   { id: 'h14', deck: 'chance', text: 'Take a trip to Reading Railroad', effect: { type: 'moveTo', tileId: 'reading-railroad', awardGoIfPassed: true } },
   { id: 'h15', deck: 'chance', text: 'Go back 3 spaces', effect: { type: 'moveSteps', steps: -3, awardGoIfPassed: false } },
-  { id: 'h16', deck: 'chance', text: 'Advance to the nearest Railroad', effect: { type: 'moveTo', tileId: 'pennsylvania-railroad', awardGoIfPassed: true } },
+  { id: 'h16', deck: 'chance', text: 'Advance to the nearest Railroad', effect: { type: 'moveToNearest', target: 'railroad', awardGoIfPassed: true, ownerRentMultiplier: 2 } },
 ];
 
 export const BUS: CardDefinition[] = [
