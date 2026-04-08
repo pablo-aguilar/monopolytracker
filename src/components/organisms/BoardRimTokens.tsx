@@ -90,11 +90,13 @@ function PlayerRimToken({
   positionIndex,
   stackIndex,
   centers,
+  isActive,
 }: {
   color: string;
   positionIndex: number;
   stackIndex: number;
   centers: Map<number, { x: number; y: number }>;
+  isActive: boolean;
 }): JSX.Element | null {
   const visualRef = useRef(positionIndex);
   const [renderIdx, setRenderIdx] = useState(positionIndex);
@@ -141,18 +143,36 @@ function PlayerRimToken({
 
   const x = center.x - TOKEN_OFFSET + dx;
   const y = center.y - TOKEN_OFFSET + dy;
+  const reduceMotion =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   return (
     <motion.div
-      className="pointer-events-none absolute left-0 top-0 z-[30] h-[6px] w-[6px] rounded-full"
-      style={{ backgroundColor: color }}
+      className={`pointer-events-none absolute left-0 top-0 h-[6px] w-[6px] rounded-full ${isActive ? 'z-[32]' : 'z-[30]'}`}
+      style={{
+        backgroundColor: color,
+        boxShadow: isActive ? `0 0 0 2px ${color}55, 0 0 14px ${color}aa` : undefined,
+      }}
       initial={false}
-      animate={{ x, y }}
+      animate={
+        isActive && !reduceMotion
+          ? {
+              x,
+              y,
+              scale: [1, 1.5, 1],
+              opacity: [1, 0.92, 1],
+            }
+          : { x, y, scale: 1, opacity: 1 }
+      }
       transition={{
-        type: 'spring',
-        stiffness: 520,
-        damping: 22,
-        mass: 0.35,
+        x: { type: 'spring', stiffness: 520, damping: 22, mass: 0.35 },
+        y: { type: 'spring', stiffness: 520, damping: 22, mass: 0.35 },
+        ...(isActive && !reduceMotion
+          ? {
+              scale: { duration: 0.78, ease: 'easeInOut', repeat: Infinity },
+              opacity: { duration: 0.78, ease: 'easeInOut', repeat: Infinity },
+            }
+          : {}),
       }}
     />
   );
@@ -161,9 +181,10 @@ function PlayerRimToken({
 export interface BoardRimTokensProps {
   containerRef: React.RefObject<HTMLElement | null>;
   players: BoardRimPlayer[];
+  activePlayerId?: string | null;
 }
 
-export default function BoardRimTokens({ containerRef, players }: BoardRimTokensProps): JSX.Element | null {
+export default function BoardRimTokens({ containerRef, players, activePlayerId = null }: BoardRimTokensProps): JSX.Element | null {
   const [centers, setCenters] = useState<Map<number, { x: number; y: number }>>(new Map());
 
   const measure = useMemo(() => {
@@ -213,6 +234,7 @@ export default function BoardRimTokens({ containerRef, players }: BoardRimTokens
           positionIndex={p.positionIndex}
           stackIndex={p.stackIndex}
           centers={centers}
+          isActive={p.id === activePlayerId}
         />
       ))}
     </div>

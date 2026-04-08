@@ -31,7 +31,7 @@ import {
 } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle, type CardEffect } from '@/data/cards';
 import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled, revertTileToBank } from '@/features/properties/propertiesSlice';
-import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
+import { drawCardById, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearAllBusTickets, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
 import { persistor, type AppDispatch, type RootState } from '@/app/store';
@@ -1007,16 +1007,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
 
     // Apply staged Chance/Community effects and mutate decks now
     const applyStagedCard = (deck: 'chance' | 'community', cardId: string): boolean => {
-      // Move chosen card to top of discard by simulating: put all cards before it to bottom, then draw
-      const draw = cardsState.decks[deck].drawPile;
-      const idx = draw.findIndex((c) => c.id === cardId);
-      if (idx > 0) {
-        for (let i = 0; i < idx; i++) {
-          const id = draw[i].id;
-          dispatch(putCardOnBottom({ deck, cardId: id }));
-        }
-      }
-      dispatch(drawCard(deck));
+      dispatch(drawCardById({ deck, cardId }));
       dispatch(appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'CARD', actorPlayerId: pid, payload: { deck, cardId, message: `Drew ${deck}` }, createdAt: new Date().toISOString() }));
       // Apply effects based on the known definition for the selected card id
       const def = (deck === 'chance' ? CHANCE : COMMUNITY_CHEST).find((c) => c.id === cardId);
@@ -2116,13 +2107,10 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     return false;
   };
   const isFirstRoundPurchaseLocked = (pid: string, targetIndex: number): boolean => {
+    void targetIndex;
     const pl = players.find((x) => x.id === pid);
-    const fromPos = players.find((x) => x.id === pid)?.positionIndex ?? 0;
-    const fromW = wrapIndex(fromPos);
-    const toW = wrapIndex(targetIndex);
-    const isTeleportPreview = (busTeleportTo != null) || (tripleTeleportTo != null);
-    const willPassGoThisMove = (isTeleportPreview && toW === fromW) || passedGo(fromW, toW);
-    return !(pl?.hasPassedGo || willPassGoThisMove);
+    // Strict rule: buying unlocks only after an actual recorded GO pass.
+    return !(pl?.hasPassedGo === true);
   };
   const findNearestTileIndex = (fromIndex: number, target: 'railroad' | 'utility'): number | null => {
     const len = BOARD_TILES.length;
@@ -2641,14 +2629,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
 
     const deck = meta.deck;
     const cardId = meta.cardId;
-    const draw = cardsState.decks[deck].drawPile;
-    const cidx = draw.findIndex((c) => c.id === cardId);
-    if (cidx > 0) {
-      for (let i = 0; i < cidx; i++) {
-        dispatch(putCardOnBottom({ deck, cardId: draw[i].id }));
-      }
-    }
-    dispatch(drawCard(deck));
+    dispatch(drawCardById({ deck, cardId }));
     dispatch(
       appendEvent({
         id: crypto.randomUUID(),
@@ -4393,43 +4374,48 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       })()}
 
       {/* New Game confirmation */}
-      <AnimatePresence>
-        {newGameConfirmOpen && (
-          <motion.div
-            key="new-game"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) setNewGameConfirmOpen(false);
-            }}
-          >
-            <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
-              <OverlayHeader title="Start a new game?" onClose={() => setNewGameConfirmOpen(false)} className="mb-1" />
-              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                This will clear players, properties, decks, and the event log saved on this device and return you to Setup.
-              </div>
-              <div className="mt-4 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNewGameConfirmOpen(false)}
-                  className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
+      {typeof document !== 'undefined'
+        ? createPortal(
+            <AnimatePresence>
+              {newGameConfirmOpen && (
+                <motion.div
+                  key="new-game"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[260] flex items-center justify-center modal-backdrop p-4"
+                  onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) setNewGameConfirmOpen(false);
+                  }}
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={onConfirmNewGame}
-                  className="rounded-md bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-rose-400"
-                >
-                  New Game
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                  <div className="w-full max-w-md rounded-xl bg-white dark:bg-neutral-900 p-4 shadow-2xl border border-neutral-200 dark:border-neutral-700">
+                    <OverlayHeader title="Start a new game?" onClose={() => setNewGameConfirmOpen(false)} className="mb-1" />
+                    <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                      This will clear players, properties, decks, and the event log saved on this device and return you to Setup.
+                    </div>
+                    <div className="mt-4 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewGameConfirmOpen(false)}
+                        className="rounded-md border border-neutral-300 dark:border-neutral-700 px-3 py-1.5 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onConfirmNewGame}
+                        className="rounded-md bg-rose-600 hover:bg-rose-700 px-3 py-1.5 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-rose-400"
+                      >
+                        New Game
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
 
       {/* Centered board picker for teleports */}
       <AnimatePresence>

@@ -23,6 +23,7 @@ export interface BoardFrameProps {
   className?: string;
   /** Rim pawn dots; positions follow `data-board-index` cells. */
   rimPlayers?: BoardRimPlayer[];
+  activeRimPlayerId?: string | null;
   /** Called when a perimeter tile is clicked. */
   onTileClick?: (tileIndex: number) => void;
   /** Map of tile id -> owner color for owned perimeter tiles. */
@@ -223,6 +224,7 @@ export default function BoardFrame({
   size = 'sm',
   className = '',
   rimPlayers,
+  activeRimPlayerId,
   onTileClick,
   ownerColorByTileId,
   improvementsByTileId,
@@ -279,7 +281,7 @@ export default function BoardFrame({
         <BoardFrameTile key="fp-h" tile={freeParking} edge="horizontal" rim="bottom" size={size} onTileClick={onTileClick} ownerColorByTileId={ownerColorByTileId} improvementsByTileId={improvementsByTileId} qaSuffix="-h" cornerHalf corner="br" />
       </div>
       {rimPlayers && rimPlayers.length > 0 ? (
-        <BoardRimTokens containerRef={frameRef} players={rimPlayers} />
+        <BoardRimTokens containerRef={frameRef} players={rimPlayers} activePlayerId={activeRimPlayerId} />
       ) : null}
     </div>
   );

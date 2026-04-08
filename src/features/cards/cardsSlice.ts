@@ -53,6 +53,14 @@ const cardsSlice = createSlice({
         deck.discardPile.unshift(card);
       }
     },
+    drawCardById(state, action: PayloadAction<{ deck: CardDeck; cardId: string }>) {
+      const { deck: deckKey, cardId } = action.payload;
+      const deck = state.decks[deckKey];
+      const idx = deck.drawPile.findIndex((c) => c.id === cardId);
+      if (idx < 0) return;
+      const [card] = deck.drawPile.splice(idx, 1);
+      if (card) deck.discardPile.unshift(card);
+    },
     putCardOnBottom(state, action: PayloadAction<{ deck: CardDeck; cardId: string }>) {
       const { deck: deckKey, cardId } = action.payload;
       const deck = state.decks[deckKey];
@@ -100,5 +108,5 @@ export const selectLastDrawnCard = (state: CardsState, deck: CardDeck): CardDefi
   return d.discardPile.length > 0 ? d.discardPile[0] : null;
 };
 
-export const { setSeed, drawCard, putCardOnBottom, reshuffleIfEmpty, drawBusCardByType, hydrateFromTimeline } = cardsSlice.actions;
+export const { setSeed, drawCard, drawCardById, putCardOnBottom, reshuffleIfEmpty, drawBusCardByType, hydrateFromTimeline } = cardsSlice.actions;
 export default cardsSlice.reducer;

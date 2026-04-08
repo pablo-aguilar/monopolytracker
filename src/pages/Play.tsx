@@ -7,6 +7,7 @@ import type { RootState } from '@/app/store';
 import BoardFrame from '@/components/organisms/BoardFrame';
 import PlayConsole from '@/components/organisms/PlayConsole';
 import TileDetailsOverlay from '@/components/molecules/TileDetailsOverlay';
+import PlayerFocusStrip from '@/components/molecules/PlayerFocusStrip';
 
 export default function Play(): JSX.Element {
   const [playMountKey, setPlayMountKey] = useState(0);
@@ -15,6 +16,9 @@ export default function Play(): JSX.Element {
   const rimPlayers = useSelector((s: RootState) => s.players.players);
   const properties = useSelector((s: RootState) => s.properties);
   const events = useSelector((s: RootState) => s.events.events);
+  const snapshots = useSelector((s: RootState) => s.timeline.snapshots);
+  const turnIndexRaw = useSelector((s: RootState) => (s as any).session?.turnIndex);
+  const turnIndex = typeof turnIndexRaw === 'number' && turnIndexRaw >= 0 ? turnIndexRaw : 0;
   const ownerColorByTileId = useMemo(() => {
     const colorByTileId: Record<string, string | null> = {};
     for (const [tileId, ps] of Object.entries(properties.byTileId)) {
@@ -46,10 +50,18 @@ export default function Play(): JSX.Element {
         ref={setPlayChromeHost}
         className="relative z-10 w-full shrink-0 border-b border-neutral-200/80 bg-surface-0 px-2.5 py-3 sm:px-6 dark:border-neutral-700/80"
       />
+      <PlayerFocusStrip
+        players={rimPlayers}
+        properties={properties}
+        events={events}
+        snapshots={snapshots}
+        activePlayerId={rimPlayers[turnIndex]?.id ?? rimPlayers[0]?.id ?? null}
+      />
       <BoardFrame
         size="sm"
         className="min-h-0 flex-1"
         rimPlayers={rimPlayersLite}
+        activeRimPlayerId={rimPlayers[turnIndex]?.id ?? rimPlayers[0]?.id ?? null}
         onTileClick={(tileIndex) => setSelectedTileIndex(tileIndex)}
         ownerColorByTileId={ownerColorByTileId}
         improvementsByTileId={improvementsByTileId}

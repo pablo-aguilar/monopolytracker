@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { getThemeMode, setThemeMode, subscribeThemeMode, type ThemeMode } from '@/lib/theme';
 import OverlayHeader from '@/components/molecules/OverlayHeader';
 
@@ -54,7 +55,7 @@ export default function SettingsModal({ open, onClose, extraContent }: SettingsM
     setMode(m);
   };
 
-  return (
+  const modal = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -63,7 +64,7 @@ export default function SettingsModal({ open, onClose, extraContent }: SettingsM
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           data-cmp="m/SettingsModal"
-          className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4"
+          className="fixed inset-0 z-[220] flex items-center justify-center modal-backdrop p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -101,5 +102,7 @@ export default function SettingsModal({ open, onClose, extraContent }: SettingsM
       )}
     </AnimatePresence>
   );
+  if (typeof document === 'undefined') return modal;
+  return createPortal(modal, document.body);
 }
 
