@@ -30,7 +30,7 @@ import {
   type ColorGroup,
 } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST, getBusCardShortTitle, type CardEffect } from '@/data/cards';
-import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled } from '@/features/properties/propertiesSlice';
+import { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled, revertTileToBank } from '@/features/properties/propertiesSlice';
 import { drawCard, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpty, drawBusCardByType, selectLastDrawnCard } from '@/features/cards/cardsSlice';
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearAllBusTickets, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
@@ -1006,7 +1006,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     }
 
     // Apply staged Chance/Community effects and mutate decks now
-    const applyStagedCard = (deck: 'chance' | 'community', cardId: string) => {
+    const applyStagedCard = (deck: 'chance' | 'community', cardId: string): boolean => {
       // Move chosen card to top of discard by simulating: put all cards before it to bottom, then draw
       const draw = cardsState.decks[deck].drawPile;
       const idx = draw.findIndex((c) => c.id === cardId);
@@ -1023,6 +1023,11 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       const effect = def?.effect as CardEffect | undefined;
       if (effect && pid) {
         if (effect.type === 'payBank' && typeof effect.amount === 'number' && effect.amount > 0) {
+          const payerMoney = (store.getState() as RootState).players.players.find((p) => p.id === pid)?.money ?? 0;
+          if (payerMoney < effect.amount) {
+            bankruptToBank(pid, `card fee $${effect.amount}`);
+            return true;
+          }
           dispatch(adjustPlayerMoney({ id: pid, delta: -effect.amount }));
           dispatch(addToFreeParking(effect.amount));
         } else if (effect.type === 'receiveBank' && typeof effect.amount === 'number' && effect.amount > 0) {
@@ -1099,15 +1104,16 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
           ]);
         }
       }
+      return false;
     };
 
     if (!thirdDoubles) {
       if (stagedChanceCardId) {
-        applyStagedCard('chance', stagedChanceCardId);
+        if (applyStagedCard('chance', stagedChanceCardId)) return;
         setStagedChanceCardId(null);
       }
       if (stagedCommunityCardId) {
-        applyStagedCard('community', stagedCommunityCardId);
+        if (applyStagedCard('community', stagedCommunityCardId)) return;
         setStagedCommunityCardId(null);
       }
     }
@@ -1345,6 +1351,11 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
       const idx3 = predictedTo ?? currentIndex;
       const t3 = getTileByIndex(idx3);
       if (t3 && t3.type === 'tax' && t3.taxAmount) {
+        const payerMoney = (store.getState() as RootState).players.players.find((p) => p.id === pid)?.money ?? 0;
+        if (payerMoney < t3.taxAmount) {
+          bankruptToBank(pid, `tax $${t3.taxAmount}`);
+          return;
+        }
         dispatch(adjustPlayerMoney({ id: pid, delta: -t3.taxAmount }));
         dispatch(addToFreeParking(t3.taxAmount));
         dispatch(
@@ -1824,6 +1835,11 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
   const onPayTax = (): void => {
     const tile = getTileByIndex(currentIndex);
     if (tile.type !== 'tax' || !tile.taxAmount || !moneyPlayerId) return;
+    const payerMoney = (store.getState() as RootState).players.players.find((p) => p.id === moneyPlayerId)?.money ?? 0;
+    if (payerMoney < tile.taxAmount) {
+      bankruptToBank(moneyPlayerId, `tax $${tile.taxAmount}`);
+      return;
+    }
     dispatch(adjustPlayerMoney({ id: moneyPlayerId, delta: -tile.taxAmount }));
     dispatch(
       appendEvent({
@@ -2122,6 +2138,52 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     if (base <= 0) return base;
     const mult = activeCardRentMultiplier ?? 1;
     return Math.round(base * mult);
+  };
+  const bankruptToBank = (loserId: string, reason: string): void => {
+    const loser = (store.getState() as RootState).players.players.find((p) => p.id === loserId);
+    if (!loser) return;
+    const loserName = loser.nickname ?? loserId;
+    const byTile = (store.getState() as RootState).properties.byTileId;
+    const ownedTileIds = BOARD_TILES
+      .filter((t) => (t.type === 'property' || t.type === 'railroad' || t.type === 'utility') && byTile[t.id]?.ownerId === loserId)
+      .map((t) => t.id);
+
+    for (const tileId of ownedTileIds) {
+      dispatch(revertTileToBank({ tileId }));
+      dispatch(unassignProperty({ id: loserId, tileId }));
+    }
+
+    // Return special assets to bank/discard by clearing the bankrupt player's counts.
+    const cur = (store.getState() as RootState).players.players.find((p) => p.id === loserId);
+    if (cur) {
+      const bus = cur.busTickets ?? 0;
+      if (bus > 0) dispatch(consumeBusTicket({ id: loserId, count: bus }));
+      const gjChance = cur.gojfChance ?? 0;
+      const gjComm = cur.gojfCommunity ?? 0;
+      if (gjChance > 0) dispatch(consumeGetOutOfJail({ id: loserId, deck: 'chance', count: gjChance }));
+      if (gjComm > 0) dispatch(consumeGetOutOfJail({ id: loserId, deck: 'community', count: gjComm }));
+      if (cur.money > 0) dispatch(adjustPlayerMoney({ id: loserId, delta: -cur.money }));
+    }
+
+    dispatch(
+      appendEvent({
+        id: crypto.randomUUID(),
+        gameId: 'local',
+        type: 'MONEY_ADJUST',
+        actorPlayerId: loserId,
+        payload: {
+          playerId: loserId,
+          message: `${loserName} is bankrupt to bank (${reason}). ${ownedTileIds.length} properties returned to bank, unmortgaged.`,
+        },
+        createdAt: new Date().toISOString(),
+      })
+    );
+
+    dispatch(consumePendingMortgageCredit({ playerId: loserId }));
+    dispatch(removePlayer(loserId));
+    const nextPlayerCount = Math.max(0, players.length - 1);
+    const nextIndex = nextPlayerCount > 0 ? Math.min(turnIndex, nextPlayerCount - 1) : 0;
+    dispatch(setTurnIndex(nextIndex));
   };
   // Require purchase or auction resolution when applicable
   const purchaseOrAuctionRequiredButNotResolved = (): boolean => {
@@ -2532,6 +2594,11 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
     const idx = predictedTo ?? currentIndex;
     const t = getTileByIndex(idx);
     if (t.type !== 'tax' || !t.taxAmount) return;
+    const payerMoney = (store.getState() as RootState).players.players.find((p) => p.id === pid)?.money ?? 0;
+    if (payerMoney < t.taxAmount) {
+      bankruptToBank(pid, `tax $${t.taxAmount}`);
+      return;
+    }
     dispatch(adjustPlayerMoney({ id: pid, delta: -t.taxAmount }));
     dispatch(
       appendEvent({ id: crypto.randomUUID(), gameId: 'local', type: 'FEE', actorPlayerId: pid, payload: { tileId: t.id, from: pid, amount: t.taxAmount, message: `Tax ${t.taxAmount}` }, moneyDelta: -t.taxAmount, createdAt: new Date().toISOString() })

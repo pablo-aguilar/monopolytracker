@@ -177,11 +177,29 @@ const propertiesSlice = createSlice({
       if (!tile || tile.type !== 'railroad') return;
       ps.depotInstalled = action.payload.installed;
     },
+    /** Return a tile to bank ownership in a clean state. */
+    revertTileToBank(state, action: PayloadAction<{ tileId: string }>) {
+      const ps = state.byTileId[action.payload.tileId];
+      if (!ps) return;
+      const before = ps.improvements;
+      if (before >= 6) {
+        state.skyscrapersRemaining += 1;
+        state.hotelsRemaining += 1;
+      } else if (before === 5) {
+        state.hotelsRemaining += 1;
+      } else if (before > 0) {
+        state.housesRemaining += before;
+      }
+      ps.ownerId = null;
+      ps.mortgaged = false;
+      ps.improvements = 0;
+      ps.depotInstalled = false;
+    },
     hydrateFromTimeline(_state, action: PayloadAction<PropertiesState>) {
       return action.payload;
     },
   },
 });
 
-export const { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled, hydrateFromTimeline } = propertiesSlice.actions;
+export const { assignOwner, transferOwnerPreserveState, setMortgaged, buyHouse, sellHouse, setDepotInstalled, revertTileToBank, hydrateFromTimeline } = propertiesSlice.actions;
 export default propertiesSlice.reducer;
