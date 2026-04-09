@@ -17,6 +17,7 @@ import ColorSwatchPicker from '@/components/molecules/ColorSwatchPicker';
 import AvatarPicker from '@/components/molecules/AvatarPicker';
 import TurnOrderList from '@/components/molecules/TurnOrderList';
 import { initializeRacePot } from '@/features/session/sessionSlice';
+import { supabaseAuthService, supabaseLobbyService } from '@/services/supabase';
 
 const COLORS = ['#ef4444', '#22c55e', '#3b82f6', '#eab308', '#a855f7', '#06b6d4', '#f97316'];
 const SHOW_CARD_SEED = false; // MVP: decks are managed IRL; hide seed input
@@ -39,6 +40,8 @@ export default function SetupForm(): JSX.Element {
   const [avatarKey, setAvatarKey] = useState<string>(firstAvailableAvatar);
   const [colorPickerOpen, setColorPickerOpen] = useState<boolean>(false);
   const [seed, setSeedInput] = useState<string>('monopoly');
+  const [isCreatingLobby, setIsCreatingLobby] = useState<boolean>(false);
+  const [lobbyError, setLobbyError] = useState<string | null>(null);
 
   // //#effects
   React.useEffect(() => {
@@ -97,6 +100,24 @@ export default function SetupForm(): JSX.Element {
       }
     }
     navigate('/play');
+  };
+
+  const onCreateOnlineLobby = async (): Promise<void> => {
+    setLobbyError(null);
+    setIsCreatingLobby(true);
+    try {
+      const profile = await supabaseAuthService.ensureProfile({
+        displayName: players[0]?.nickname ?? 'DM',
+        avatarKey: players[0]?.avatarKey ?? 'hat',
+      });
+      const game = await supabaseLobbyService.createGame({ hostProfileId: profile.id });
+      await supabaseLobbyService.joinGame({ inviteCode: game.inviteCode, profileId: profile.id });
+      navigate(`/lobby/${game.inviteCode}`);
+    } catch (err) {
+      setLobbyError(err instanceof Error ? err.message : 'Unable to create lobby.');
+    } finally {
+      setIsCreatingLobby(false);
+    }
   };
 
   const turnPlayers = players.map((p) => ({
@@ -186,6 +207,14 @@ export default function SetupForm(): JSX.Element {
       </section>
 
       <div className="flex justify-center gap-3">
+        <button
+          data-qa="btn-create-online-lobby"
+          onClick={onCreateOnlineLobby}
+          disabled={isCreatingLobby}
+          className="inline-flex min-w-48 items-center justify-center rounded-md px-4 py-2 border border-surface-strong bg-surface-1 text-fg font-semibold shadow hover:bg-surface-2 disabled:opacity-50"
+        >
+          {isCreatingLobby ? 'Creating Lobby...' : 'Create Online Lobby'}
+        </button>
         {players.length >= 2 && (
           <button
             data-qa="btn-start-game"
@@ -196,6 +225,7 @@ export default function SetupForm(): JSX.Element {
           </button>
         )}
       </div>
+      {lobbyError ? <p className="text-center text-sm text-red-600">{lobbyError}</p> : null}
     </div>
   );
 }

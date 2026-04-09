@@ -75,6 +75,17 @@ export const supabaseLobbyService: LobbyService = {
     return data ? mapDbGameToDomain(data) : null;
   },
 
+  async listParticipants(gameId: string): Promise<LobbyParticipant[]> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('game_players')
+      .select('id, game_id, participant_type, profile_id, guest_name, guest_avatar_key, is_ready, seat_order')
+      .eq('game_id', gameId)
+      .order('seat_order', { ascending: true });
+    if (error) throw error;
+    return (data as DbGamePlayerRow[]).map(mapDbGamePlayerToDomain);
+  },
+
   async joinGame(input: JoinGameInput): Promise<LobbyParticipant> {
     const supabase = getSupabaseClient();
     const game = await this.getGameByInviteCode(input.inviteCode);
