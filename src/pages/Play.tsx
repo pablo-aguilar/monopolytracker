@@ -3,6 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
 import type { RootState } from '@/app/store';
 import BoardFrame from '@/components/organisms/BoardFrame';
 import PlayConsole from '@/components/organisms/PlayConsole';
@@ -10,6 +11,11 @@ import TileDetailsOverlay from '@/components/molecules/TileDetailsOverlay';
 import PlayerFocusStrip from '@/components/molecules/PlayerFocusStrip';
 
 export default function Play(): JSX.Element {
+  const activeRole = sessionStorage.getItem('mt_active_role');
+  const activeInviteCode = sessionStorage.getItem('mt_active_invite');
+  if (activeRole === 'spectator') {
+    return <Navigate to={activeInviteCode ? `/g/${activeInviteCode}` : '/setup'} replace />;
+  }
   const [playMountKey, setPlayMountKey] = useState(0);
   const [playChromeHost, setPlayChromeHost] = useState<HTMLDivElement | null>(null);
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);

@@ -90,6 +90,8 @@ export default function SetupForm(): JSX.Element {
   };
 
   const onStart = (): void => {
+    sessionStorage.setItem('mt_active_role', 'host');
+    sessionStorage.removeItem('mt_active_invite');
     if (SHOW_CARD_SEED) dispatch(setSeed(seed));
     // Initialize race pot and deduct if 2+ opted in
     const participants = players.filter((p) => p.racePotOptIn).map((p) => p.id);
@@ -112,6 +114,8 @@ export default function SetupForm(): JSX.Element {
       });
       const game = await supabaseLobbyService.createGame({ hostProfileId: profile.id });
       await supabaseLobbyService.joinGame({ inviteCode: game.inviteCode, profileId: profile.id });
+      sessionStorage.setItem('mt_active_role', 'host');
+      sessionStorage.setItem('mt_active_invite', game.inviteCode);
       navigate(`/lobby/${game.inviteCode}`);
     } catch (err) {
       setLobbyError(err instanceof Error ? err.message : 'Unable to create lobby.');

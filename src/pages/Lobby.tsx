@@ -47,6 +47,28 @@ export default function Lobby(): JSX.Element {
     refreshLobby();
   }, [refreshLobby]);
 
+  React.useEffect(() => {
+    if (!inviteCode) return;
+    const id = window.setInterval(() => {
+      refreshLobby();
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [inviteCode, refreshLobby]);
+
+  React.useEffect(() => {
+    if (!game || !inviteCode) return;
+    if (game.status !== 'in_progress') return;
+    if (isHost) {
+      sessionStorage.setItem('mt_active_role', 'host');
+      sessionStorage.setItem('mt_active_invite', inviteCode);
+      navigate('/play', { replace: true });
+      return;
+    }
+    sessionStorage.setItem('mt_active_role', 'spectator');
+    sessionStorage.setItem('mt_active_invite', inviteCode);
+    navigate(`/g/${inviteCode}`, { replace: true });
+  }, [game, inviteCode, isHost, navigate]);
+
   async function onToggleReady(): Promise<void> {
     if (!game || !myParticipant) return;
     setIsBusy(true);
@@ -67,6 +89,8 @@ export default function Lobby(): JSX.Element {
     setError(null);
     try {
       await supabaseLobbyService.startGame(game.id);
+      sessionStorage.setItem('mt_active_role', 'host');
+      sessionStorage.setItem('mt_active_invite', game.inviteCode);
       navigate('/play');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start game.');
