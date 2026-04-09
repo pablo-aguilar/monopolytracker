@@ -182,9 +182,9 @@ export default function PlayerFocusStrip({
 
   return (
     <>
-      <div data-cmp="m/PlayerFocusStrip" className={`relative z-10 w-full border-b border-neutral-200/80 bg-surface-0 px-2.5 py-2 sm:px-6 dark:border-neutral-700/80 ${className}`}>
+      <div data-cmp="m/PlayerFocusStrip" className={`relative z-10 w-full bg-surface-0 py-2 ${className}`}>
         <div className="overflow-x-auto sm:hidden">
-          <div className="flex min-w-max gap-2">
+          <div className="flex min-w-max gap-2 px-2">
             {players.map((p) => {
               const avatar = AVATARS.find((a) => a.key === p.avatarKey);
               const active = p.id === activePlayerId;

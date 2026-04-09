@@ -89,7 +89,7 @@ export default function PlayerTurnCards({
             {/* location only + cash/liquidation pill (avatar/name intentionally removed) */}
             <div className="flex items-center gap-3 relative">
               <div className="font-semibold flex flex-col text-fg min-w-0">
-                <span className="text-sm font-normal text-muted truncate">
+                <span className="ml-3 text-sm font-normal text-muted truncate">
                   {locLabel} <span className="text-subtle">{p.positionIndex}</span>
                 </span>
               </div>

@@ -48,7 +48,7 @@ export default function Play(): JSX.Element {
         role="region"
         aria-label="Game summary"
         ref={setPlayChromeHost}
-        className="relative z-10 w-full shrink-0 border-b border-neutral-200/80 bg-surface-0 px-2.5 py-3 sm:px-6 dark:border-neutral-700/80"
+        className="relative z-10 w-full shrink-0 bg-surface-0 px-2.5 pt-2 pb-1 sm:px-6"
       />
       <PlayerFocusStrip
         players={rimPlayers}
