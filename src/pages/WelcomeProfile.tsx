@@ -43,7 +43,9 @@ export default function WelcomeProfile(): JSX.Element {
       await supabaseAuthService.completeOnboarding({ displayName: name, avatarKey });
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save profile.');
+      const msg = err instanceof Error ? err.message : 'Could not save profile.';
+      console.error('completeOnboarding failed', err);
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }

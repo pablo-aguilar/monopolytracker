@@ -71,12 +71,43 @@ export const supabaseAuthService: AuthService = {
       avatar_key: input.avatarKey,
       onboarding_completed: true,
     };
-    const { data: upserted, error: upsertError } = await supabase
+
+    const { data: inserted, error: insertError } = await supabase
       .from('profiles')
-      .upsert(row, { onConflict: 'id' })
+      .insert(row)
       .select('id, display_name, avatar_key, onboarding_completed')
       .single<DbProfileRow>();
-    if (upsertError) throw upsertError;
-    return mapDbProfileToDomain(upserted);
+
+    if (!insertError) {
+      return mapDbProfileToDomain(inserted);
+    }
+
+    // Row may already exist (e.g. partial state); finish onboarding with an update.
+    const { data: updated, error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        display_name: row.display_name,
+        avatar_key: row.avatar_key,
+        onboarding_completed: true,
+      })
+      .eq('id', user.id)
+      .select('id, display_name, avatar_key, onboarding_completed')
+      .single<DbProfileRow>();
+
+    if (!updateError && updated) {
+      return mapDbProfileToDomain(updated);
+    }
+
+    const err = insertError ?? updateError;
+    const hint =
+      err && typeof err === 'object' && 'message' in err && typeof (err as { message: string }).message === 'string'
+        ? (err as { message: string }).message
+        : String(err);
+    if (/onboarding_completed|schema cache|PGRST204/i.test(hint)) {
+      throw new Error(
+        `${hint} — Run the SQL migration supabase/migrations/20260412_profile_onboarding.sql in your Supabase project (SQL Editor).`,
+      );
+    }
+    throw new Error(hint || 'Could not save profile.');
   },
 };
