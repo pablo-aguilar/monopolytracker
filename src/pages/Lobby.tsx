@@ -13,6 +13,13 @@ export default function Lobby(): JSX.Element {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isBusy, setIsBusy] = React.useState(false);
+  const [copyDone, setCopyDone] = React.useState(false);
+
+  const inviteUrl = React.useMemo(() => {
+    if (!inviteCode) return '';
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${base}/lobby/${encodeURIComponent(inviteCode)}`;
+  }, [inviteCode]);
 
   const myParticipant = React.useMemo(
     () => participants.find((p) => p.profileId === profile?.id) ?? null,
@@ -99,6 +106,17 @@ export default function Lobby(): JSX.Element {
     }
   }
 
+  async function copyInviteLink(): Promise<void> {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopyDone(true);
+      window.setTimeout(() => setCopyDone(false), 2000);
+    } catch {
+      setError('Could not copy — select the link and copy manually.');
+    }
+  }
+
   if (isLoading) {
     return <div className="min-h-dvh flex items-center justify-center text-muted">Loading lobby...</div>;
   }
@@ -106,9 +124,41 @@ export default function Lobby(): JSX.Element {
   return (
     <div className="min-h-dvh bg-surface-0 text-fg p-6">
       <div className="mx-auto w-full max-w-3xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Game Lobby</h1>
-          <div className="text-sm text-muted">Invite: {inviteCode}</div>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-semibold">Game Lobby</h1>
+            {inviteCode ? (
+              <span className="text-xs font-medium uppercase tracking-wide text-muted">Code: {inviteCode}</span>
+            ) : null}
+          </div>
+          {inviteUrl ? (
+            <div
+              data-qa="invite-link-row"
+              className="flex flex-col gap-2 rounded-xl border border-surface-strong bg-surface-1 p-3 sm:flex-row sm:items-stretch"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 text-xs font-medium text-muted">Invite link — copy and share</div>
+                <input
+                  readOnly
+                  type="text"
+                  value={inviteUrl}
+                  aria-label="Full lobby invite URL"
+                  className="w-full rounded-lg border border-surface-strong bg-surface-0 px-3 py-2 font-mono text-xs text-fg outline-none sm:text-sm"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+              </div>
+              <div className="flex shrink-0 items-end sm:items-end">
+                <button
+                  type="button"
+                  data-qa="btn-copy-invite-link"
+                  onClick={copyInviteLink}
+                  className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:w-auto"
+                >
+                  {copyDone ? 'Copied!' : 'Copy link'}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
         {error ? <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
         <div className="rounded-xl border border-surface-strong bg-surface-1 p-4">
