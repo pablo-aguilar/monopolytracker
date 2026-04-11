@@ -4,6 +4,8 @@ export interface PlayerProfile {
   id: string;
   displayName: string;
   avatarKey: string;
+  /** False until the user completes first-time name + avatar onboarding. */
+  onboardingCompleted: boolean;
 }
 
 export interface LobbyParticipant {

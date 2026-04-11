@@ -7,6 +7,7 @@ type DbProfileRow = {
   id: string;
   display_name: string;
   avatar_key: string;
+  onboarding_completed: boolean | null;
 };
 
 export const supabaseAuthService: AuthService = {
@@ -37,32 +38,45 @@ export const supabaseAuthService: AuthService = {
     if (error) throw error;
   },
 
-  async ensureProfile(defaultProfile: { displayName: string; avatarKey: string }): Promise<PlayerProfile> {
+  async getProfile(): Promise<PlayerProfile | null> {
+    const supabase = getSupabaseClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    const user = authData.user;
+    if (!user) return null;
+
+    const { data: existing, error: existingError } = await supabase
+      .from('profiles')
+      .select('id, display_name, avatar_key, onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle<DbProfileRow>();
+    if (existingError) throw existingError;
+    if (!existing) return null;
+    return mapDbProfileToDomain(existing);
+  },
+
+  async completeOnboarding(input: { displayName: string; avatarKey: string }): Promise<PlayerProfile> {
     const supabase = getSupabaseClient();
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError) throw authError;
     const user = authData.user;
     if (!user) throw new Error('No authenticated user found.');
 
-    const { data: existing, error: existingError } = await supabase
-      .from('profiles')
-      .select('id, display_name, avatar_key')
-      .eq('id', user.id)
-      .maybeSingle<DbProfileRow>();
-    if (existingError) throw existingError;
-    if (existing) return mapDbProfileToDomain(existing);
+    const displayName = input.displayName.trim();
+    if (!displayName) throw new Error('Display name is required.');
 
-    const insertRow = {
+    const row = {
       id: user.id,
-      display_name: defaultProfile.displayName,
-      avatar_key: defaultProfile.avatarKey,
+      display_name: displayName.slice(0, 48),
+      avatar_key: input.avatarKey,
+      onboarding_completed: true,
     };
-    const { data: inserted, error: insertError } = await supabase
+    const { data: upserted, error: upsertError } = await supabase
       .from('profiles')
-      .insert(insertRow)
-      .select('id, display_name, avatar_key')
+      .upsert(row, { onConflict: 'id' })
+      .select('id, display_name, avatar_key, onboarding_completed')
       .single<DbProfileRow>();
-    if (insertError) throw insertError;
-    return mapDbProfileToDomain(inserted);
+    if (upsertError) throw upsertError;
+    return mapDbProfileToDomain(upserted);
   },
 };

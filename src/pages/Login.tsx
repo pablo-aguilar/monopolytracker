@@ -12,11 +12,20 @@ export default function Login(): JSX.Element {
   const [message, setMessage] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    supabaseAuthService.getSession().then((session) => {
-      if (session) navigate(redirect, { replace: true });
-    }).catch(() => {
-      // ignore; user can still sign in manually
-    });
+    supabaseAuthService
+      .getSession()
+      .then(async (session) => {
+        if (!session) return;
+        const profile = await supabaseAuthService.getProfile();
+        if (!profile || !profile.onboardingCompleted) {
+          navigate(`/welcome?redirect=${encodeURIComponent(redirect)}`, { replace: true });
+        } else {
+          navigate(redirect, { replace: true });
+        }
+      })
+      .catch(() => {
+        // ignore; user can still sign in manually
+      });
   }, [navigate, redirect]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {

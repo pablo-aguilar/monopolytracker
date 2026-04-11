@@ -6,7 +6,9 @@ import Spectate from './pages/Spectate';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Lobby from './pages/Lobby';
+import WelcomeProfile from './pages/WelcomeProfile';
 import RequireAuth from '@/components/auth/RequireAuth';
+import RequireOnboarding from '@/components/auth/RequireOnboarding';
 
 export default function AppRouter(): JSX.Element {
   return (
@@ -14,10 +16,11 @@ export default function AppRouter(): JSX.Element {
       <Route path="/" element={<Navigate to="/setup" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/setup" element={<RequireAuth><Setup /></RequireAuth>} />
-      <Route path="/lobby/:inviteCode" element={<RequireAuth><Lobby /></RequireAuth>} />
-      <Route path="/play" element={<RequireAuth><Play /></RequireAuth>} />
-      <Route path="/g/:shareCode" element={<RequireAuth><Spectate /></RequireAuth>} />
+      <Route path="/welcome" element={<RequireAuth><WelcomeProfile /></RequireAuth>} />
+      <Route path="/setup" element={<RequireAuth><RequireOnboarding><Setup /></RequireOnboarding></RequireAuth>} />
+      <Route path="/lobby/:inviteCode" element={<RequireAuth><RequireOnboarding><Lobby /></RequireOnboarding></RequireAuth>} />
+      <Route path="/play" element={<RequireAuth><RequireOnboarding><Play /></RequireOnboarding></RequireAuth>} />
+      <Route path="/g/:shareCode" element={<RequireAuth><RequireOnboarding><Spectate /></RequireOnboarding></RequireAuth>} />
       <Route path="*" element={<Navigate to="/setup" replace />} />
     </Routes>
   );

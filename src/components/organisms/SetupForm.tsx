@@ -108,10 +108,8 @@ export default function SetupForm(): JSX.Element {
     setLobbyError(null);
     setIsCreatingLobby(true);
     try {
-      const profile = await supabaseAuthService.ensureProfile({
-        displayName: players[0]?.nickname ?? 'DM',
-        avatarKey: players[0]?.avatarKey ?? 'hat',
-      });
+      const profile = await supabaseAuthService.getProfile();
+      if (!profile) throw new Error('Profile not loaded.');
       const game = await supabaseLobbyService.createGame({ hostProfileId: profile.id });
       await supabaseLobbyService.joinGame({ inviteCode: game.inviteCode, profileId: profile.id });
       sessionStorage.setItem('mt_active_role', 'host');

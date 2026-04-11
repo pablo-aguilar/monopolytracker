@@ -20,11 +20,12 @@ export default function AuthCallback(): JSX.Element {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
         }
-        await supabaseAuthService.ensureProfile({
-          displayName: 'Player',
-          avatarKey: 'hat',
-        });
-        if (mounted) navigate(redirect, { replace: true });
+        const profile = await supabaseAuthService.getProfile();
+        if (!profile || !profile.onboardingCompleted) {
+          if (mounted) navigate(`/welcome?redirect=${encodeURIComponent(redirect)}`, { replace: true });
+        } else if (mounted) {
+          navigate(redirect, { replace: true });
+        }
       } catch (err) {
         if (!mounted) return;
         setError(err instanceof Error ? err.message : 'Authentication failed.');

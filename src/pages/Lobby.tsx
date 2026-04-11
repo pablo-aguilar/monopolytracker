@@ -33,14 +33,15 @@ export default function Lobby(): JSX.Element {
     if (!inviteCode) return;
     setError(null);
     try {
-      const ensured = await supabaseAuthService.ensureProfile({ displayName: 'Player', avatarKey: 'hat' });
-      setProfile(ensured);
+      const loadedProfile = await supabaseAuthService.getProfile();
+      if (!loadedProfile) throw new Error('Profile not found. Complete onboarding first.');
+      setProfile(loadedProfile);
       const loadedGame = await supabaseLobbyService.getGameByInviteCode(inviteCode);
       if (!loadedGame) throw new Error('Lobby not found.');
       setGame(loadedGame);
       let roster = await supabaseLobbyService.listParticipants(loadedGame.id);
-      if (!roster.some((p) => p.profileId === ensured.id)) {
-        await supabaseLobbyService.joinGame({ inviteCode, profileId: ensured.id });
+      if (!roster.some((p) => p.profileId === loadedProfile.id)) {
+        await supabaseLobbyService.joinGame({ inviteCode, profileId: loadedProfile.id });
         roster = await supabaseLobbyService.listParticipants(loadedGame.id);
       }
       setParticipants(roster);
