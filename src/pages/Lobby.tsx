@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { IoMdCopy } from 'react-icons/io';
 import { supabaseAuthService, supabaseLobbyService } from '@/services/supabase';
 import type { GameSummary, LobbyParticipant, PlayerProfile } from '@/services/contracts';
 import { AVATARS } from '@/data/avatars';
@@ -113,7 +114,7 @@ export default function Lobby(): JSX.Element {
       setCopyDone(true);
       window.setTimeout(() => setCopyDone(false), 2000);
     } catch {
-      setError('Could not copy — select the link and copy manually.');
+      setError('Could not copy the link. Try again or copy from the browser address bar.');
     }
   }
 
@@ -132,32 +133,16 @@ export default function Lobby(): JSX.Element {
             ) : null}
           </div>
           {inviteUrl ? (
-            <div
-              data-qa="invite-link-row"
-              className="flex flex-col gap-2 rounded-xl border border-surface-strong bg-surface-1 p-3 sm:flex-row sm:items-stretch"
+            <button
+              type="button"
+              data-qa="btn-share-invite-link"
+              onClick={copyInviteLink}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-emerald-500/80 bg-emerald-600 px-6 py-4 text-lg font-semibold text-white shadow-md transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-surface-0"
+              aria-label={copyDone ? 'Link copied' : 'Share invite link'}
             >
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 text-xs font-medium text-muted">Invite link — copy and share</div>
-                <input
-                  readOnly
-                  type="text"
-                  value={inviteUrl}
-                  aria-label="Full lobby invite URL"
-                  className="w-full rounded-lg border border-surface-strong bg-surface-0 px-3 py-2 font-mono text-xs text-fg outline-none sm:text-sm"
-                  onFocus={(e) => e.currentTarget.select()}
-                />
-              </div>
-              <div className="flex shrink-0 items-end sm:items-end">
-                <button
-                  type="button"
-                  data-qa="btn-copy-invite-link"
-                  onClick={copyInviteLink}
-                  className="w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 sm:w-auto"
-                >
-                  {copyDone ? 'Copied!' : 'Copy link'}
-                </button>
-              </div>
-            </div>
+              <IoMdCopy className="h-7 w-7 shrink-0" aria-hidden />
+              {copyDone ? 'Copied!' : 'Share Link'}
+            </button>
           ) : null}
         </div>
         {error ? <div className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
