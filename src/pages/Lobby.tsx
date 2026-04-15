@@ -1,11 +1,16 @@
 import React from 'react';
+import { useDispatch } from 'react-redux';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import type { AppDispatch } from '@/app/store';
+import { bootstrapOnlinePlayFromRoster } from '@/lib/bootstrap-online-play';
 import { IoMdCopy } from 'react-icons/io';
+import AccountMenu from '@/components/molecules/AccountMenu';
 import { supabaseAuthService, supabaseLobbyService } from '@/services/supabase';
 import type { GameSummary, LobbyParticipant, PlayerProfile } from '@/services/contracts';
 import { AVATARS } from '@/data/avatars';
 
 export default function Lobby(): JSX.Element {
+  const dispatch = useDispatch<AppDispatch>();
   const { inviteCode } = useParams<{ inviteCode: string }>();
   const navigate = useNavigate();
   const [profile, setProfile] = React.useState<PlayerProfile | null>(null);
@@ -57,6 +62,10 @@ export default function Lobby(): JSX.Element {
   }, [refreshLobby]);
 
   React.useEffect(() => {
+    if (game?.id) sessionStorage.setItem('mt_active_game_id', game.id);
+  }, [game?.id]);
+
+  React.useEffect(() => {
     if (!inviteCode) return;
     const id = window.setInterval(() => {
       refreshLobby();
@@ -70,6 +79,7 @@ export default function Lobby(): JSX.Element {
     if (isHost) {
       sessionStorage.setItem('mt_active_role', 'host');
       sessionStorage.setItem('mt_active_invite', inviteCode);
+      if (game.id) sessionStorage.setItem('mt_active_game_id', game.id);
       navigate('/play', { replace: true });
       return;
     }
@@ -98,8 +108,15 @@ export default function Lobby(): JSX.Element {
     setError(null);
     try {
       await supabaseLobbyService.startGame(game.id);
+      const roster = await supabaseLobbyService.listParticipants(game.id);
+      if (roster.length === 0) {
+        setError('No players in the lobby roster.');
+        return;
+      }
+      bootstrapOnlinePlayFromRoster(dispatch, roster);
       sessionStorage.setItem('mt_active_role', 'host');
       sessionStorage.setItem('mt_active_invite', game.inviteCode);
+      sessionStorage.setItem('mt_active_game_id', game.id);
       navigate('/play');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start game.');
@@ -124,7 +141,10 @@ export default function Lobby(): JSX.Element {
   }
 
   return (
-    <div className="min-h-dvh bg-surface-0 text-fg p-6">
+    <div className="relative min-h-dvh bg-surface-0 text-fg p-6">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <AccountMenu />
+      </div>
       <div className="mx-auto w-full max-w-3xl space-y-4">
         <div className="space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

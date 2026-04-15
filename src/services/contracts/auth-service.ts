@@ -13,4 +13,6 @@ export interface AuthService {
   getProfile(): Promise<PlayerProfile | null>;
   /** First-time profile creation after sign-in (name + avatar). */
   completeOnboarding(input: { displayName: string; avatarKey: string }): Promise<PlayerProfile>;
+  /** Update display name and avatar for the signed-in user. */
+  updateProfile(input: { displayName: string; avatarKey: string }): Promise<PlayerProfile>;
 }

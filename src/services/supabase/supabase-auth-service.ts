@@ -110,4 +110,29 @@ export const supabaseAuthService: AuthService = {
     }
     throw new Error(hint || 'Could not save profile.');
   },
+
+  async updateProfile(input: { displayName: string; avatarKey: string }): Promise<PlayerProfile> {
+    const supabase = getSupabaseClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) throw authError;
+    const user = authData.user;
+    if (!user) throw new Error('No authenticated user found.');
+
+    const displayName = input.displayName.trim();
+    if (!displayName) throw new Error('Display name is required.');
+
+    const { data: updated, error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        display_name: displayName.slice(0, 48),
+        avatar_key: input.avatarKey,
+      })
+      .eq('id', user.id)
+      .select('id, display_name, avatar_key, onboarding_completed')
+      .single<DbProfileRow>();
+
+    if (updateError) throw updateError;
+    if (!updated) throw new Error('Profile not found.');
+    return mapDbProfileToDomain(updated);
+  },
 };

@@ -19,6 +19,12 @@ function topKFrequencyCounts(map: Map<number, number>, k: number): { total: numb
     .slice(0, k);
 }
 
+/** Format roll histogram rows for UI (e.g. `6×3, 8×2`). */
+export function formatRollTopStats(rows: { total: number; count: number }[]): string {
+  if (rows.length === 0) return '—';
+  return rows.map((r) => `${r.total}×${r.count}`).join(', ');
+}
+
 function topKTileCounts(map: Map<string, number>, k: number): { name: string; count: number }[] {
   return [...map.entries()]
     .map(([name, count]) => ({ name, count }))
@@ -160,8 +166,9 @@ export function computeGameStats(events: readonly GameEvent[], players: readonly
       moneyWonBankParkingJackpotCards += ev.moneyDelta;
     }
 
-    if (ev.type === 'PASSED_GO' && actor && byId[actor]) {
-      byId[actor]!.passedGo += 1;
+    if (ev.type === 'PASSED_GO') {
+      const pid = (ev.payload?.playerId as string | undefined) ?? actor;
+      if (pid && byId[pid]) byId[pid]!.passedGo += 1;
     }
 
     if (ev.type === 'CARD') {

@@ -14,8 +14,8 @@
 -- ------------------------------------------------------------
 insert into public.profiles (id, display_name, avatar_key)
 values
-  ('00000000-0000-0000-0000-000000000001', 'Host User', 'hat'),
-  ('00000000-0000-0000-0000-000000000002', 'Participant User', 'dog')
+  ('1a1b8998-8617-4b81-8cb8-f8b4c81a0d1a', 'Host User', 'hat'),
+  ('9d440e48-31a0-4b12-89f9-70bbb6318dce', 'Participant User', 'dog')
 on conflict (id) do update
 set display_name = excluded.display_name,
     avatar_key = excluded.avatar_key;
@@ -25,19 +25,19 @@ set display_name = excluded.display_name,
 -- ------------------------------------------------------------
 with g as (
   insert into public.games (host_profile_id, invite_code, status)
-  values ('00000000-0000-0000-0000-000000000001', 'A2TEST', 'lobby')
+  values ('1a1b8998-8617-4b81-8cb8-f8b4c81a0d1a', 'A2TEST', 'lobby')
   on conflict (invite_code) do update set status = excluded.status
   returning id
 )
 insert into public.game_players (game_id, participant_type, profile_id, guest_name, guest_avatar_key, seat_order)
-select id, 'account', '00000000-0000-0000-0000-000000000001', null, null, 1 from g
+select id, 'account', '9d440e48-31a0-4b12-89f9-70bbb6318dce', null, null, 1 from g
 on conflict do nothing;
 
 with g as (
   select id from public.games where invite_code = 'A2TEST'
 )
 insert into public.game_players (game_id, participant_type, profile_id, guest_name, guest_avatar_key, seat_order)
-select id, 'account', '00000000-0000-0000-0000-000000000002', null, null, 2 from g
+select id, 'account', '9d440e48-31a0-4b12-89f9-70bbb6318dce', null, null, 2 from g
 on conflict do nothing;
 
 with g as (

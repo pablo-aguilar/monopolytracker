@@ -21,6 +21,8 @@ export type TurnOrderListProps = {
   players: TurnPlayer[];
   onReorder: (newOrderIds: string[]) => void;
   onRemove?: (id: string) => void;
+  /** When true, hide remove so roster cannot drop below two players. */
+  removeDisabled?: boolean;
   onOptInChange?: (id: string, optIn: boolean) => void;
   /** When set, tap/click nickname to edit inline (setup). */
   onNicknameChange?: (id: string, nickname: string) => void;
@@ -30,6 +32,7 @@ export default function TurnOrderList({
   players,
   onReorder,
   onRemove,
+  removeDisabled = false,
   onOptInChange,
   onNicknameChange,
 }: TurnOrderListProps): JSX.Element {
@@ -159,7 +162,7 @@ export default function TurnOrderList({
                 </button>
                 <Toggle checked={Boolean(p.racePotOptIn)} onChange={(next) => onOptInChange?.(p.id, next)} qa={`toggle-race-${p.id}`} />
               </div>
-              {onRemove && (
+              {onRemove && !removeDisabled && (
                 <button
                   type="button"
                   data-qa={`btn-remove-${p.id}`}

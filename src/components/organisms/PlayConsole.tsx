@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom';
 import type { SpecialDieFace, GameEvent } from '@/types/monopoly-schema';
 import EventLog from '@/components/molecules/EventLog';
 import GameStatsPanel from '@/components/molecules/GameStatsPanel';
-import SegmentedControl from '@/components/molecules/SegmentedControl';
+import SlidingSegmentedControl from '@/components/molecules/SlidingSegmentedControl';
 import { useDispatch, useSelector, useStore } from 'react-redux';
 import { appendEvent } from '@/features/events/eventsSlice';
 import { addPendingMortgageCredit, addToFreeParking, consumePendingMortgageCredit, resetFreeParking } from '@/features/session/sessionSlice';
@@ -35,6 +35,7 @@ import { drawCardById, putCardOnBottom, setSeed as setCardsSeed, reshuffleIfEmpt
 import { adjustPlayerMoney, setPlayerPosition, grantBusTicket, clearAllBusTickets, grantGetOutOfJail, assignProperty, unassignProperty, consumeGetOutOfJail, removePlayer, transferPlayerSpecialAssets } from '@/features/players/playersSlice';
 import { consumeBusTicket } from '@/features/players/playersSlice';
 import { persistor, type AppDispatch, type RootState } from '@/app/store';
+import { publishHostGameSnapshot } from '@/lib/host-game-snapshot';
 import { computeRent } from '@/features/selectors/rent';
 import AvatarToken from '@/components/atoms/AvatarToken';
 import AnimatedNumber from '@/components/atoms/AnimatedNumber';
@@ -63,7 +64,7 @@ import TradeModal, { type TradeModalConfirmPayload } from '@/components/molecule
 import VictoryModal from '@/components/molecules/VictoryModal';
 import PlayerTurnCards from '@/components/molecules/PlayerTurnCards';
 import SectionCard from '@/components/molecules/SectionCard';
-import SettingsGear from '@/components/molecules/SettingsGear';
+import AccountMenu from '@/components/molecules/AccountMenu';
 import { BsDice1Fill, BsDice2Fill, BsDice3Fill, BsDice4Fill, BsDice5Fill, BsDice6Fill } from 'react-icons/bs';
 import { FaBusAlt, FaCheck, FaHandshake } from 'react-icons/fa';
 import { GiDiceFire, GiTeleport } from 'react-icons/gi';
@@ -944,6 +945,10 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
         if (pick === 'regular') {
           dispatch(grantBusTicket({ id: pid, count: 1 }));
         } else {
+          const bigBusClearedByPlayerId: Record<string, number> = {};
+          for (const pl of players) {
+            bigBusClearedByPlayerId[pl.id] = pl.busTickets ?? 0;
+          }
           dispatch(clearAllBusTickets());
           dispatch(grantBusTicket({ id: pid, count: 1 }));
           dispatch(
@@ -956,6 +961,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                 deck: 'bus',
                 cardId: 'bb-*',
                 message: "Big Bus: all players' bus tickets cleared; drawer gains 1",
+                bigBusClearedByPlayerId,
               },
               createdAt: new Date().toISOString(),
             })
@@ -2782,9 +2788,9 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                 <MdReceiptLong className="h-4 w-4 shrink-0" aria-hidden />
                 <span className="hidden sm:inline">Logs</span>
               </button>
-              <SettingsGear
+              <AccountMenu
                 className="shrink-0"
-            modalContent={(
+                settingsExtra={(
               <div className="w-full">
                 <button
                   type="button"
@@ -2897,8 +2903,8 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                   </div>
                 )}
               </div>
-            )}
-          />
+                )}
+              />
             </div>
           </>
         );
@@ -4099,7 +4105,7 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
               <div className="p-2 bg-surface-1 rounded-t-xl">
                 <OverlayHeader title="Game log & stats" onClose={() => setEventLogOpen(false)} className="pl-2" />
                 <div className="mt-2 flex justify-center px-1 sm:justify-start">
-                  <SegmentedControl
+                  <SlidingSegmentedControl
                     dense
                     value={eventLogPanelTab}
                     onChange={setEventLogPanelTab}
@@ -4347,6 +4353,9 @@ export default function PlayConsole({ onTimelineRestored, playChromeHost }: Play
                         if (!pid) return;
                         finalizeTurn(pid);
                         setSummaryOpen(false);
+                        queueMicrotask(() => {
+                          void publishHostGameSnapshot(store.getState());
+                        });
                       }}
                     >
                       {label}

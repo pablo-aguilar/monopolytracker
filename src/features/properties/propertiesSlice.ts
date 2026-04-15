@@ -26,6 +26,9 @@ const initialState: PropertiesState = {
   skyscrapersRemaining: 12,
 };
 
+/** Bank + empty ownership (e.g. spectator reset). */
+export const propertiesInitialState: PropertiesState = structuredClone(initialState);
+
 function getGroupTileIds(tileId: string): string[] {
   const tile = BOARD_TILES.find((t) => t.id === tileId);
   if (!tile) return [];

@@ -30,6 +30,16 @@ const initialState: CardsState = {
   },
 };
 
+/** Fresh card decks (e.g. spectator reset). */
+export const cardsInitialState: CardsState = {
+  seed: initialState.seed,
+  decks: {
+    chance: initDeck(initialState.seed, 'chance'),
+    community: initDeck(initialState.seed, 'community'),
+    bus: initDeck(initialState.seed, 'bus'),
+  },
+};
+
 const cardsSlice = createSlice({
   name: 'cards',
   initialState,

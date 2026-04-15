@@ -28,6 +28,9 @@ const initialState: SessionState = {
   pendingMortgageCreditByPlayerId: {},
 };
 
+/** Fresh session slice (e.g. spectator view reset before remote hydrate). */
+export const sessionInitialState: SessionState = { ...initialState, racePot: defaultRacePot() };
+
 const sessionSlice = createSlice({
   name: 'session',
   initialState,

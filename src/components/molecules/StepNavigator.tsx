@@ -47,22 +47,22 @@ export default function StepNavigator({ items, activeStep, highestStep, onSelect
                 {i < items.length - 1 && (
                   <div className={`absolute ${midLeft} right-0 h-1 bg-surface-1`} aria-hidden />
                 )}
-                {/* Progress connectors (green) up to current step edge */}
+                {/* Progress connectors up to current step edge */}
                 {i > 0 && i <= activeStep && (
-                  <div className={`absolute left-0 ${midRight} h-1 bg-emerald-500`} aria-hidden />
+                  <div className={`absolute left-0 ${midRight} h-1 bg-neutral-500/55 dark:bg-white/35`} aria-hidden />
                 )}
                 {i < activeStep && (
-                  <div className={`absolute ${midLeft} right-0 h-1 bg-emerald-500`} aria-hidden />
+                  <div className={`absolute ${midLeft} right-0 h-1 bg-neutral-500/55 dark:bg-white/35`} aria-hidden />
                 )}
                 <button
                   type="button"
                   disabled={!clickable}
                   onClick={() => clickable && onSelect(s.id)}
-                  className={`relative z-10 inline-flex h-8 w-8 bg-surface-0 items-center font-bold justify-center rounded-full border-3 border-tint transition-colors ${
+                  className={`relative z-10 inline-flex h-8 w-8 items-center font-bold justify-center rounded-full border-2 border-tint bg-surface-0 transition-colors ${
                     status === 'done'
-                      ? 'bg-emerald-600! border-emerald-600! text-emerald-50'
+                      ? '!border-white/75 !bg-neutral-950 !text-white dark:!border-white/80'
                       : status === 'current'
-                      ? 'bg-emerald-600! border-emerald-600! text-white ring-1 ring-emerald-500 ring-offset-3 ring-offset-white dark:ring-offset-neutral-900'
+                      ? '!border-white !bg-neutral-950 !text-white ring-1 ring-white/35 ring-offset-2 ring-offset-white dark:!bg-neutral-950 dark:!border-white/90 dark:ring-white/25 dark:ring-offset-neutral-950'
                       : 'text-subtle'
                   } ${!clickable ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >

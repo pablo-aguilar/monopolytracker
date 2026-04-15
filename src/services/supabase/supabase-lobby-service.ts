@@ -1,6 +1,7 @@
 import type { LobbyService, CreateGameInput, JoinGameInput } from '@/services/contracts/lobby-service';
 import type { GameSummary, LobbyParticipant } from '@/services/contracts/types';
 import { getSupabaseClient } from '@/lib/supabase';
+import { isPersistedGameState } from '@/lib/game-snapshot-types';
 import { mapDbGameToDomain } from '@/services/mappers/game-mapper';
 import { mapDbGamePlayerToDomain } from '@/services/mappers/lobby-participant-mapper';
 
@@ -66,13 +67,23 @@ export const supabaseLobbyService: LobbyService = {
 
   async getGameByInviteCode(inviteCode: string): Promise<GameSummary | null> {
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('games')
-      .select('id, host_profile_id, status, invite_code, started_at, ended_at, winner_profile_id')
-      .eq('invite_code', inviteCode)
-      .maybeSingle<DbGameRow>();
+    const { data, error } = await supabase.rpc('fetch_game_by_invite_code', {
+      p_invite_code: inviteCode,
+    });
     if (error) throw error;
-    return data ? mapDbGameToDomain(data) : null;
+    const rows = data as DbGameRow[] | null;
+    if (!rows || rows.length === 0) return null;
+    return mapDbGameToDomain(rows[0]);
+  },
+
+  async fetchLiveSnapshotByInvite(inviteCode: string) {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('fetch_live_snapshot_by_invite', {
+      p_invite_code: inviteCode,
+    });
+    if (error) throw error;
+    if (data == null) return null;
+    return isPersistedGameState(data) ? data : null;
   },
 
   async listParticipants(gameId: string): Promise<LobbyParticipant[]> {

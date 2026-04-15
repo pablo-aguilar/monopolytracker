@@ -58,8 +58,13 @@
   /* Income Tax / Luxury Tax tile stripes (board.ts BOARD_TILE_TAX_STRIPE_STYLE) */
   --game-tax-stripe-light: theme(colors.yellow.600);
   --game-tax-stripe-dark: theme(colors.yellow.800);
-}
 
+  /* dots */
+  --dot-active: theme(colors.neutral.900);
+  --dot-inactive: theme(colors.neutral.400);
+
+
+}
 .dark {
   /* Surfaces */
   --surface-0: theme(colors.neutral.950);
@@ -105,6 +110,10 @@
 
   --game-tax-stripe-light: theme(colors.yellow.600);
   --game-tax-stripe-dark: theme(colors.yellow.800);
+
+  /* dots */
+  --dot-active: theme(colors.neutral.100);
+  --dot-inactive: theme(colors.neutral.400);
 }
 
 @layer utilities {
@@ -156,6 +165,10 @@
   .divide-y.divide-surface-strong > :not([hidden]) { border-color: var(--divider-strong); }
   .divide-x.divide-surface > :not([hidden]) { border-color: var(--divider); }
   .divide-x.divide-surface-strong > :not([hidden]) { border-color: var(--divider-strong); }
+
+  /* dots */
+  .bg-dot-active { background-color: var(--dot-active); }
+  .bg-dot-inactive { background-color: var(--dot-inactive); }
 
   .modal-backdrop {
     background-color: rgb(0 0 0 / 0.6);

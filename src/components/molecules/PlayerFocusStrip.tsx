@@ -1,19 +1,18 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import type { GameEvent } from '@/types/monopoly-schema';
 import type { PlayerLite } from '@/features/players/playersSlice';
 import type { PropertiesState } from '@/features/properties/propertiesSlice';
 import type { TimelineSnapshot } from '@/features/timeline/types';
+import { computeGameStats, formatRollTopStats } from '@/features/stats/computeGameStats';
+import { computeBusTicketEconomy } from '@/features/stats/busTicketStats';
 import { BOARD_TILES } from '@/data/board';
 import { CHANCE, COMMUNITY_CHEST } from '@/data/cards';
 import { AVATARS } from '@/data/avatars';
 import AvatarToken from '@/components/atoms/AvatarToken';
-import AnimatedNumber from '@/components/atoms/AnimatedNumber';
-import HudBadge from '@/components/atoms/HudBadge';
-import { BsCashStack } from 'react-icons/bs';
-import { TbBuildings } from 'react-icons/tb';
-import { FaBusAlt } from 'react-icons/fa';
-import CloseIconButton from '@/components/atoms/CloseIconButton';
 import SectionCard from '@/components/molecules/SectionCard';
+import OverlayHeader from '@/components/molecules/OverlayHeader';
+import PlayerSnapshotCard from '@/components/molecules/PlayerSnapshotCard';
 
 type PlayerStats = {
   highestCash: number;
@@ -43,8 +42,23 @@ function propertyValueForOwner(byTileId: PropertiesState['byTileId'], ownerId: s
 function currency(n: number): string {
   return `$${Math.round(n).toLocaleString()}`;
 }
-function abbreviateTileNameForHud(name: string): string {
-  return name.replace(/\bAvenue\b/g, 'Ave');
+
+function ModalStatBlock({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
+  return (
+    <section className="rounded-lg border border-neutral-200 bg-surface-1 p-3 dark:border-neutral-700">
+      <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-subtle">{title}</h3>
+      <div className="space-y-1.5 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function ModalRow({ label, value }: { label: string; value: React.ReactNode }): JSX.Element {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+      <span className="text-neutral-600 dark:text-neutral-400">{label}</span>
+      <span className="text-right font-medium tabular-nums text-fg">{value}</span>
+    </div>
+  );
 }
 
 function computePlayerStats(
@@ -156,10 +170,38 @@ export default function PlayerFocusStrip({
   className = '',
 }: PlayerFocusStripProps): JSX.Element | null {
   const [openPlayerId, setOpenPlayerId] = useState<string | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const suppressCarouselLayoutSyncRef = useRef(false);
+  const scrollSyncTimerRef = useRef<number | null>(null);
+  const snapshotHeaderElsRef = useRef(new Map<string, HTMLDivElement>());
+  const [snapshotHeaderMinPx, setSnapshotHeaderMinPx] = useState(0);
+  const reduceMotion = useReducedMotion();
+
+  const setSnapshotHeaderMeasureRef = useCallback((playerId: string) => (node: HTMLDivElement | null) => {
+    const m = snapshotHeaderElsRef.current;
+    if (node) m.set(playerId, node);
+    else m.delete(playerId);
+  }, []);
+
+  const recomputeSnapshotHeaderMinHeight = useCallback(() => {
+    if (players.length < 2 || !openPlayerId) {
+      setSnapshotHeaderMinPx(0);
+      return;
+    }
+    let max = 0;
+    for (const p of players) {
+      const el = snapshotHeaderElsRef.current.get(p.id);
+      if (el) max = Math.max(max, Math.ceil(el.getBoundingClientRect().height));
+    }
+    if (max > 0) setSnapshotHeaderMinPx(max);
+  }, [players, openPlayerId]);
+
   const statsById = useMemo(
     () => computePlayerStats(players, properties, events, snapshots),
     [players, properties, events, snapshots],
   );
+  const playerRefs = useMemo(() => players.map((p) => ({ id: p.id, nickname: p.nickname })), [players]);
+  const gameStats = useMemo(() => computeGameStats(events, playerRefs), [events, playerRefs]);
   const liquidationPotentialById = useMemo(() => {
     const out: Record<string, number> = {};
     for (const p of players) out[p.id] = 0;
@@ -177,6 +219,250 @@ export default function PlayerFocusStrip({
 
   const openPlayer = players.find((p) => p.id === openPlayerId) ?? null;
   const openStats = openPlayer ? statsById[openPlayer.id] : null;
+  const busEconomyByPlayerId = useMemo(() => {
+    const o: Record<string, ReturnType<typeof computeBusTicketEconomy>> = {};
+    for (const p of players) {
+      o[p.id] = computeBusTicketEconomy(p.id, events, p.busTickets ?? 0);
+    }
+    return o;
+  }, [players, events]);
+
+  useLayoutEffect(() => {
+    recomputeSnapshotHeaderMinHeight();
+  }, [recomputeSnapshotHeaderMinHeight, properties.byTileId, players]);
+
+  useEffect(() => {
+    if (players.length < 2 || !openPlayerId) return;
+    const ro = new ResizeObserver(() => {
+      recomputeSnapshotHeaderMinHeight();
+    });
+    for (const p of players) {
+      const el = snapshotHeaderElsRef.current.get(p.id);
+      if (el) ro.observe(el);
+    }
+    return () => ro.disconnect();
+  }, [players, openPlayerId, recomputeSnapshotHeaderMinHeight]);
+
+  useEffect(() => {
+    if (!openPlayerId) setSnapshotHeaderMinPx(0);
+  }, [openPlayerId]);
+
+  const goPrevPlayer = useCallback(() => {
+    if (players.length < 2 || !openPlayerId) return;
+    const i = players.findIndex((p) => p.id === openPlayerId);
+    if (i < 0) return;
+    const ni = (i - 1 + players.length) % players.length;
+    const el = carouselRef.current;
+    if (el) {
+      suppressCarouselLayoutSyncRef.current = true;
+      el.scrollTo({ left: ni * el.clientWidth, behavior: 'smooth' });
+    }
+    setOpenPlayerId(players[ni]!.id);
+  }, [players, openPlayerId]);
+
+  const goNextPlayer = useCallback(() => {
+    if (players.length < 2 || !openPlayerId) return;
+    const i = players.findIndex((p) => p.id === openPlayerId);
+    if (i < 0) return;
+    const ni = (i + 1) % players.length;
+    const el = carouselRef.current;
+    if (el) {
+      suppressCarouselLayoutSyncRef.current = true;
+      el.scrollTo({ left: ni * el.clientWidth, behavior: 'smooth' });
+    }
+    setOpenPlayerId(players[ni]!.id);
+  }, [players, openPlayerId]);
+
+  const goToPlayerIndex = useCallback(
+    (i: number) => {
+      const el = carouselRef.current;
+      if (players.length > 1 && el) {
+        suppressCarouselLayoutSyncRef.current = true;
+        el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+      }
+      const p = players[i];
+      if (p) setOpenPlayerId(p.id);
+    },
+    [players],
+  );
+
+  useLayoutEffect(() => {
+    if (suppressCarouselLayoutSyncRef.current) {
+      suppressCarouselLayoutSyncRef.current = false;
+      return;
+    }
+    const el = carouselRef.current;
+    if (!el || players.length < 2 || !openPlayerId) return;
+    const idx = players.findIndex((p) => p.id === openPlayerId);
+    if (idx < 0) return;
+    const w = el.clientWidth;
+    if (w === 0) return;
+    const target = idx * w;
+    if (Math.abs(el.scrollLeft - target) > 2) {
+      el.scrollTo({ left: target, behavior: 'instant' });
+    }
+  }, [openPlayerId, players]);
+
+  const syncOpenPlayerFromScroll = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el || players.length < 2) return;
+    const w = el.clientWidth;
+    if (!w) return;
+    const idx = Math.max(0, Math.min(players.length - 1, Math.round(el.scrollLeft / w)));
+    const p = players[idx];
+    if (!p || p.id === openPlayerId) return;
+    suppressCarouselLayoutSyncRef.current = true;
+    setOpenPlayerId(p.id);
+  }, [players, openPlayerId]);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || players.length < 2) return;
+    const onScroll = () => {
+      if (scrollSyncTimerRef.current != null) window.clearTimeout(scrollSyncTimerRef.current);
+      scrollSyncTimerRef.current = window.setTimeout(() => syncOpenPlayerFromScroll(), 60);
+    };
+    const onScrollEnd = () => syncOpenPlayerFromScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('scrollend', onScrollEnd as EventListener);
+    return () => {
+      if (scrollSyncTimerRef.current != null) window.clearTimeout(scrollSyncTimerRef.current);
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('scrollend', onScrollEnd as EventListener);
+    };
+  }, [players.length, syncOpenPlayerFromScroll, openPlayerId]);
+
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el || players.length < 2 || !openPlayerId) return;
+    const ro = new ResizeObserver(() => {
+      const idx = players.findIndex((p) => p.id === openPlayerId);
+      if (idx < 0 || !carouselRef.current) return;
+      suppressCarouselLayoutSyncRef.current = true;
+      carouselRef.current.scrollTo({ left: idx * carouselRef.current.clientWidth, behavior: 'instant' });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [openPlayerId, players]);
+
+  useEffect(() => {
+    if (!openPlayerId) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goPrevPlayer();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goNextPlayer();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [openPlayerId, goPrevPlayer, goNextPlayer]);
+
+  const closeStatsModal = useCallback(() => {
+    setOpenPlayerId(null);
+  }, []);
+
+  const renderPlayerStatsSections = (p: PlayerLite) => {
+    const s = statsById[p.id];
+    const personal = gameStats.byPlayer[p.id];
+    const busEco = busEconomyByPlayerId[p.id];
+    if (!s) return null;
+    return (
+      <>
+        <SectionCard className="p-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Highest Cash</div>
+              <div className="font-semibold">{currency(s.highestCash)}</div>
+            </div>
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Highest Overall Value</div>
+              <div className="font-semibold">{currency(s.highestOverall)}</div>
+            </div>
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Distance Traveled</div>
+              <div className="font-semibold">{s.distanceTraveled.toLocaleString()}</div>
+            </div>
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Passed GO</div>
+              <div className="font-semibold">{s.passesGo.toLocaleString()}</div>
+            </div>
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Spent Building</div>
+              <div className="font-semibold">{currency(s.spentBuilding)}</div>
+            </div>
+            <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Spent Rent</div>
+              <div className="font-semibold">{currency(s.spentRent)}</div>
+            </div>
+            <div className="col-span-2 rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
+              <div className="text-[11px] text-subtle">Spent Paying Fees</div>
+              <div className="font-semibold">{currency(s.spentFees)}</div>
+            </div>
+          </div>
+        </SectionCard>
+
+        {personal && busEco ? (
+          <>
+            <ModalStatBlock title="Dice">
+              <ModalRow label="Top roll totals" value={formatRollTopStats(personal.topRollTotals)} />
+              <ModalRow label="Doubles (d6)" value={personal.doubles} />
+              <ModalRow label="Triples (three match)" value={personal.triples} />
+              <ModalRow label="1-1-1 jackpot rolls" value={personal.tripleOnes} />
+            </ModalStatBlock>
+
+            <ModalStatBlock title="Rent">
+              <ModalRow
+                label="Paid most to"
+                value={
+                  personal.paidMostTo
+                    ? `${personal.paidMostTo.name} ($${personal.paidMostTo.amount.toLocaleString()})`
+                    : '—'
+                }
+              />
+              <ModalRow
+                label="Received most from"
+                value={
+                  personal.receivedMostFrom
+                    ? `${personal.receivedMostFrom.name} ($${personal.receivedMostFrom.amount.toLocaleString()})`
+                    : '—'
+                }
+              />
+            </ModalStatBlock>
+
+            <ModalStatBlock title="Cards drawn">
+              <ModalRow label="Chance" value={personal.cardsChance} />
+              <ModalRow label="Community Chest" value={personal.cardsCommunity} />
+              <ModalRow label="Bus deck" value={personal.cardsBus} />
+            </ModalStatBlock>
+
+            <ModalStatBlock title="Bus tickets">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-0 px-2 py-2 text-center dark:border-neutral-600">
+                  <div className="text-[11px] text-subtle">Total</div>
+                  <div className="font-semibold tabular-nums">{busEco.totalAcquired}</div>
+                </div>
+                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-0 px-2 py-2 text-center dark:border-neutral-600">
+                  <div className="text-[11px] text-subtle">Used</div>
+                  <div className="font-semibold tabular-nums">{busEco.used}</div>
+                </div>
+                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-0 px-2 py-2 text-center dark:border-neutral-600">
+                  <div className="text-[11px] text-subtle">Lost</div>
+                  <div className="font-semibold tabular-nums">{busEco.lostBigBus}</div>
+                </div>
+              </div>
+              <p className="text-[11px] text-subtle pt-1">
+                Total = held + used + lost (lifetime acquired). Used = teleports + tickets traded away. Lost = cleared
+                when another player played Big Bus (logged in new games).
+              </p>
+            </ModalStatBlock>
+          </>
+        ) : null}
+      </>
+    );
+  };
 
   if (players.length === 0) return null;
 
@@ -238,94 +524,119 @@ export default function PlayerFocusStrip({
 
       {openPlayer && openStats ? (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/55 p-3 sm:p-6"
+          className="fixed inset-0 z-[120] flex min-h-0 items-center justify-center bg-black/55 p-3 sm:p-6"
           role="dialog"
           aria-modal="true"
-          aria-label={`Player stats for ${openPlayer.nickname}`}
-          onClick={() => setOpenPlayerId(null)}
+          aria-label={openPlayer ? `Player stats for ${openPlayer.nickname}` : 'Player stats'}
+          onClick={closeStatsModal}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-surface-0 p-3 shadow-2xl sm:p-4"
+            className="relative flex h-[min(85vh,760px)] w-full max-w-lg min-h-0 flex-col overflow-hidden rounded-2xl border border-neutral-300 dark:border-neutral-700 bg-surface-0 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-3">
-              <div className="rounded-3xl border-2 border-neutral-200 dark:border-neutral-700 bg-surface-2">
-                <div className="pl-2 py-1 pr-2 gap-2 relative bg-surface-1 flex flex-col rounded-t-3xl rounded-b-3xl">
-                  <div className="absolute right-1.5 top-1.5 z-[1]">
-                    <CloseIconButton onClick={() => setOpenPlayerId(null)} />
+            <OverlayHeader
+              title={openPlayer ? `${openPlayer.nickname} stats` : 'Player stats'}
+              onClose={closeStatsModal}
+              className="shrink-0 px-3 py-2 sm:px-4"
+            />
+
+            {players.length > 1 ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <div
+                    ref={carouselRef}
+                    data-qa="player-stats-carousel"
+                    className="flex min-h-0 min-w-0 w-full flex-1 flex-row overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth snap-x snap-mandatory [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {players.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex h-full min-h-0 min-w-full shrink-0 grow-0 basis-full snap-start snap-always flex-col overflow-hidden px-2"
+                      >
+                        <div
+                          ref={setSnapshotHeaderMeasureRef(p.id)}
+                          className="mb-1 flex min-h-0 shrink-0 flex-col px-0 pt-0 sm:px-0 sm:pt-0"
+                          style={snapshotHeaderMinPx > 0 ? { minHeight: snapshotHeaderMinPx } : undefined}
+                        >
+                          <PlayerSnapshotCard
+                            player={p}
+                            properties={properties}
+                            liquidationPotential={liquidationPotentialById[p.id] ?? 0}
+                            showClose={false}
+                            fillHeight={players.length >= 2}
+                            className="min-h-0 flex-1"
+                            onClose={closeStatsModal}
+                          />
+                        </div>
+                        <div className="min-h-0 w-full min-w-0 flex-1 basis-0 touch-pan-y overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] pb-3 pt-2 sm:pb-4">
+                          <div className="space-y-3">{renderPlayerStatsSections(p)}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3 relative pr-8">
-                    <div style={{ ['--player-color' as string]: openPlayer.color } as React.CSSProperties}>
-                      <AvatarToken
-                        emoji={AVATARS.find((a) => a.key === openPlayer.avatarKey)?.emoji ?? '🙂'}
-                        borderColorClass="border-[color:var(--player-color)]"
-                        ring
-                        ringColorClass="ring-[color:var(--player-color)]"
-                        size={36}
+                </div>
+                <LayoutGroup id="player-stats-carousel-dots">
+                  <div
+                    className="flex shrink-0 items-center justify-center gap-1.5 px-2 py-2"
+                    role="tablist"
+                    aria-label="Choose player"
+                  >
+                    {players.map((p, i) => {
+                      const active = p.id === openPlayerId;
+                      return (
+                        <motion.button
+                          key={p.id}
+                          type="button"
+                          role="tab"
+                          aria-label={`Show stats for ${p.nickname}`}
+                          aria-selected={active}
+                          initial={false}
+                          animate={{
+                            width: active ? 24 : 8,
+                            opacity: active ? 1 : 0.45,
+                          }}
+                          transition={
+                            reduceMotion
+                              ? { duration: 0.15, ease: 'easeOut' }
+                              : { type: 'spring', stiffness: 380, damping: 28 }
+                          }
+                          whileTap={reduceMotion ? undefined : { scale: 0.88 }}
+                          className={`h-2 shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-fg/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-0 ${
+                            active
+                              ? 'bg-dot-active '
+                              : ' bg-dot-inactive'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (p.id === openPlayerId) return;
+                            goToPlayerIndex(i);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </LayoutGroup>
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
+                {players[0] ? (
+                  <>
+                    <div className="shrink-0 pb-2">
+                      <PlayerSnapshotCard
+                        player={players[0]}
+                        properties={properties}
+                        liquidationPotential={liquidationPotentialById[players[0].id] ?? 0}
+                        showClose={false}
+                        onClose={closeStatsModal}
                       />
                     </div>
-                    <div className="font-semibold flex flex-col text-fg">
-                      <span>{openPlayer.nickname}</span>
-                      <span className="text-sm font-normal text-muted">
-                        {abbreviateTileNameForHud(BOARD_TILES[openPlayer.positionIndex]?.name ?? '—')} <span className=" text-subtle">{openPlayer.positionIndex}</span>
-                      </span>
+                    <div className="min-h-0 flex-1 basis-0 touch-pan-y overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+                      <div className="space-y-3">{renderPlayerStatsSections(players[0])}</div>
                     </div>
-                    <div className="ml-auto inline-flex items-center gap-2 text-sm font-bold text-fg bg-surface-0 border border-surface-strong rounded-full px-3 py-2">
-                      <span className="inline-flex items-center gap-1">
-                        <BsCashStack className="h-4 w-4 text-emerald-600" aria-hidden />
-                        <AnimatedNumber value={openPlayer.money} prefix="$" />
-                      </span>
-                      {(liquidationPotentialById[openPlayer.id] ?? 0) > 0 ? (
-                        <span className="inline-flex items-center gap-1">
-                          <TbBuildings className="h-4 w-4 text-sky-600" aria-hidden />
-                          <AnimatedNumber value={liquidationPotentialById[openPlayer.id] ?? 0} prefix="$" />
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 px-1 pb-1 text-sm text-muted">
-                    <div className="flex shrink-0 items-center gap-3">
-                      {((openPlayer.gojfChance ?? 0) + (openPlayer.gojfCommunity ?? 0) > 0) ? (
-                        <HudBadge title="Get Out of Jail Free" icon={<span>⛓️‍💥</span>} count={(openPlayer.gojfChance ?? 0) + (openPlayer.gojfCommunity ?? 0)} />
-                      ) : null}
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                      {(openPlayer.busTickets ?? 0) > 0 ? (
-                        <HudBadge title="Bus tickets" icon={<FaBusAlt className="h-3.5 w-3.5 text-game-bus" aria-hidden />} count={openPlayer.busTickets ?? 0} />
-                      ) : null}
-                      {(['brown', 'lightBlue', 'pink', 'orange', 'red', 'yellow', 'green', 'darkBlue'] as const).map((g) => {
-                        const owned = BOARD_TILES.filter((t) => t.type === 'property' && t.group === g && properties.byTileId[t.id]?.ownerId === openPlayer.id).length;
-                        if (owned <= 0) return null;
-                        return <HudBadge key={g} icon={<span>🏠</span>} count={owned} variant="pill" borderClassName="border-white" />;
-                      })}
-                      {(() => {
-                        const rr = BOARD_TILES.filter((t) => t.type === 'railroad' && properties.byTileId[t.id]?.ownerId === openPlayer.id).length;
-                        return rr > 0 ? <HudBadge title="Railroads owned" icon={<span>🚂</span>} count={rr} variant="pill" borderClassName="border-white" /> : null;
-                      })()}
-                      {(() => {
-                        const util = BOARD_TILES.filter((t) => t.type === 'utility' && properties.byTileId[t.id]?.ownerId === openPlayer.id).length;
-                        return util > 0 ? <HudBadge title="Utilities owned" icon={<span>🛠️</span>} count={util} variant="pill" borderClassName="border-white" /> : null;
-                      })()}
-                    </div>
-                  </div>
-                </div>
+                  </>
+                ) : null}
               </div>
-            </div>
-
-            <SectionCard className="p-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Highest Cash</div><div className="font-semibold">{currency(openStats.highestCash)}</div></div>
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Highest Overall Value</div><div className="font-semibold">{currency(openStats.highestOverall)}</div></div>
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Distance Traveled</div><div className="font-semibold">{openStats.distanceTraveled.toLocaleString()}</div></div>
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Times Around Board</div><div className="font-semibold">{openStats.passesGo.toLocaleString()}</div></div>
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Spent Building</div><div className="font-semibold">{currency(openStats.spentBuilding)}</div></div>
-                <div className="rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5"><div className="text-[11px] text-subtle">Spent Rent</div><div className="font-semibold">{currency(openStats.spentRent)}</div></div>
-                <div className="col-span-2 rounded-md border border-neutral-200 dark:border-neutral-700 bg-surface-1 px-2 py-1.5">
-                  <div className="text-[11px] text-subtle">Spent Paying Fees</div>
-                  <div className="font-semibold">{currency(openStats.spentFees)}</div>
-                </div>
-              </div>
-            </SectionCard>
+            )}
           </div>
         </div>
       ) : null}

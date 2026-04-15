@@ -90,8 +90,10 @@ export default function SetupForm(): JSX.Element {
   };
 
   const onStart = (): void => {
+    if (players.length < 2) return;
     sessionStorage.setItem('mt_active_role', 'host');
     sessionStorage.removeItem('mt_active_invite');
+    sessionStorage.removeItem('mt_active_game_id');
     if (SHOW_CARD_SEED) dispatch(setSeed(seed));
     // Initialize race pot and deduct if 2+ opted in
     const participants = players.filter((p) => p.racePotOptIn).map((p) => p.id);
@@ -114,6 +116,7 @@ export default function SetupForm(): JSX.Element {
       await supabaseLobbyService.joinGame({ inviteCode: game.inviteCode, profileId: profile.id });
       sessionStorage.setItem('mt_active_role', 'host');
       sessionStorage.setItem('mt_active_invite', game.inviteCode);
+      sessionStorage.setItem('mt_active_game_id', game.id);
       navigate(`/lobby/${game.inviteCode}`);
     } catch (err) {
       setLobbyError(err instanceof Error ? err.message : 'Unable to create lobby.');
@@ -144,6 +147,7 @@ export default function SetupForm(): JSX.Element {
           players={turnPlayers}
           onReorder={(ids) => dispatch(reorderPlayers(ids))}
           onRemove={(id) => dispatch(removePlayer(id))}
+          removeDisabled={players.length <= 2}
           onOptInChange={(id, optIn) => dispatch(setRacePotOptIn({ id, optIn }))}
           onNicknameChange={(id, nickname) => dispatch(setPlayerNickname({ id, nickname }))}
         />

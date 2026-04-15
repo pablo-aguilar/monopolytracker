@@ -1,10 +1,13 @@
 // #index
 // - //#imports: PlayConsole organism wrapper
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
-import type { RootState } from '@/app/store';
+import { store, type RootState } from '@/app/store';
+import { publishHostGameSnapshot } from '@/lib/host-game-snapshot';
+import { bootstrapOnlinePlayFromRoster } from '@/lib/bootstrap-online-play';
+import { supabaseLobbyService } from '@/services/supabase';
 import BoardFrame from '@/components/organisms/BoardFrame';
 import PlayConsole from '@/components/organisms/PlayConsole';
 import TileDetailsOverlay from '@/components/molecules/TileDetailsOverlay';
@@ -48,6 +51,39 @@ export default function Play(): JSX.Element {
     () => rimPlayers.map((p) => ({ id: p.id, positionIndex: p.positionIndex, color: p.color })),
     [rimPlayers],
   );
+
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return;
+    if (sessionStorage.getItem('mt_active_role') !== 'host') return;
+    if (!sessionStorage.getItem('mt_active_game_id')) return;
+    const id = window.setTimeout(() => {
+      void publishHostGameSnapshot(store.getState());
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (typeof sessionStorage === 'undefined') return;
+    if (sessionStorage.getItem('mt_active_role') !== 'host') return;
+    const gameId = sessionStorage.getItem('mt_active_game_id');
+    if (!gameId) return;
+    if (store.getState().players.players.length > 0) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const roster = await supabaseLobbyService.listParticipants(gameId);
+        if (cancelled || roster.length === 0) return;
+        bootstrapOnlinePlayFromRoster(store.dispatch, roster);
+        void publishHostGameSnapshot(store.getState());
+      } catch {
+        /* lobby roster may be unavailable briefly */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div data-qa="play-page" className="relative flex min-h-dvh flex-col bg-surface-0 text-fg">
       <div

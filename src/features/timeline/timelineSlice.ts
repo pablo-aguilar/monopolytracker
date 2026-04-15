@@ -25,6 +25,9 @@ const timelineSlice = createSlice({
     clearSnapshots(state) {
       state.snapshots = [];
     },
+    replaceSnapshots(state, action: PayloadAction<TimelineSnapshot[]>) {
+      state.snapshots = action.payload.slice(-TIMELINE_SNAPSHOT_CAP);
+    },
     /** After a restore, drop snapshots that are not prefixes of the new event log. */
     pruneSnapshotsToEventPrefix(state, action: PayloadAction<GameEvent[]>) {
       const target = action.payload;
@@ -36,5 +39,5 @@ const timelineSlice = createSlice({
   },
 });
 
-export const { pushSnapshot, clearSnapshots, pruneSnapshotsToEventPrefix } = timelineSlice.actions;
+export const { pushSnapshot, clearSnapshots, pruneSnapshotsToEventPrefix, replaceSnapshots } = timelineSlice.actions;
 export default timelineSlice.reducer;
