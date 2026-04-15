@@ -6,5 +6,6 @@ export interface GameDetail extends GameSummary {
 
 export interface GameHistoryService {
   listGamesForProfile(profileId: string): Promise<GameSummary[]>;
+  listGamesForLeaderboard(limit?: number): Promise<GameSummary[]>;
   getGameDetail(gameId: string): Promise<GameDetail | null>;
 }

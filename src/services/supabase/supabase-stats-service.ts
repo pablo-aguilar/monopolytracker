@@ -13,13 +13,12 @@ export const supabaseStatsService: StatsService = {
   async getLifetimeStats(profileId: string): Promise<PlayerLifetimeStats | null> {
     const supabase = getSupabaseClient();
 
-    // Prefer a DB-provided aggregate view if present.
-    const { data: aggregate, error: aggregateError } = await supabase
-      .from('player_aggregates')
-      .select('profile_id, games_played, wins, average_placement')
-      .eq('profile_id', profileId)
-      .maybeSingle<AggregateRow>();
+    // Prefer a DB-provided RPC aggregate if present.
+    const { data: aggregateRows, error: aggregateError } = await supabase.rpc('get_player_lifetime_stats', {
+      p_profile_id: profileId,
+    });
 
+    const aggregate = ((aggregateRows ?? []) as AggregateRow[])[0];
     if (!aggregateError && aggregate) {
       return {
         profileId: aggregate.profile_id ?? profileId,

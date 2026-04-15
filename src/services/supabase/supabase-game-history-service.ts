@@ -46,6 +46,15 @@ export const supabaseGameHistoryService: GameHistoryService = {
     return (games as DbGameRow[]).map(mapDbGameToDomain);
   },
 
+  async listGamesForLeaderboard(limit = 200): Promise<GameSummary[]> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.rpc('list_games_for_leaderboard', {
+      p_limit: Math.max(1, Math.min(limit, 500)),
+    });
+    if (error) throw error;
+    return ((data ?? []) as DbGameRow[]).map(mapDbGameToDomain);
+  },
+
   async getGameDetail(gameId: string): Promise<GameDetail | null> {
     const supabase = getSupabaseClient();
     const { data: game, error: gameError } = await supabase
